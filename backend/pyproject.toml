@@ -1,0 +1,37 @@
+[project]
+name = "autoparts-backend"
+version = "0.1.0"
+description = "Autoparts: backend учёта продаж автозапчастей"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.118",
+    "uvicorn[standard]>=0.38",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.16",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.10",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "httpx2>=2.13",
+    "ruff>=0.14",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# FastAPI's Depends(...) in argument defaults is the framework's idiom, not a real mutable-default bug.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
