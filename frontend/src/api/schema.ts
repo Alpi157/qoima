@@ -549,6 +549,8 @@ export interface components {
             cancelled_at: string | null;
             /** Cancel Reason */
             cancel_reason: string | null;
+            /** Cancelled By Name */
+            cancelled_by_name: string | null;
             /** Created By Name */
             created_by_name: string;
             /**
@@ -679,6 +681,8 @@ export interface components {
             cancelled_at: string | null;
             /** Cancel Reason */
             cancel_reason: string | null;
+            /** Cancelled By Name */
+            cancelled_by_name: string | null;
             /** Created By Name */
             created_by_name: string;
             /**

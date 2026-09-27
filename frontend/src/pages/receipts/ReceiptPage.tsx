@@ -5,26 +5,22 @@ import {
   Card,
   Group,
   Loader,
-  Modal,
   Paper,
   Stack,
   Table,
   Text,
-  Textarea,
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { notifications } from '@mantine/notifications'
-import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { isApiError, isClientError } from '../../api/errors'
+import { isApiError } from '../../api/errors'
+import { CancelDocumentModal } from '../../components/CancelDocumentModal'
 import { NotFoundState } from '../../components/NotFoundState'
 import { QueryError } from '../../components/QueryError'
 import { formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
-import { reasonError as validateReason } from '../../lib/validation'
 import { type Receipt, useCancelReceipt, useReceipt } from './api'
 import { ReceiptStatusBadge } from './ReceiptStatusBadge'
 
@@ -100,95 +96,9 @@ function LinesCards({ lines }: { lines: ReceiptLineOut[] }) {
   )
 }
 
-interface CancelModalProps {
-  receipt: Receipt
-  opened: boolean
-  onClose: () => void
-}
-
-function CancelReceiptModal({ receipt, opened, onClose }: CancelModalProps) {
-  const cancel = useCancelReceipt(receipt.id)
-  const [reason, setReason] = useState('')
-  const [reasonError, setReasonError] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
-
-  const close = () => {
-    setReason('')
-    setReasonError(null)
-    setFormError(null)
-    onClose()
-  }
-
-  const submit = () => {
-    const problem = validateReason(reason)
-    if (problem) {
-      setReasonError(problem)
-      return
-    }
-    setFormError(null)
-    cancel.mutate(reason.trim(), {
-      onSuccess: (saved) => {
-        notifications.show({ color: 'green', message: `Приход №${saved.number} отменён` })
-        close()
-      },
-      onError: (error) => {
-        // 409 (stock would go negative) and other 4xx stay in the window; 5xx is a notification.
-        if (!isClientError(error) || !isApiError(error)) return
-        const fieldMessage = error.fieldErrors.reason
-        if (fieldMessage) setReasonError(fieldMessage)
-        else setFormError(error.detail)
-      },
-    })
-  }
-
-  return (
-    <Modal opened={opened} onClose={close} title={`Отменить приход №${receipt.number}?`}>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          submit()
-        }}
-        noValidate
-      >
-        <Stack>
-          <Text size="sm">
-            Остатки товаров из прихода уменьшатся обратно. Сам приход останется в списке как
-            отменённый.
-          </Text>
-          <Textarea
-            label="Причина"
-            required
-            autosize
-            minRows={2}
-            data-autofocus
-            value={reason}
-            onChange={(event) => {
-              setReason(event.currentTarget.value)
-              setReasonError(null)
-            }}
-            error={reasonError}
-          />
-          {formError && (
-            <Alert color="red" role="alert">
-              {formError}
-            </Alert>
-          )}
-          <Group justify="flex-end">
-            <Button variant="default" onClick={close} disabled={cancel.isPending}>
-              Не отменять
-            </Button>
-            <Button type="submit" color="red" loading={cancel.isPending}>
-              Отменить приход
-            </Button>
-          </Group>
-        </Stack>
-      </form>
-    </Modal>
-  )
-}
-
 function ReceiptDetails({ receipt }: { receipt: Receipt }) {
   const [cancelOpened, cancelModal] = useDisclosure()
+  const cancel = useCancelReceipt(receipt.id)
 
   return (
     <Stack>
@@ -215,6 +125,7 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
           {receipt.cancelled_at && (
             <Text size="sm">Когда: {formatDateTime(receipt.cancelled_at)}</Text>
           )}
+          {receipt.cancelled_by_name && <Text size="sm">Кто: {receipt.cancelled_by_name}</Text>}
           {receipt.cancel_reason && <Text size="sm">Причина: {receipt.cancel_reason}</Text>}
         </Alert>
       )}
@@ -238,7 +149,15 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
         </Group>
       </Paper>
 
-      <CancelReceiptModal receipt={receipt} opened={cancelOpened} onClose={cancelModal.close} />
+      <CancelDocumentModal
+        opened={cancelOpened}
+        onClose={cancelModal.close}
+        title={`Отменить приход №${receipt.number}?`}
+        description="Остатки товаров из прихода уменьшатся обратно. Сам приход останется в списке как отменённый."
+        confirmLabel="Отменить приход"
+        cancel={cancel}
+        successMessage={(saved) => `Приход №${saved.number} отменён`}
+      />
     </Stack>
   )
 }

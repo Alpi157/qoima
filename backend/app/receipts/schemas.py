@@ -66,6 +66,7 @@ class ReceiptOut(BaseModel):
     status: ReceiptStatus
     cancelled_at: datetime | None
     cancel_reason: str | None
+    cancelled_by_name: str | None
     created_by_name: str
     created_at: datetime
     lines: list[ReceiptLineOut]

@@ -25,6 +25,7 @@ import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { MoneyInput } from '../../components/MoneyInput'
 import { ProductPicker } from '../../components/ProductPicker'
+import { WIDE_SCREEN } from '../../lib/breakpoints'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { serverFormErrors } from '../../lib/formErrors'
 import { formatMoney } from '../../lib/money'
@@ -40,9 +41,6 @@ import {
 } from './receiptLines'
 
 export const INITIAL_STOCK_SUPPLIER = 'Начальные остатки'
-
-// Same breakpoint as `visibleFrom="sm"` elsewhere: narrower screens get cards instead of a table.
-const WIDE_SCREEN = '(min-width: 48em)'
 
 const HEADER_FIELD_MAP = { supplier: 'supplier', note: 'note', received_at: 'receivedAt' }
 

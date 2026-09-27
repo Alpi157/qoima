@@ -5,7 +5,7 @@ from datetime import date
 from psycopg.errors import UniqueViolation
 from sqlalchemy import BigInteger, ColumnElement, cast, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
 from app.catalog.models import Product
@@ -157,17 +157,22 @@ def post_sale(db: Session, data: SaleCreate, user_id: int) -> tuple[SaleOut, boo
     return get_sale(db, sale.id), True
 
 
+# The user who cancelled a document; a second alias of users next to the author.
+Canceller = aliased(User)
+
+
 def get_sale(db: Session, sale_id: int) -> SaleOut:
     row = db.execute(
-        select(Sale, User.full_name, Customer)
+        select(Sale, User.full_name, Canceller.full_name, Customer)
         .join(User, User.id == Sale.created_by)
+        .outerjoin(Canceller, Canceller.id == Sale.cancelled_by)
         .outerjoin(Customer, Customer.id == Sale.customer_id)
         .where(Sale.id == sale_id)
         .execution_options(populate_existing=True)
     ).one_or_none()
     if row is None:
         raise SaleNotFoundError()
-    sale, created_by_name, customer = row
+    sale, created_by_name, cancelled_by_name, customer = row
 
     lines = [
         SaleLineOut(
@@ -201,6 +206,7 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
         status=sale.status,
         cancelled_at=sale.cancelled_at,
         cancel_reason=sale.cancel_reason,
+        cancelled_by_name=cancelled_by_name,
         created_by_name=created_by_name,
         created_at=sale.created_at,
         lines=lines,

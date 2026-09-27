@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy import BigInteger, ColumnElement, cast, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
 from app.catalog.models import Product
@@ -68,16 +68,21 @@ def _total_cost(pairs: list[tuple[int, int | None]]) -> int | None:
     return sum(costs) if costs else None
 
 
+# The user who cancelled a document; a second alias of users next to the author.
+Canceller = aliased(User)
+
+
 def get_receipt(db: Session, receipt_id: int) -> ReceiptOut:
     row = db.execute(
-        select(Receipt, User.full_name)
+        select(Receipt, User.full_name, Canceller.full_name)
         .join(User, User.id == Receipt.created_by)
+        .outerjoin(Canceller, Canceller.id == Receipt.cancelled_by)
         .where(Receipt.id == receipt_id)
         .execution_options(populate_existing=True)
     ).one_or_none()
     if row is None:
         raise ReceiptNotFoundError()
-    receipt, created_by_name = row
+    receipt, created_by_name, cancelled_by_name = row
 
     lines = [
         ReceiptLineOut(
@@ -104,6 +109,7 @@ def get_receipt(db: Session, receipt_id: int) -> ReceiptOut:
         status=receipt.status,
         cancelled_at=receipt.cancelled_at,
         cancel_reason=receipt.cancel_reason,
+        cancelled_by_name=cancelled_by_name,
         created_by_name=created_by_name,
         created_at=receipt.created_at,
         lines=lines,

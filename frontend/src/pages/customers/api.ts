@@ -1,14 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, unwrap } from '../../api/client'
-import { type CustomerListParams, queryKeys, type SaleListParams } from '../../api/queryKeys'
+import { type CustomerListParams, queryKeys } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
 import { PAGE_SIZE, pageOffset } from '../../lib/pagination'
 
 export type Customer = components['schemas']['CustomerOut']
 export type CustomerCreate = components['schemas']['CustomerCreate']
 export type CustomerUpdate = components['schemas']['CustomerUpdate']
-export type SaleListItem = components['schemas']['SaleListItem']
 
 export function useCustomers(params: CustomerListParams) {
   return useQuery({
@@ -25,31 +24,30 @@ export function useCustomers(params: CustomerListParams) {
   })
 }
 
+const CUSTOMER_SEARCH_LIMIT = 10
+
+/** Search for a picker: by name or phone, first results only. */
+export function useCustomerSearch(q: string) {
+  const query = q.trim()
+  return useQuery({
+    queryKey: queryKeys.customerSearch(query),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/customers', {
+          params: { query: { q: query, limit: CUSTOMER_SEARCH_LIMIT } },
+        }),
+      ),
+    enabled: query !== '',
+    placeholderData: keepPreviousData,
+  })
+}
+
 export function useCustomer(id: number) {
   return useQuery({
     queryKey: queryKeys.customer(id),
     queryFn: () =>
       unwrap(api.GET('/api/customers/{customer_id}', { params: { path: { customer_id: id } } })),
     meta: { handlesNotFound: true },
-  })
-}
-
-export function useSales(params: SaleListParams) {
-  return useQuery({
-    queryKey: queryKeys.sales(params),
-    queryFn: () =>
-      unwrap(
-        api.GET('/api/sales', {
-          params: {
-            query: {
-              customer_id: params.customerId,
-              limit: PAGE_SIZE,
-              offset: pageOffset(params.page),
-            },
-          },
-        }),
-      ),
-    placeholderData: keepPreviousData,
   })
 }
 

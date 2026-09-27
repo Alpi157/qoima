@@ -10,14 +10,13 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { DatePickerInput } from '@mantine/dates'
-import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { EmptyState } from '../../components/EmptyState'
 import { ListPagination } from '../../components/ListPagination'
+import { PeriodInput } from '../../components/PeriodInput'
 import { QueryError } from '../../components/QueryError'
-import { formatDateTime } from '../../lib/dates'
+import { dateParam, formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { useListParams } from '../../lib/useListParams'
 import { isReceiptStatus, type ReceiptListItem, useReceipts } from './api'
@@ -28,15 +27,6 @@ const STATUS_OPTIONS = [
   { value: 'posted', label: 'Проведённые' },
   { value: 'cancelled', label: 'Отменённые' },
 ]
-
-type DateRange = [string | null, string | null]
-
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
-
-/** A date from the address, "2026-09-27"; anything else is ignored instead of failing the list. */
-function dateParam(value: string | null): string {
-  return value && DATE_PATTERN.test(value) ? value : ''
-}
 
 function costText(receipt: ReceiptListItem): string {
   return receipt.total_cost !== null ? formatMoney(receipt.total_cost) : '—'
@@ -136,19 +126,6 @@ export function ReceiptsPage() {
   const receipts = useReceipts({ from, to, status, page })
   const navigate = useNavigate()
 
-  // The first click of a range picks only its start; the address changes once both ends are set.
-  const [draftRange, setDraftRange] = useState<DateRange | null>(null)
-  const range: DateRange = draftRange ?? [from || null, to || null]
-
-  const changeRange = (value: DateRange) => {
-    if (value[0] && !value[1]) {
-      setDraftRange(value)
-      return
-    }
-    setDraftRange(null)
-    setParams({ from: value[0], to: value[1] })
-  }
-
   const isFiltered = Boolean(from || to || status)
 
   return (
@@ -161,17 +138,7 @@ export function ReceiptsPage() {
       </Group>
 
       <Group align="flex-end">
-        <DatePickerInput
-          type="range"
-          label="Период"
-          placeholder="Все даты"
-          valueFormat="DD.MM.YYYY"
-          allowSingleDateInRange
-          clearable
-          value={range}
-          onChange={changeRange}
-          miw={260}
-        />
+        <PeriodInput from={from} to={to} onChange={(from, to) => setParams({ from, to })} />
         <SegmentedControl
           aria-label="Статус"
           data={STATUS_OPTIONS}

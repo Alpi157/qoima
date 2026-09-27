@@ -1,5 +1,7 @@
+import type { Customer } from '../pages/customers/api'
 import type { Product } from '../pages/products/api'
 import type { Receipt } from '../pages/receipts/api'
+import type { Sale } from '../pages/sales/api'
 
 export function makeProduct(overrides: Partial<Product> = {}): Product {
   return {
@@ -34,11 +36,43 @@ export function makeReceipt(overrides: Partial<Receipt> = {}): Receipt {
     status: 'posted',
     cancelled_at: null,
     cancel_reason: null,
+    cancelled_by_name: null,
     created_by_name: 'Владелец',
     created_at: '2026-09-27T09:00:00Z',
     lines: [],
     total_qty: 0,
     total_cost: null,
+    ...overrides,
+  }
+}
+
+export function makeCustomer(overrides: Partial<Customer> = {}): Customer {
+  return {
+    id: 7,
+    name: 'Ержан',
+    phone: '+7 701 123 45 67',
+    note: null,
+    created_at: '2026-09-27T09:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makeSale(overrides: Partial<Sale> = {}): Sale {
+  return {
+    id: 9,
+    number: 21,
+    request_id: '00000000-0000-4000-8000-000000000000',
+    sold_at: '2026-09-27T09:00:00Z',
+    customer: null,
+    note: null,
+    status: 'posted',
+    cancelled_at: null,
+    cancel_reason: null,
+    cancelled_by_name: null,
+    created_by_name: 'Владелец',
+    created_at: '2026-09-27T09:00:00Z',
+    lines: [],
+    total: 0,
     ...overrides,
   }
 }

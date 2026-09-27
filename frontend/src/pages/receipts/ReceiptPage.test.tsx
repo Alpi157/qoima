@@ -84,6 +84,7 @@ describe('ReceiptPage', () => {
           status: 'cancelled',
           cancelled_at: '2026-09-28T04:00:00Z',
           cancel_reason: 'Пересорт',
+          cancelled_by_name: 'Анна',
         }),
       ),
     )
@@ -91,6 +92,7 @@ describe('ReceiptPage', () => {
 
     expect(await screen.findByText('Приход отменён')).toBeTruthy()
     expect(screen.getByText('Когда: 28.09.2026 09:00')).toBeTruthy()
+    expect(screen.getByText('Кто: Анна')).toBeTruthy()
     expect(screen.getByText('Причина: Пересорт')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Отменить приход' })).toBeNull()
   })

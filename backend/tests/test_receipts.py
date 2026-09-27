@@ -29,6 +29,15 @@ def _post(client: TestClient, lines: list[dict[str, object]], **fields: object) 
     return response.json()
 
 
+def _login_as(client: TestClient, db: Session, full_name: str) -> None:
+    """Replaces the client's session with a new user named full_name."""
+    user = create_user(db, full_name=full_name, password="other-password")
+    response = client.post(
+        "/api/auth/login", json={"username": user.username, "password": "other-password"}
+    )
+    assert response.status_code == 200
+
+
 @pytest.fixture
 def products(db_session: Session) -> tuple[Product, Product]:
     return (
@@ -336,6 +345,23 @@ def test_cancel_receipt_returns_stock(
         )
     ).all()
     assert cancel_movements == [(-4, receipt["id"], "Ошибка ввода")]
+
+
+def test_cancelled_by_name_is_the_user_who_cancelled(
+    auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
+) -> None:
+    oc, _ = products
+    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 4}])
+    assert receipt["cancelled_by_name"] is None
+
+    _login_as(auth_client, db_session, "Второй")
+    response = auth_client.post(f"/api/receipts/{receipt['id']}/cancel", json={"reason": "Ошибка"})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["created_by_name"], body["cancelled_by_name"]) == ("Тест", "Второй")
+    fetched = auth_client.get(f"/api/receipts/{receipt['id']}").json()
+    assert fetched["cancelled_by_name"] == "Второй"
 
 
 def test_cancel_twice_rejected(

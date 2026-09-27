@@ -24,11 +24,12 @@ function toBody(values: CustomerFormValues): CustomerCreate {
 
 interface CustomerFormProps {
   customer?: Customer
+  initialName?: string
   onSaved: (customer: Customer) => void
   onCancel: () => void
 }
 
-function CustomerForm({ customer, onSaved, onCancel }: CustomerFormProps) {
+function CustomerForm({ customer, initialName = '', onSaved, onCancel }: CustomerFormProps) {
   const create = useCreateCustomer()
   const update = useUpdateCustomer(customer?.id ?? 0)
   const mutation = customer ? update : create
@@ -36,7 +37,7 @@ function CustomerForm({ customer, onSaved, onCancel }: CustomerFormProps) {
 
   const form = useForm<CustomerFormValues>({
     initialValues: {
-      name: customer?.name ?? '',
+      name: customer?.name ?? initialName,
       phone: customer?.phone ?? '',
       note: customer?.note ?? '',
     },
@@ -109,10 +110,18 @@ export interface CustomerFormModalProps {
   onClose: () => void
   /** The customer to edit; without it the form creates a new one. */
   customer?: Customer
+  /** Name to start a new customer with, for example the text typed in a search. */
+  initialName?: string
   onSaved?: (customer: Customer) => void
 }
 
-export function CustomerFormModal({ opened, onClose, customer, onSaved }: CustomerFormModalProps) {
+export function CustomerFormModal({
+  opened,
+  onClose,
+  customer,
+  initialName,
+  onSaved,
+}: CustomerFormModalProps) {
   return (
     <Modal
       opened={opened}
@@ -123,6 +132,7 @@ export function CustomerFormModal({ opened, onClose, customer, onSaved }: Custom
       {opened && (
         <CustomerForm
           customer={customer}
+          initialName={initialName}
           onCancel={onClose}
           onSaved={(saved) => {
             onClose()

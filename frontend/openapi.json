@@ -2135,6 +2135,17 @@
             ],
             "title": "Cancel Reason"
           },
+          "cancelled_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By Name"
+          },
           "created_by_name": {
             "type": "string",
             "title": "Created By Name"
@@ -2177,6 +2188,7 @@
           "status",
           "cancelled_at",
           "cancel_reason",
+          "cancelled_by_name",
           "created_by_name",
           "created_at",
           "lines",
@@ -2525,6 +2537,17 @@
             ],
             "title": "Cancel Reason"
           },
+          "cancelled_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By Name"
+          },
           "created_by_name": {
             "type": "string",
             "title": "Created By Name"
@@ -2557,6 +2580,7 @@
           "status",
           "cancelled_at",
           "cancel_reason",
+          "cancelled_by_name",
           "created_by_name",
           "created_at",
           "lines",

@@ -1,15 +1,4 @@
-import {
-  Anchor,
-  Badge,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Anchor, Button, Card, Group, Loader, Stack, Table, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { Link, useParams } from 'react-router-dom'
 
@@ -18,20 +7,13 @@ import { ListPagination } from '../../components/ListPagination'
 import { NotFoundState } from '../../components/NotFoundState'
 import { QueryError } from '../../components/QueryError'
 import { formatDateTime } from '../../lib/dates'
-import { saleStatusLabel } from '../../lib/labels'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { useListParams } from '../../lib/useListParams'
-import { type Customer, type SaleListItem, useCustomer, useSales } from './api'
+import { type SaleListItem, useSales } from '../sales/api'
+import { SaleStatusBadge } from '../sales/SaleStatusBadge'
+import { type Customer, useCustomer } from './api'
 import { CustomerFormModal } from './CustomerFormModal'
-
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <Badge color={status === 'cancelled' ? 'gray' : 'green'} variant="light">
-      {saleStatusLabel(status)}
-    </Badge>
-  )
-}
 
 function SaleLink({ sale }: { sale: SaleListItem }) {
   return (
@@ -64,7 +46,7 @@ function SaleTable({ items }: { items: SaleListItem[] }) {
                 {formatMoney(sale.total)}
               </Table.Td>
               <Table.Td>
-                <StatusBadge status={sale.status} />
+                <SaleStatusBadge status={sale.status} />
               </Table.Td>
             </Table.Tr>
           ))}
@@ -81,7 +63,7 @@ function SaleCards({ items }: { items: SaleListItem[] }) {
         <Card key={sale.id} withBorder padding="sm">
           <Group justify="space-between">
             <SaleLink sale={sale} />
-            <StatusBadge status={sale.status} />
+            <SaleStatusBadge status={sale.status} />
           </Group>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">

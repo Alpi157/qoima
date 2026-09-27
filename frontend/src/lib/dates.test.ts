@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { formatDate, formatDateTime, localInputToIso, nowLocalInput, todayLocal } from './dates'
+import {
+  dateParam,
+  formatDate,
+  formatDateTime,
+  localInputToIso,
+  nowLocalInput,
+  quickRange,
+  todayLocal,
+} from './dates'
 
 // Asia/Almaty is UTC+5 (since March 2024, same as Astana).
 
@@ -80,5 +88,40 @@ describe('localInputToIso', () => {
   it('rejects garbage', () => {
     expect(localInputToIso('')).toBeNull()
     expect(localInputToIso('27.09.2026')).toBeNull()
+  })
+})
+
+describe('dateParam', () => {
+  it('keeps a well-formed date and drops anything else', () => {
+    expect(dateParam('2026-09-27')).toBe('2026-09-27')
+    expect(dateParam('27.09.2026')).toBe('')
+    expect(dateParam(null)).toBe('')
+  })
+})
+
+describe('quickRange', () => {
+  // Sunday 27.09.2026 00:30 in Almaty, while UTC is still Saturday.
+  const sundayNight = new Date('2026-09-26T19:30:00Z')
+
+  it('today is the Almaty date, not the UTC one', () => {
+    expect(quickRange('today', sundayNight)).toEqual(['2026-09-27', '2026-09-27'])
+  })
+
+  it('week starts on Monday', () => {
+    expect(quickRange('week', sundayNight)).toEqual(['2026-09-21', '2026-09-27'])
+    // Monday itself: a one-day week.
+    expect(quickRange('week', new Date('2026-09-28T04:00:00Z'))).toEqual([
+      '2026-09-28',
+      '2026-09-28',
+    ])
+  })
+
+  it('month starts on the 1st, across the UTC month boundary', () => {
+    expect(quickRange('month', sundayNight)).toEqual(['2026-09-01', '2026-09-27'])
+    // 1 October 01:00 in Almaty is still 30 September in UTC.
+    expect(quickRange('month', new Date('2026-09-30T20:00:00Z'))).toEqual([
+      '2026-10-01',
+      '2026-10-01',
+    ])
   })
 })

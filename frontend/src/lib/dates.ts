@@ -73,3 +73,39 @@ export function localInputToIso(value: string): string | null {
   const offset = shown - (asUtc - second * 1000)
   return new Date(asUtc - offset).toISOString()
 }
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+/** A date from the address, "2026-09-27"; anything else is ignored instead of failing a list. */
+export function dateParam(value: string | null): string {
+  return value && DATE_PATTERN.test(value) ? value : ''
+}
+
+export type QuickRange = 'today' | 'week' | 'month'
+
+/** "2026-09-27" -> the same calendar day as a UTC Date, for day arithmetic only. */
+function calendarDay(date: string): Date {
+  const [year, month, day] = date.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day))
+}
+
+function dateString(day: Date): string {
+  return day.toISOString().slice(0, 10)
+}
+
+/**
+ * Period ending today in Asia/Almaty, as [from, to] in "2026-09-27" format:
+ * today, the current week from Monday, or the current month from the 1st.
+ */
+export function quickRange(range: QuickRange, now: Date = new Date()): [string, string] {
+  const today = todayLocal(now)
+  const day = calendarDay(today)
+  if (range === 'week') {
+    // getUTCDay: Sunday is 0; step back to Monday.
+    const sinceMonday = (day.getUTCDay() + 6) % 7
+    day.setUTCDate(day.getUTCDate() - sinceMonday)
+  } else if (range === 'month') {
+    day.setUTCDate(1)
+  }
+  return [dateString(day), today]
+}

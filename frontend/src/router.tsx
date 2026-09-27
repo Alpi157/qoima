@@ -13,6 +13,9 @@ import { ProductsPage } from './pages/products/ProductsPage'
 import { NewReceiptPage } from './pages/receipts/NewReceiptPage'
 import { ReceiptPage } from './pages/receipts/ReceiptPage'
 import { ReceiptsPage } from './pages/receipts/ReceiptsPage'
+import { NewSalePage } from './pages/sales/NewSalePage'
+import { SalePage } from './pages/sales/SalePage'
+import { SalesPage } from './pages/sales/SalesPage'
 
 export const router = createBrowserRouter([
   { path: LOGIN_PATH, element: <LoginPage /> },
@@ -23,7 +26,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { index: true, element: <Navigate to={DEFAULT_PATH} replace /> },
-          { path: 'sale', element: <PlaceholderPage title="Продажа" /> },
+          { path: 'sale', element: <NewSalePage /> },
           { path: 'products', element: <ProductsPage /> },
           { path: 'products/:id', element: <ProductPage /> },
           { path: 'customers', element: <CustomersPage /> },
@@ -31,7 +34,8 @@ export const router = createBrowserRouter([
           { path: 'receipts', element: <ReceiptsPage /> },
           { path: 'receipts/new', element: <NewReceiptPage /> },
           { path: 'receipts/:id', element: <ReceiptPage /> },
-          { path: 'sales', element: <PlaceholderPage title="Продажи" /> },
+          { path: 'sales', element: <SalesPage /> },
+          { path: 'sales/:id', element: <SalePage /> },
           { path: 'settings', element: <PlaceholderPage title="Настройки" /> },
           { path: '*', element: <NotFoundPage /> },
         ],
