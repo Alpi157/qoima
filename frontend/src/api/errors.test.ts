@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ApiError,
   apiErrorFromResponse,
+  hasErrorCode,
   isClientError,
   networkError,
   SERVER_UNAVAILABLE,
@@ -25,6 +26,7 @@ describe('apiErrorFromResponse', () => {
           { field: 'note', message: 'Максимальная длина: 1000' },
           { field: 'note', message: 'Второе сообщение' },
         ],
+        code: 'validation_error',
       }),
     )
 
@@ -32,18 +34,32 @@ describe('apiErrorFromResponse', () => {
     expect(error.status).toBe(422)
     expect(error.detail).toBe('Проверьте введённые данные')
     expect(error.message).toBe('Проверьте введённые данные')
+    expect(error.code).toBe('validation_error')
     expect(error.fieldErrors).toEqual({
       'lines.0.qty': 'Должно быть не меньше 1',
       note: 'Максимальная длина: 1000',
     })
   })
 
-  it('reads detail from a business error without errors', async () => {
-    const error = await apiErrorFromResponse(jsonResponse(409, { detail: 'Товар OC-90 в архиве' }))
+  it('reads detail and code from a business error without errors', async () => {
+    const error = await apiErrorFromResponse(
+      jsonResponse(409, { detail: 'Товар OC-90 в архиве', code: 'product_archived' }),
+    )
 
     expect(error.status).toBe(409)
     expect(error.detail).toBe('Товар OC-90 в архиве')
+    expect(error.code).toBe('product_archived')
     expect(error.fieldErrors).toEqual({})
+    expect(hasErrorCode(error, 'product_archived')).toBe(true)
+    expect(hasErrorCode(error, 'insufficient_stock')).toBe(false)
+  })
+
+  it('has no code when the body has none or it is not a string', async () => {
+    expect((await apiErrorFromResponse(jsonResponse(404, { detail: 'Not Found' }))).code).toBeNull()
+    expect(
+      (await apiErrorFromResponse(jsonResponse(409, { detail: 'x', code: 1 }))).code,
+    ).toBeNull()
+    expect(networkError().code).toBeNull()
   })
 
   it('reads 429 from login', async () => {

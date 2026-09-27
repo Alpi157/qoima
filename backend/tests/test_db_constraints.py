@@ -144,3 +144,12 @@ def test_document_counters_constraints(
     with pytest.raises(IntegrityError, match=constraint):
         with db_session.begin_nested():
             db_session.execute(text(statement))
+
+
+def test_business_settings_has_single_row(db_session: Session) -> None:
+    count = db_session.execute(text("SELECT count(*) FROM business_settings")).scalar_one()
+    assert count == 1
+
+    with pytest.raises(IntegrityError, match="ck_business_settings_single_row"):
+        with db_session.begin_nested():
+            db_session.execute(text("INSERT INTO business_settings (id) VALUES (2)"))

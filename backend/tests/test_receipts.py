@@ -202,7 +202,10 @@ def test_duplicate_product_rejected(
         json={"lines": [{"product_id": oc.id, "qty": 1}, {"product_id": oc.id, "qty": 2}]},
     )
     assert response.status_code == 422
-    assert response.json() == {"detail": "Товар OC-90 указан в приходе дважды"}
+    assert response.json() == {
+        "detail": "Товар OC-90 указан в приходе дважды",
+        "code": "invalid_document_lines",
+    }
     assert _stock(db_session, oc.id) == 0
 
 
@@ -215,7 +218,10 @@ def test_missing_product_rejected(
         json={"lines": [{"product_id": oc.id, "qty": 1}, {"product_id": 999999999, "qty": 1}]},
     )
     assert response.status_code == 422
-    assert response.json() == {"detail": "Товар не найден: 999999999"}
+    assert response.json() == {
+        "detail": "Товар не найден: 999999999",
+        "code": "invalid_document_lines",
+    }
 
 
 def test_archived_product_rejected(auth_client: TestClient, db_session: Session) -> None:
@@ -224,7 +230,7 @@ def test_archived_product_rejected(auth_client: TestClient, db_session: Session)
         "/api/receipts", json={"lines": [{"product_id": product.id, "qty": 1}]}
     )
     assert response.status_code == 409
-    assert response.json() == {"detail": "Товар ARH-1 в архиве"}
+    assert response.json() == {"detail": "Товар ARH-1 в архиве", "code": "product_archived"}
     assert _stock(db_session, product.id) == 0
 
 
@@ -234,7 +240,7 @@ def test_missing_receipt(auth_client: TestClient) -> None:
         auth_client.post("/api/receipts/999999999/cancel", json={"reason": "Ошибка"}),
     ):
         assert response.status_code == 404
-        assert response.json() == {"detail": "Приход не найден"}
+        assert response.json() == {"detail": "Приход не найден", "code": "receipt_not_found"}
 
 
 def test_list_receipts(auth_client: TestClient, products: tuple[Product, Product]) -> None:
@@ -375,7 +381,7 @@ def test_cancel_twice_rejected(
     response = auth_client.post(url, json={"reason": "Ещё раз"})
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Приход уже отменён"}
+    assert response.json() == {"detail": "Приход уже отменён", "code": "receipt_already_cancelled"}
     assert _stock(db_session, oc.id) == 0
     assert _movement_count(db_session, oc.id) == 2
 
@@ -395,7 +401,8 @@ def test_cancel_after_sale_rejected(
     assert response.status_code == 409
     assert response.json() == {
         "detail": "Нельзя отменить приход: товара на остатке меньше, чем было в приходе. "
-        "Недостаточно товара. OC-90: на остатке 2, требуется 5"
+        "Недостаточно товара. OC-90: на остатке 2, требуется 5",
+        "code": "receipt_cancel_blocked",
     }
     assert _stock(db_session, oc.id) == 2
     assert _stock(db_session, bosch.id) == 2

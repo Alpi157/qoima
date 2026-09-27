@@ -282,6 +282,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings_api_settings_get"];
+        /** Update Settings */
+        put: operations["update_settings_api_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -300,6 +318,40 @@ export interface components {
             movement: components["schemas"]["MovementOut"];
             /** Stock */
             stock: number;
+        };
+        /** BusinessSettingsOut */
+        BusinessSettingsOut: {
+            /** Seller Name */
+            seller_name: string;
+            /** Seller Iin Bin */
+            seller_iin_bin: string;
+            /** Responsible Person */
+            responsible_person: string;
+            /** Released By Name */
+            released_by_name: string;
+            /** Chief Accountant */
+            chief_accountant: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * BusinessSettingsUpdate
+         * @description PUT body: every field is required, an empty string clears it.
+         */
+        BusinessSettingsUpdate: {
+            /** Seller Name */
+            seller_name: string;
+            /** Seller Iin Bin */
+            seller_iin_bin: string;
+            /** Responsible Person */
+            responsible_person: string;
+            /** Released By Name */
+            released_by_name: string;
+            /** Chief Accountant */
+            chief_accountant: string;
         };
         /** CustomerCreate */
         CustomerCreate: {
@@ -342,10 +394,29 @@ export interface components {
             /** Note */
             note?: string | null;
         };
-        /** HTTPValidationError */
-        HTTPValidationError: {
+        /**
+         * ErrorCode
+         * @description Machine-readable error code, sent as `code` in every 4xx error response.
+         * @enum {string}
+         */
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "invalid_document_lines" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict";
+        /**
+         * ErrorOut
+         * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
+         */
+        ErrorOut: {
             /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
+            detail: string;
+            code: components["schemas"]["ErrorCode"];
+            /** Errors */
+            errors?: components["schemas"]["FieldErrorOut"][] | null;
+        };
+        /** FieldErrorOut */
+        FieldErrorOut: {
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
         };
         /** LoginIn */
         LoginIn: {
@@ -715,19 +786,6 @@ export interface components {
             /** Role */
             role: string;
         };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
     };
     responses: never;
     parameters: never;
@@ -755,6 +813,15 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
         };
     };
     login_api_auth_login_post: {
@@ -779,13 +846,13 @@ export interface operations {
                     "application/json": components["schemas"]["UserOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -806,6 +873,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
         };
     };
     me_api_auth_me_get: {
@@ -824,6 +900,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -851,13 +936,13 @@ export interface operations {
                     "application/json": components["schemas"]["ProductPage"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -884,13 +969,13 @@ export interface operations {
                     "application/json": components["schemas"]["ProductOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -915,13 +1000,13 @@ export interface operations {
                     "application/json": components["schemas"]["ProductOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -950,13 +1035,13 @@ export interface operations {
                     "application/json": components["schemas"]["ProductOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -983,13 +1068,13 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerPage"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1016,13 +1101,13 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1047,13 +1132,13 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1082,13 +1167,13 @@ export interface operations {
                     "application/json": components["schemas"]["CustomerOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1117,13 +1202,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReceiptPage"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1150,13 +1235,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReceiptOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1181,13 +1266,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReceiptOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1216,13 +1301,13 @@ export interface operations {
                     "application/json": components["schemas"]["ReceiptOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1252,13 +1337,13 @@ export interface operations {
                     "application/json": components["schemas"]["SalePage"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1294,13 +1379,13 @@ export interface operations {
                     "application/json": components["schemas"]["SaleOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1325,13 +1410,13 @@ export interface operations {
                     "application/json": components["schemas"]["SaleOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1360,13 +1445,13 @@ export interface operations {
                     "application/json": components["schemas"]["SaleOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1393,13 +1478,13 @@ export interface operations {
                     "application/json": components["schemas"]["AdjustmentOut"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };
@@ -1427,13 +1512,75 @@ export interface operations {
                     "application/json": components["schemas"]["MovementPage"];
                 };
             };
-            /** @description Validation Error */
-            422: {
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_settings_api_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessSettingsOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    update_settings_api_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusinessSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessSettingsOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
                 };
             };
         };

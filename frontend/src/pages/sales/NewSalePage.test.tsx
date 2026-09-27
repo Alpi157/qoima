@@ -25,7 +25,7 @@ function renderPage() {
     [
       { path: '/sale', element: <NewSalePage /> },
       { path: '/sales', element: <p>История продаж</p> },
-      { path: '/sales/:id', element: <p>Карточка продажи</p> },
+      { path: '/sales/:id/print', element: <p>Накладная</p> },
     ],
     { route: '/sale' },
   )
@@ -59,7 +59,15 @@ function priceInput(article: string): HTMLInputElement {
 }
 
 function postButton(): HTMLButtonElement {
-  return screen.getByRole('button', { name: 'Провести продажу' }) as HTMLButtonElement
+  return screen.getByRole('button', { name: 'Провести и напечатать' }) as HTMLButtonElement
+}
+
+function expectPrintPage(
+  router: { state: { location: { pathname: string; search: string } } },
+  id: number,
+) {
+  const { pathname, search } = router.state.location
+  expect(`${pathname}${search}`).toBe(`/sales/${id}/print?auto=1`)
 }
 
 function sentBodies(post: { mock: { calls: unknown[][] } }): SaleCreate[] {
@@ -92,7 +100,7 @@ describe('NewSalePage', () => {
     expect(screen.getByTestId('sale-total').textContent).toBe(formatMoney(1950000))
     await user.click(postButton())
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/sales/9'))
+    await waitFor(() => expectPrintPage(router, 9))
     const [body] = sentBodies(post)
     expect(post.mock.calls[0][0]).toBe('/api/sales')
     expect(body.lines).toStrictEqual([
@@ -150,7 +158,7 @@ describe('NewSalePage', () => {
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(postButton().disabled).toBe(false))
     await user.click(postButton())
-    await waitFor(() => expect(router.state.location.pathname).toBe('/sales/9'))
+    await waitFor(() => expectPrintPage(router, 9))
 
     await act(() => router.navigate('/sale'))
     await pick(user, 'OC-90')
@@ -179,7 +187,10 @@ describe('NewSalePage', () => {
   it('explains a request_id conflict and links to the sales history', async () => {
     const user = userEvent.setup()
     mockSearch()
-    vi.spyOn(api, 'POST').mockRejectedValue(new ApiError(409, SALE_REQUEST_CONFLICT))
+    // Recognised by the code, whatever the text says.
+    vi.spyOn(api, 'POST').mockRejectedValue(
+      new ApiError(409, 'Любой текст', {}, SALE_REQUEST_CONFLICT),
+    )
     renderPage()
 
     await pick(user, 'OC-90')
@@ -190,6 +201,19 @@ describe('NewSalePage', () => {
     expect(within(alert).getByRole('link', { name: 'историю продаж' }).getAttribute('href')).toBe(
       '/sales',
     )
+  })
+
+  it('a 409 with the conflict text but another code is shown as is', async () => {
+    const user = userEvent.setup()
+    mockSearch()
+    const message = 'Этот запрос уже использован для другой продажи'
+    vi.spyOn(api, 'POST').mockRejectedValue(new ApiError(409, message, {}, 'insufficient_stock'))
+    renderPage()
+
+    await pick(user, 'OC-90')
+    await user.click(postButton())
+
+    expect((await screen.findByRole('alert')).textContent).toBe(message)
   })
 
   it('shows line errors from the server under the right field', async () => {
@@ -223,7 +247,7 @@ describe('NewSalePage', () => {
     expect(document.activeElement).toBe(qtyInput('OC-90'))
     await user.keyboard('{Control>}{Enter}{/Control}')
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/sales/9'))
+    await waitFor(() => expectPrintPage(router, 9))
     expect(post).toHaveBeenCalledTimes(1)
   })
 

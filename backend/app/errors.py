@@ -1,15 +1,45 @@
 from collections.abc import Mapping
+from enum import StrEnum
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+
+class ErrorCode(StrEnum):
+    """Machine-readable error code, sent as `code` in every 4xx error response."""
+
+    APP_ERROR = "app_error"
+    VALIDATION_ERROR = "validation_error"
+    INVALID_ARTICLE = "invalid_article"
+    INSUFFICIENT_STOCK = "insufficient_stock"
+    INVALID_CREDENTIALS = "invalid_credentials"
+    NOT_AUTHENTICATED = "not_authenticated"
+    TOO_MANY_LOGIN_ATTEMPTS = "too_many_login_attempts"
+    USERNAME_TAKEN = "username_taken"
+    USER_NOT_FOUND = "user_not_found"
+    INVALID_USER_DATA = "invalid_user_data"
+    PRODUCT_NOT_FOUND = "product_not_found"
+    DUPLICATE_ARTICLE = "duplicate_article"
+    CUSTOMER_NOT_FOUND = "customer_not_found"
+    PRODUCT_ARCHIVED = "product_archived"
+    INVALID_DOCUMENT_LINES = "invalid_document_lines"
+    RECEIPT_NOT_FOUND = "receipt_not_found"
+    RECEIPT_ALREADY_CANCELLED = "receipt_already_cancelled"
+    RECEIPT_CANCEL_BLOCKED = "receipt_cancel_blocked"
+    DOCUMENT_CUSTOMER_NOT_FOUND = "document_customer_not_found"
+    SALE_NOT_FOUND = "sale_not_found"
+    SALE_ALREADY_CANCELLED = "sale_already_cancelled"
+    SALE_REQUEST_CONFLICT = "sale_request_conflict"
 
 
 class AppError(Exception):
     """Base class for business-logic errors. Maps to an HTTP 4xx response with a Russian message."""
 
     status_code: int = 400
+    code: ErrorCode = ErrorCode.APP_ERROR
     default_message: str = "Ошибка запроса"
 
     def __init__(self, message: str | None = None) -> None:
@@ -18,98 +48,132 @@ class AppError(Exception):
 
 
 class InvalidArticleError(AppError):
+    code = ErrorCode.INVALID_ARTICLE
     status_code = 422
 
 
 class InsufficientStockError(AppError):
+    code = ErrorCode.INSUFFICIENT_STOCK
     status_code = 409
 
 
 class InvalidCredentialsError(AppError):
+    code = ErrorCode.INVALID_CREDENTIALS
     status_code = 401
     default_message = "Неверный логин или пароль"
 
 
 class NotAuthenticatedError(AppError):
+    code = ErrorCode.NOT_AUTHENTICATED
     status_code = 401
     default_message = "Требуется вход"
 
 
 class TooManyLoginAttemptsError(AppError):
+    code = ErrorCode.TOO_MANY_LOGIN_ATTEMPTS
     status_code = 429
     default_message = "Слишком много попыток входа. Попробуйте через минуту"
 
 
 class UsernameTakenError(AppError):
+    code = ErrorCode.USERNAME_TAKEN
     status_code = 409
     default_message = "Пользователь с таким логином уже существует"
 
 
 class UserNotFoundError(AppError):
+    code = ErrorCode.USER_NOT_FOUND
     status_code = 404
     default_message = "Пользователь не найден"
 
 
 class InvalidUserDataError(AppError):
+    code = ErrorCode.INVALID_USER_DATA
     status_code = 422
 
 
 class ProductNotFoundError(AppError):
+    code = ErrorCode.PRODUCT_NOT_FOUND
     status_code = 404
     default_message = "Товар не найден"
 
 
 class DuplicateArticleError(AppError):
+    code = ErrorCode.DUPLICATE_ARTICLE
     status_code = 409
 
 
 class CustomerNotFoundError(AppError):
+    code = ErrorCode.CUSTOMER_NOT_FOUND
     status_code = 404
     default_message = "Покупатель не найден"
 
 
 class ProductArchivedError(AppError):
+    code = ErrorCode.PRODUCT_ARCHIVED
     status_code = 409
 
 
 class InvalidDocumentLinesError(AppError):
+    code = ErrorCode.INVALID_DOCUMENT_LINES
     status_code = 422
 
 
 class ReceiptNotFoundError(AppError):
+    code = ErrorCode.RECEIPT_NOT_FOUND
     status_code = 404
     default_message = "Приход не найден"
 
 
 class ReceiptAlreadyCancelledError(AppError):
+    code = ErrorCode.RECEIPT_ALREADY_CANCELLED
     status_code = 409
     default_message = "Приход уже отменён"
 
 
 class ReceiptCancelError(AppError):
+    code = ErrorCode.RECEIPT_CANCEL_BLOCKED
     status_code = 409
 
 
 class DocumentCustomerNotFoundError(AppError):
     """Customer referenced from a document body: the request is invalid, hence 422, not 404."""
 
+    code = ErrorCode.DOCUMENT_CUSTOMER_NOT_FOUND
     status_code = 422
     default_message = "Покупатель не найден"
 
 
 class SaleNotFoundError(AppError):
+    code = ErrorCode.SALE_NOT_FOUND
     status_code = 404
     default_message = "Продажа не найдена"
 
 
 class SaleAlreadyCancelledError(AppError):
+    code = ErrorCode.SALE_ALREADY_CANCELLED
     status_code = 409
     default_message = "Продажа уже отменена"
 
 
 class SaleRequestConflictError(AppError):
+    code = ErrorCode.SALE_REQUEST_CONFLICT
     status_code = 409
     default_message = "Этот запрос уже использован для другой продажи"
+
+
+class FieldErrorOut(BaseModel):
+    field: str
+    message: str
+
+
+class ErrorOut(BaseModel):
+    """Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md)."""
+
+    detail: str
+    code: ErrorCode
+    # Only in validation errors.
+    errors: list[FieldErrorOut] | None = None
 
 
 VALIDATION_DETAIL = "Проверьте введённые данные"
@@ -157,7 +221,9 @@ def validation_field(loc: tuple[int | str, ...]) -> str:
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+        return JSONResponse(
+            status_code=exc.status_code, content={"detail": exc.message, "code": exc.code}
+        )
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(
@@ -168,5 +234,10 @@ def register_exception_handlers(app: FastAPI) -> None:
             for e in exc.errors()
         ]
         return JSONResponse(
-            status_code=422, content={"detail": VALIDATION_DETAIL, "errors": errors}
+            status_code=422,
+            content={
+                "detail": VALIDATION_DETAIL,
+                "code": ErrorCode.VALIDATION_ERROR,
+                "errors": errors,
+            },
         )

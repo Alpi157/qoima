@@ -28,7 +28,7 @@ def _create(client: TestClient, **fields: object):
 def test_products_require_login(client: TestClient, method: str, path: str) -> None:
     response = client.request(method, path, json={})
     assert response.status_code == 401
-    assert response.json() == {"detail": "Требуется вход"}
+    assert response.json() == {"detail": "Требуется вход", "code": "not_authenticated"}
 
 
 def test_create_product(auth_client: TestClient) -> None:
@@ -65,13 +65,13 @@ def test_get_product(auth_client: TestClient) -> None:
 def test_get_missing_product(auth_client: TestClient) -> None:
     response = auth_client.get("/api/products/999999999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Товар не найден"}
+    assert response.json() == {"detail": "Товар не найден", "code": "product_not_found"}
 
 
 def test_update_missing_product(auth_client: TestClient) -> None:
     response = auth_client.patch("/api/products/999999999", json={"name": "X"})
     assert response.status_code == 404
-    assert response.json() == {"detail": "Товар не найден"}
+    assert response.json() == {"detail": "Товар не найден", "code": "product_not_found"}
 
 
 def test_update_product(auth_client: TestClient) -> None:
@@ -151,7 +151,7 @@ def test_create_product_validation(auth_client: TestClient, fields: dict[str, ob
 def test_create_product_article_without_letters_or_digits(auth_client: TestClient) -> None:
     response = _create(auth_client, article="--/--")
     assert response.status_code == 422
-    assert response.json() == {"detail": "Артикул не может быть пустым"}
+    assert response.json() == {"detail": "Артикул не может быть пустым", "code": "invalid_article"}
 
 
 def test_create_product_accepts_price_bounds(auth_client: TestClient) -> None:
@@ -184,7 +184,10 @@ def test_duplicate_article_after_normalization(auth_client: TestClient) -> None:
     response = _create(auth_client, article="ос-90", name="Другой фильтр")
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Товар с артикулом «OC90» уже есть: Фильтр масляный"}
+    assert response.json() == {
+        "detail": "Товар с артикулом «OC90» уже есть: Фильтр масляный",
+        "code": "duplicate_article",
+    }
 
 
 def test_change_article_to_taken_one(auth_client: TestClient) -> None:
@@ -194,7 +197,10 @@ def test_change_article_to_taken_one(auth_client: TestClient) -> None:
     response = auth_client.patch(f"/api/products/{other_id}", json={"article": "oc 90"})
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Товар с артикулом «OC90» уже есть: Фильтр масляный"}
+    assert response.json() == {
+        "detail": "Товар с артикулом «OC90» уже есть: Фильтр масляный",
+        "code": "duplicate_article",
+    }
     assert auth_client.get(f"/api/products/{other_id}").json()["article"] == "W712"
 
 

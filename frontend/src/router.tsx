@@ -7,21 +7,24 @@ import { CustomerPage } from './pages/customers/CustomerPage'
 import { CustomersPage } from './pages/customers/CustomersPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ProductPage } from './pages/products/ProductPage'
 import { ProductsPage } from './pages/products/ProductsPage'
 import { NewReceiptPage } from './pages/receipts/NewReceiptPage'
 import { ReceiptPage } from './pages/receipts/ReceiptPage'
 import { ReceiptsPage } from './pages/receipts/ReceiptsPage'
+import { InvoicePrintPage } from './pages/sales/InvoicePrintPage'
 import { NewSalePage } from './pages/sales/NewSalePage'
 import { SalePage } from './pages/sales/SalePage'
 import { SalesPage } from './pages/sales/SalesPage'
+import { SettingsPage } from './pages/settings/SettingsPage'
 
 export const router = createBrowserRouter([
   { path: LOGIN_PATH, element: <LoginPage /> },
   {
     element: <ProtectedRoute />,
     children: [
+      // The invoice is printed as is: no menu or header around it.
+      { path: 'sales/:id/print', element: <InvoicePrintPage /> },
       {
         element: <AppLayout />,
         children: [
@@ -36,7 +39,7 @@ export const router = createBrowserRouter([
           { path: 'receipts/:id', element: <ReceiptPage /> },
           { path: 'sales', element: <SalesPage /> },
           { path: 'sales/:id', element: <SalePage /> },
-          { path: 'settings', element: <PlaceholderPage title="Настройки" /> },
+          { path: 'settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

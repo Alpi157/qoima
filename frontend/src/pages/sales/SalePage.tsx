@@ -107,11 +107,16 @@ function SaleDetails({ sale }: { sale: Sale }) {
           </Title>
           <SaleStatusBadge status={sale.status} />
         </Group>
-        {sale.status === 'posted' && (
-          <Button color="red" variant="light" onClick={cancelModal.open}>
-            Отменить продажу
+        <Group gap="sm">
+          <Button component={Link} to={`/sales/${sale.id}/print`} variant="default">
+            Печать накладной
           </Button>
-        )}
+          {sale.status === 'posted' && (
+            <Button color="red" variant="light" onClick={cancelModal.open}>
+              Отменить продажу
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {sale.status === 'cancelled' && (

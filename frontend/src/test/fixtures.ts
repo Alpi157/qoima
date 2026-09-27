@@ -2,6 +2,7 @@ import type { Customer } from '../pages/customers/api'
 import type { Product } from '../pages/products/api'
 import type { Receipt } from '../pages/receipts/api'
 import type { Sale } from '../pages/sales/api'
+import type { BusinessSettings } from '../pages/settings/api'
 
 export function makeProduct(overrides: Partial<Product> = {}): Product {
   return {
@@ -73,6 +74,18 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
     created_at: '2026-09-27T09:00:00Z',
     lines: [],
     total: 0,
+    ...overrides,
+  }
+}
+
+export function makeBusinessSettings(overrides: Partial<BusinessSettings> = {}): BusinessSettings {
+  return {
+    seller_name: '3А Аuto Parts.KZ',
+    seller_iin_bin: '900101300123',
+    responsible_person: 'Кәкеш Арман',
+    released_by_name: 'Кәкеш А.',
+    chief_accountant: 'Қамтамасыз етілмейді',
+    updated_at: '2026-09-27T09:00:00Z',
     ...overrides,
   }
 }

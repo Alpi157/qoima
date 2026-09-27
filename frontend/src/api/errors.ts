@@ -1,3 +1,8 @@
+import type { components } from './schema'
+
+/** Machine-readable error code from the backend; decisions are made by it, never by the text. */
+export type ErrorCode = components['schemas']['ErrorCode']
+
 export const SERVER_UNAVAILABLE = 'Сервер недоступен, попробуйте позже'
 
 /** Error returned by the backend (see "Формат ошибок API" in docs/architecture.md). */
@@ -6,13 +11,21 @@ export class ApiError extends Error {
   readonly detail: string
   /** Field path (for example "lines.0.qty") -> message, from the validation `errors` list. */
   readonly fieldErrors: Record<string, string>
+  /** `code` from the response body; null when the backend was not reached or sent no code. */
+  readonly code: string | null
 
-  constructor(status: number, detail: string, fieldErrors: Record<string, string> = {}) {
+  constructor(
+    status: number,
+    detail: string,
+    fieldErrors: Record<string, string> = {},
+    code: string | null = null,
+  ) {
     super(detail)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail
     this.fieldErrors = fieldErrors
+    this.code = code
   }
 }
 
@@ -45,7 +58,8 @@ export async function apiErrorFromResponse(response: Response): Promise<ApiError
   if (!isRecord(body) || typeof body.detail !== 'string') {
     return new ApiError(response.status, SERVER_UNAVAILABLE)
   }
-  return new ApiError(response.status, body.detail, parseFieldErrors(body.errors))
+  const code = typeof body.code === 'string' ? body.code : null
+  return new ApiError(response.status, body.detail, parseFieldErrors(body.errors), code)
 }
 
 /** The request never reached the backend (network down, DNS, CORS). */
@@ -55,6 +69,11 @@ export function networkError(): ApiError {
 
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError
+}
+
+/** The error is an ApiError with this code. */
+export function hasErrorCode(error: unknown, code: ErrorCode): boolean {
+  return isApiError(error) && error.code === code
 }
 
 export function isClientError(error: unknown): boolean {

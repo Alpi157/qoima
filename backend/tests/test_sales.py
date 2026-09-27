@@ -167,7 +167,10 @@ def test_price_required_when_product_has_none(
         json=_payload([{"product_id": oc.id, "qty": 1}, {"product_id": bosch.id, "qty": 1}]),
     )
     assert response.status_code == 422
-    assert response.json() == {"detail": "Укажите цену для товара 0986.452.041"}
+    assert response.json() == {
+        "detail": "Укажите цену для товара 0986.452.041",
+        "code": "invalid_document_lines",
+    }
     assert _sale_count(db_session) == 0
     assert _stock(db_session, oc.id) == 10
 
@@ -245,7 +248,10 @@ def test_missing_customer_rejected(
         "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], customer_id=999999999)
     )
     assert response.status_code == 422
-    assert response.json() == {"detail": "Покупатель не найден"}
+    assert response.json() == {
+        "detail": "Покупатель не найден",
+        "code": "document_customer_not_found",
+    }
     assert _stock(db_session, oc.id) == 10
 
 
@@ -258,7 +264,10 @@ def test_missing_product_rejected(
         json=_payload([{"product_id": oc.id, "qty": 1}, {"product_id": 999999999, "qty": 1}]),
     )
     assert response.status_code == 422
-    assert response.json() == {"detail": "Товар не найден: 999999999"}
+    assert response.json() == {
+        "detail": "Товар не найден: 999999999",
+        "code": "invalid_document_lines",
+    }
 
 
 def test_duplicate_product_rejected(
@@ -270,7 +279,10 @@ def test_duplicate_product_rejected(
         json=_payload([{"product_id": oc.id, "qty": 1}, {"product_id": oc.id, "qty": 2}]),
     )
     assert response.status_code == 422
-    assert response.json() == {"detail": "Товар OC-90 указан в продаже дважды"}
+    assert response.json() == {
+        "detail": "Товар OC-90 указан в продаже дважды",
+        "code": "invalid_document_lines",
+    }
     assert _stock(db_session, oc.id) == 10
 
 
@@ -279,7 +291,7 @@ def test_archived_product_rejected(auth_client: TestClient, db_session: Session)
     _receive(db_session, product, 3)
     response = auth_client.post("/api/sales", json=_payload([{"product_id": product.id, "qty": 1}]))
     assert response.status_code == 409
-    assert response.json() == {"detail": "Товар ARH-1 в архиве"}
+    assert response.json() == {"detail": "Товар ARH-1 в архиве", "code": "product_archived"}
     assert _stock(db_session, product.id) == 3
 
 
@@ -298,7 +310,8 @@ def test_insufficient_stock_creates_nothing(
     )
     assert response.status_code == 409
     assert response.json() == {
-        "detail": "Недостаточно товара. 0986.452.041: на остатке 5, требуется 6"
+        "detail": "Недостаточно товара. 0986.452.041: на остатке 5, требуется 6",
+        "code": "insufficient_stock",
     }
     assert _sale_count(db_session) == 0
     assert _stock(db_session, oc.id) == 10
@@ -376,7 +389,10 @@ def test_same_request_other_content_rejected(
     response = auth_client.post("/api/sales", json=payload)
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Этот запрос уже использован для другой продажи"}
+    assert response.json() == {
+        "detail": "Этот запрос уже использован для другой продажи",
+        "code": "sale_request_conflict",
+    }
     assert _sale_count(db_session) == 1
     assert _stock(db_session, oc.id) == 8
 
@@ -482,7 +498,7 @@ def test_cancel_twice_rejected(
     response = auth_client.post(url, json={"reason": "Ещё раз"})
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Продажа уже отменена"}
+    assert response.json() == {"detail": "Продажа уже отменена", "code": "sale_already_cancelled"}
     assert _stock(db_session, oc.id) == 10
 
 
@@ -501,7 +517,7 @@ def test_missing_sale(auth_client: TestClient) -> None:
         auth_client.post("/api/sales/999999999/cancel", json={"reason": "Ошибка"}),
     ):
         assert response.status_code == 404
-        assert response.json() == {"detail": "Продажа не найдена"}
+        assert response.json() == {"detail": "Продажа не найдена", "code": "sale_not_found"}
 
 
 def test_list_sales(

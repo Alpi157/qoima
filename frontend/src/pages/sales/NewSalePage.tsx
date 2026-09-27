@@ -23,7 +23,7 @@ import { type KeyboardEvent, type ReactNode, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom'
 
-import { isApiError } from '../../api/errors'
+import { hasErrorCode } from '../../api/errors'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { type PickedCustomer, CustomerPicker } from '../../components/CustomerPicker'
 import { MoneyInput } from '../../components/MoneyInput'
@@ -283,10 +283,10 @@ export function NewSalePage() {
       onSuccess: (sale) => {
         posted.current = true
         notifications.show({ color: 'green', message: `Продажа №${sale.number} проведена` })
-        navigate(`/sales/${sale.id}`)
+        navigate(`/sales/${sale.id}/print?auto=1`)
       },
       onError: (error) => {
-        if (isApiError(error) && error.status === 409 && error.detail === SALE_REQUEST_CONFLICT) {
+        if (hasErrorCode(error, SALE_REQUEST_CONFLICT)) {
           setFormError(
             <>
               Продажа могла уже пройти. Проверьте{' '}
@@ -414,10 +414,10 @@ export function NewSalePage() {
               )}
 
               <Button size="lg" onClick={submit} disabled={!canPost} loading={post.isPending}>
-                Провести продажу
+                Провести и напечатать
               </Button>
               <Text size="xs" c="dimmed" ta="center">
-                Ctrl+Enter — провести
+                Ctrl+Enter — провести и напечатать
               </Text>
             </Stack>
           </Paper>

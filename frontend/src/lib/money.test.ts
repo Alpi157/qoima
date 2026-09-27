@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMoney, MONEY_INPUT_ERROR, parseMoney, tiynToInput, validateMoneyText } from './money'
+import {
+  formatAmount,
+  formatInteger,
+  formatMoney,
+  MONEY_INPUT_ERROR,
+  parseMoney,
+  tiynToInput,
+  validateMoneyText,
+} from './money'
 
 const NBSP = '\u00a0'
 
@@ -20,6 +28,30 @@ describe('formatMoney', () => {
 
   it('uses only non-breaking spaces', () => {
     expect(formatMoney(1250050)).not.toContain(' ')
+  })
+})
+
+describe('formatAmount', () => {
+  it.each([
+    [0, '0'],
+    [5, '0,05'],
+    [7200000, `72${NBSP}000`],
+    [180050, `1${NBSP}800,50`],
+    [123456789, `1${NBSP}234${NBSP}567,89`],
+    [-150, '-1,50'],
+  ])('%i tiyn -> %j', (tiyn, expected) => {
+    expect(formatAmount(tiyn)).toBe(expected)
+  })
+})
+
+describe('formatInteger', () => {
+  it.each([
+    [0, '0'],
+    [190, '190'],
+    [1250, `1${NBSP}250`],
+    [-1250, `-1${NBSP}250`],
+  ])('%i -> %j', (value, expected) => {
+    expect(formatInteger(value)).toBe(expected)
   })
 })
 

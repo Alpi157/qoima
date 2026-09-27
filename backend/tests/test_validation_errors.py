@@ -14,6 +14,7 @@ def test_validation_error_format(auth_client: TestClient) -> None:
     assert response.status_code == 422
     assert response.json() == {
         "detail": "Проверьте введённые данные",
+        "code": "validation_error",
         "errors": [
             {"field": "lines.0.qty", "message": "Должно быть не меньше 1"},
             {"field": "extra", "message": "Лишнее поле"},
@@ -39,10 +40,10 @@ def test_validation_error_in_query(auth_client: TestClient) -> None:
     ]
 
 
-def test_app_error_format_unchanged(auth_client: TestClient) -> None:
+def test_app_error_format(auth_client: TestClient) -> None:
     response = auth_client.get("/api/sales/999999999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Продажа не найдена"}
+    assert response.json() == {"detail": "Продажа не найдена", "code": "sale_not_found"}
 
 
 @pytest.mark.parametrize(

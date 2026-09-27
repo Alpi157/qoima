@@ -54,6 +54,14 @@ describe('SalePage', () => {
     expect(screen.getByText('ИТОГО: 37 500 ₸')).toBeTruthy()
   })
 
+  it('links to the invoice without auto printing', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
+    renderPage()
+
+    const link = await screen.findByRole('link', { name: 'Печать накладной' })
+    expect(link.getAttribute('href')).toBe('/sales/9/print')
+  })
+
   it('does not cancel without a reason', async () => {
     const user = userEvent.setup()
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))

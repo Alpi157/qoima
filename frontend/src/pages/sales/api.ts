@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 
 import { api, unwrap } from '../../api/client'
+import type { ErrorCode } from '../../api/errors'
 import { useInvalidateSales } from '../../api/invalidate'
 import { queryKeys, type SaleListParams } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
@@ -11,9 +12,8 @@ export type SaleListItem = components['schemas']['SaleListItem']
 export type SaleCreate = components['schemas']['SaleCreate']
 export type SaleStatus = SaleListItem['status']
 
-// Backend message of SaleRequestConflictError (backend/app/errors.py): the request_id was used
-// by a sale with other contents. The API has no error codes, so the text identifies it.
-export const SALE_REQUEST_CONFLICT = 'Этот запрос уже использован для другой продажи'
+// The request_id was already used by a sale with other contents.
+export const SALE_REQUEST_CONFLICT: ErrorCode = 'sale_request_conflict'
 
 export function isSaleStatus(value: string): value is SaleStatus {
   return value === 'posted' || value === 'cancelled'

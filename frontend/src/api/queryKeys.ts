@@ -40,4 +40,5 @@ export const queryKeys = {
   receipt: (id: number) => ['receipt', id] as const,
   sales: (params: SaleListParams) => ['sales', params] as const,
   sale: (id: number) => ['sale', id] as const,
+  settings: ['settings'] as const,
 }

@@ -14,8 +14,8 @@ from app.auth.service import verify_password
 from tests.factories import create_user
 
 PASSWORD = "correct-horse-1"
-INVALID_CREDENTIALS = {"detail": "Неверный логин или пароль"}
-NOT_AUTHENTICATED = {"detail": "Требуется вход"}
+INVALID_CREDENTIALS = {"detail": "Неверный логин или пароль", "code": "invalid_credentials"}
+NOT_AUTHENTICATED = {"detail": "Требуется вход", "code": "not_authenticated"}
 
 
 def _login(client: TestClient, username: str, password: str = PASSWORD):
@@ -202,7 +202,10 @@ def test_rate_limit_blocks_sixth_attempt_even_with_correct_password(
     response = _login(client, "owner")
 
     assert response.status_code == 429
-    assert response.json() == {"detail": "Слишком много попыток входа. Попробуйте через минуту"}
+    assert response.json() == {
+        "detail": "Слишком много попыток входа. Попробуйте через минуту",
+        "code": "too_many_login_attempts",
+    }
 
 
 def test_successful_logins_do_not_count_towards_limit(

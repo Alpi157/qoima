@@ -17,6 +17,16 @@
                 "schema": {}
               }
             }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
           }
         }
       }
@@ -49,12 +59,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -72,6 +82,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -95,6 +115,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -181,12 +211,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -225,12 +255,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -274,12 +304,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -331,12 +361,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -408,12 +438,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -452,12 +482,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -501,12 +531,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -558,12 +588,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -673,12 +703,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -717,12 +747,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -766,12 +796,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -825,12 +855,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -958,12 +988,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -1002,22 +1032,22 @@
               }
             }
           },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
           "200": {
             "description": "Продажа с этим request_id уже проведена, возвращена она же",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SaleOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1061,12 +1091,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -1120,12 +1150,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -1161,12 +1191,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
@@ -1238,17 +1268,97 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorOut"
                 }
               }
             }
           }
         }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessSettingsOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Update Settings",
+        "operationId": "update_settings_api_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessSettingsOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
       }
     }
   },
@@ -1300,6 +1410,84 @@
           "stock"
         ],
         "title": "AdjustmentOut"
+      },
+      "BusinessSettingsOut": {
+        "properties": {
+          "seller_name": {
+            "type": "string",
+            "title": "Seller Name"
+          },
+          "seller_iin_bin": {
+            "type": "string",
+            "title": "Seller Iin Bin"
+          },
+          "responsible_person": {
+            "type": "string",
+            "title": "Responsible Person"
+          },
+          "released_by_name": {
+            "type": "string",
+            "title": "Released By Name"
+          },
+          "chief_accountant": {
+            "type": "string",
+            "title": "Chief Accountant"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seller_name",
+          "seller_iin_bin",
+          "responsible_person",
+          "released_by_name",
+          "chief_accountant",
+          "updated_at"
+        ],
+        "title": "BusinessSettingsOut"
+      },
+      "BusinessSettingsUpdate": {
+        "properties": {
+          "seller_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Seller Name"
+          },
+          "seller_iin_bin": {
+            "type": "string",
+            "title": "Seller Iin Bin"
+          },
+          "responsible_person": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Responsible Person"
+          },
+          "released_by_name": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Released By Name"
+          },
+          "chief_accountant": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Chief Accountant"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seller_name",
+          "seller_iin_bin",
+          "responsible_person",
+          "released_by_name",
+          "chief_accountant"
+        ],
+        "title": "BusinessSettingsUpdate",
+        "description": "PUT body: every field is required, an empty string clears it."
       },
       "CustomerCreate": {
         "properties": {
@@ -1454,18 +1642,84 @@
         "type": "object",
         "title": "CustomerUpdate"
       },
-      "HTTPValidationError": {
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "app_error",
+          "validation_error",
+          "invalid_article",
+          "insufficient_stock",
+          "invalid_credentials",
+          "not_authenticated",
+          "too_many_login_attempts",
+          "username_taken",
+          "user_not_found",
+          "invalid_user_data",
+          "product_not_found",
+          "duplicate_article",
+          "customer_not_found",
+          "product_archived",
+          "invalid_document_lines",
+          "receipt_not_found",
+          "receipt_already_cancelled",
+          "receipt_cancel_blocked",
+          "document_customer_not_found",
+          "sale_not_found",
+          "sale_already_cancelled",
+          "sale_request_conflict"
+        ],
+        "title": "ErrorCode",
+        "description": "Machine-readable error code, sent as `code` in every 4xx error response."
+      },
+      "ErrorOut": {
         "properties": {
           "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
+            "type": "string",
             "title": "Detail"
+          },
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldErrorOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
           }
         },
         "type": "object",
-        "title": "HTTPValidationError"
+        "required": [
+          "detail",
+          "code"
+        ],
+        "title": "ErrorOut",
+        "description": "Body of every 4xx response (see \"Формат ошибок API\" in docs/architecture.md)."
+      },
+      "FieldErrorOut": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "FieldErrorOut"
       },
       "LoginIn": {
         "properties": {
@@ -2641,46 +2895,6 @@
           "role"
         ],
         "title": "UserOut"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
       }
     },
     "securitySchemes": {
