@@ -31,12 +31,16 @@
 - Создать пользователя (пароль спросит дважды): `make create-user USERNAME=owner FULL_NAME="Имя"`
   (или `cd backend && uv run python -m app.cli create-user --username owner --full-name "Имя"`)
 - Сменить пароль: `cd backend && uv run python -m app.cli set-password --username owner`
-- Тесты backend: `make test` (или `cd backend && uv run pytest`)
+- Все тесты (backend и frontend): `make test`
+- Тесты backend: `cd backend && uv run pytest`
+- Тесты frontend (vitest): `cd frontend && npm test -- --run` (без `--run` в режиме наблюдения)
 - Линтеры backend и frontend: `make lint`
 - Форматирование backend: `cd backend && uv run ruff format .`
 - Форматирование frontend: `cd frontend && npm run format`
 - Сборка frontend: `cd frontend && npm run build`
-- Генерация типов API из OpenAPI (backend должен быть запущен): `cd frontend && npm run gen:api`
+- Генерация типов API: `make gen-api` (запускать backend и базу не нужно). Выгружает схему
+  в `frontend/openapi.json` и генерирует `frontend/src/api/schema.ts`; оба файла в git,
+  CI проверяет, что они актуальны. После изменения API бэкенда запускать обязательно.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры
