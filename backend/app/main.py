@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app import models  # noqa: F401  (registers every model so cross-module FKs resolve)
 from app.db import get_db
 from app.errors import register_exception_handlers
 

@@ -75,7 +75,7 @@ backend/app/
 | is_active | bool not null default true | |
 | created_at | timestamptz | |
 
-### sessions
+### user_sessions
 | поле | тип | заметки |
 |---|---|---|
 | token_hash | text unique not null | sha256 от токена, сам токен только в cookie |
@@ -108,7 +108,14 @@ backend/app/
 Индекс: GIN `gin_trgm_ops` на `lower(name)`.
 
 ### warehouses
-Одна запись «Основной», создаётся миграцией. Нужна, чтобы потом можно было добавить склады.
+| поле | тип | заметки |
+|---|---|---|
+| code | text unique not null | машинный код склада, основной склад: `main` |
+| name | text not null | |
+| created_at | timestamptz | |
+
+Одна запись `code='main'`, `name='Основной'`, создаётся миграцией. Нужна, чтобы потом можно было
+добавить склады. Если в движении склад не указан, `post_movements` использует склад `main`.
 
 ### receipts и receipt_lines (приход)
 receipts: `number` (bigint unique из sequence), `received_at`, `supplier` (text null),

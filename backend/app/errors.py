@@ -12,6 +12,14 @@ class AppError(Exception):
         super().__init__(message)
 
 
+class InvalidArticleError(AppError):
+    status_code = 422
+
+
+class InsufficientStockError(AppError):
+    status_code = 409
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
