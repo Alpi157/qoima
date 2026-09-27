@@ -11,13 +11,16 @@ import { parsePage } from './pagination'
 export function useListParams() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const setParam = useCallback(
-    (name: string, value: string | null) => {
+  /** Sets several filters at once (for example both ends of a date range); null removes one. */
+  const setParams = useCallback(
+    (updates: Record<string, string | null>) => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
-          if (value) next.set(name, value)
-          else next.delete(name)
+          for (const [name, value] of Object.entries(updates)) {
+            if (value) next.set(name, value)
+            else next.delete(name)
+          }
           next.delete('page')
           return next
         },
@@ -25,6 +28,11 @@ export function useListParams() {
       )
     },
     [setSearchParams],
+  )
+
+  const setParam = useCallback(
+    (name: string, value: string | null) => setParams({ [name]: value }),
+    [setParams],
   )
 
   const setQ = useCallback((q: string) => setParam('q', q.trim() || null), [setParam])
@@ -48,5 +56,6 @@ export function useListParams() {
     setQ,
     setPage,
     setParam,
+    setParams,
   }
 }

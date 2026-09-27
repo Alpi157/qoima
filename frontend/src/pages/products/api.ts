@@ -30,6 +30,25 @@ export function useProducts(params: ProductListParams) {
   })
 }
 
+// Enough to find the right article by typing, short enough for a dropdown.
+export const PRODUCT_SEARCH_LIMIT = 10
+
+/** Active products for a picker; nothing is requested until there is text. */
+export function useProductSearch(q: string) {
+  const query = q.trim()
+  return useQuery({
+    queryKey: queryKeys.productSearch(query),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/products', {
+          params: { query: { q: query, limit: PRODUCT_SEARCH_LIMIT } },
+        }),
+      ),
+    enabled: query !== '',
+    placeholderData: keepPreviousData,
+  })
+}
+
 export function useProduct(id: number) {
   return useQuery({
     queryKey: queryKeys.product(id),

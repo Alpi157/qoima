@@ -10,6 +10,17 @@ export interface MoneyInputProps extends Omit<TextInputProps, 'value' | 'onChang
   onChange: (value: string, tiyn: number | null) => void
 }
 
+// Keeps the hint's line when there is nothing to show, so the form does not jump while typing.
+const EMPTY_HINT = '\u00a0'
+
+// The hint goes under the input: fields next to each other stay aligned.
+const WRAPPER_ORDER: ('label' | 'input' | 'description' | 'error')[] = [
+  'label',
+  'input',
+  'description',
+  'error',
+]
+
 /** Amount in tenge; the hint under the field shows how it was understood. */
 export function MoneyInput({ value = '', onChange, onBlur, error, ...props }: MoneyInputProps) {
   const [touched, setTouched] = useState(false)
@@ -30,7 +41,8 @@ export function MoneyInput({ value = '', onChange, onBlur, error, ...props }: Mo
         setTouched(true)
         onBlur?.(event)
       }}
-      description={tiyn !== null ? formatMoney(tiyn) : undefined}
+      inputWrapperOrder={WRAPPER_ORDER}
+      description={tiyn !== null ? formatMoney(tiyn) : EMPTY_HINT}
       error={error || ownError}
     />
   )

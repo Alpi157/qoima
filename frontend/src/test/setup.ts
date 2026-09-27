@@ -1,7 +1,7 @@
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
-// jsdom lacks these browser APIs; Mantine uses them for media queries and autosize.
+// jsdom lacks these browser APIs; Mantine uses them for media queries, autosize and comboboxes.
 if (!window.matchMedia) {
   window.matchMedia = (query: string) =>
     ({
@@ -22,6 +22,18 @@ if (!window.ResizeObserver) {
     unobserve() {}
     disconnect() {}
   }
+}
+
+// Combobox scrolls the highlighted option into view.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
+// Autosize textareas listen for web fonts loading.
+if (!document.fonts) {
+  Object.defineProperty(document, 'fonts', {
+    value: { addEventListener: () => {}, removeEventListener: () => {} },
+  })
 }
 
 afterEach(() => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { formatDate, formatDateTime, todayLocal } from './dates'
+import { formatDate, formatDateTime, localInputToIso, nowLocalInput, todayLocal } from './dates'
 
 // Asia/Almaty is UTC+5 (since March 2024, same as Astana).
 
@@ -53,5 +53,32 @@ describe('todayLocal', () => {
 
   it('accepts an explicit moment', () => {
     expect(todayLocal(new Date('2026-12-31T19:00:00Z'))).toBe('2027-01-01')
+  })
+})
+
+describe('nowLocalInput', () => {
+  it('is Almaty wall time in the date picker format', () => {
+    expect(nowLocalInput(new Date('2026-09-27T20:15:42Z'))).toBe('2026-09-28 01:15:00')
+  })
+})
+
+describe('localInputToIso', () => {
+  it('reads the value as Almaty time', () => {
+    expect(localInputToIso('2026-09-27 14:30:00')).toBe('2026-09-27T09:30:00.000Z')
+    expect(localInputToIso('2026-09-28 00:00')).toBe('2026-09-27T19:00:00.000Z')
+  })
+
+  it('keeps seconds', () => {
+    expect(localInputToIso('2026-09-27 14:30:15')).toBe('2026-09-27T09:30:15.000Z')
+  })
+
+  it('round-trips with nowLocalInput', () => {
+    const now = new Date('2026-09-27T09:30:00Z')
+    expect(localInputToIso(nowLocalInput(now))).toBe(now.toISOString())
+  })
+
+  it('rejects garbage', () => {
+    expect(localInputToIso('')).toBeNull()
+    expect(localInputToIso('27.09.2026')).toBeNull()
   })
 })

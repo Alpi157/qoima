@@ -4,6 +4,7 @@ import {
   Collapse,
   Group,
   Modal,
+  Select,
   SimpleGrid,
   Stack,
   Textarea,
@@ -21,6 +22,15 @@ import { parseMoney, tiynToInput, validateMoneyText } from '../../lib/money'
 import { type Product, type ProductCreate, useCreateProduct, useUpdateProduct } from './api'
 
 export const DEFAULT_UNIT = 'шт'
+
+const UNITS = [DEFAULT_UNIT, 'компл.', 'пара', 'л', 'кг', 'м', 'упак.']
+
+export const PRICE_REQUIRED = 'Укажите цену'
+
+/** The unit list plus the product's own unit if it is not in the list, so editing keeps it. */
+function unitOptions(current: string): string[] {
+  return current && !UNITS.includes(current) ? [...UNITS, current] : UNITS
+}
 
 interface ProductFormValues {
   article: string
@@ -64,7 +74,7 @@ function toBody(values: ProductFormValues): ProductCreate {
   return {
     article: values.article.trim(),
     name: values.name.trim(),
-    // An empty price means 0: the product can be priced later.
+    // The validator has already rejected an empty or malformed price.
     sale_price: parseMoney(values.price) ?? 0,
     unit: values.unit.trim(),
     brand: values.brand.trim() || null,
@@ -74,11 +84,19 @@ function toBody(values: ProductFormValues): ProductCreate {
 
 interface ProductFormProps {
   product?: Product
+  initialArticle?: string
+  withAddMore: boolean
   onSaved: (product: Product) => void
   onCancel: () => void
 }
 
-function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
+function ProductForm({
+  product,
+  initialArticle = '',
+  withAddMore,
+  onSaved,
+  onCancel,
+}: ProductFormProps) {
   const create = useCreateProduct()
   const update = useUpdateProduct(product?.id ?? 0)
   const mutation = product ? update : create
@@ -89,12 +107,12 @@ function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
   const [addingMore, setAddingMore] = useState(false)
 
   const form = useForm<ProductFormValues>({
-    initialValues: product ? toFormValues(product) : EMPTY_VALUES,
+    initialValues: product ? toFormValues(product) : { ...EMPTY_VALUES, article: initialArticle },
     validate: {
       article: (value) => (value.trim() ? null : 'Введите артикул'),
       name: (value) => (value.trim() ? null : 'Введите наименование'),
-      price: validateMoneyText,
-      unit: (value) => (value.trim() ? null : 'Введите единицу'),
+      price: (value) => (value.trim() ? validateMoneyText(value) : PRICE_REQUIRED),
+      unit: (value) => (value.trim() ? null : 'Выберите единицу'),
     },
   })
 
@@ -108,6 +126,8 @@ function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
           message: product ? `Товар ${saved.article} сохранён` : `Товар ${saved.article} добавлен`,
         })
         if (addMore) {
+          // The next product starts empty, without the prefilled article.
+          form.setInitialValues(EMPTY_VALUES)
           form.reset()
           form.getInputNode('article')?.focus()
         } else {
@@ -144,12 +164,17 @@ function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
           {...form.getInputProps('name')}
         />
         <SimpleGrid cols={2}>
-          <MoneyInput label="Цена" placeholder="0" {...form.getInputProps('price')} />
-          <TextInput
+          <MoneyInput
+            label="Цена"
+            required
+            placeholder="Например, 12500"
+            {...form.getInputProps('price')}
+          />
+          <Select
             label="Единица"
             required
-            autoComplete="off"
-
+            data={unitOptions(form.values.unit)}
+            allowDeselect={false}
             {...form.getInputProps('unit')}
           />
         </SimpleGrid>
@@ -159,19 +184,8 @@ function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
         </UnstyledButton>
         <Collapse expanded={moreOpened}>
           <Stack>
-            <TextInput
-              label="Бренд"
-              autoComplete="off"
-
-              {...form.getInputProps('brand')}
-            />
-            <Textarea
-              label="Заметка"
-              autosize
-              minRows={2}
-
-              {...form.getInputProps('note')}
-            />
+            <TextInput label="Бренд" autoComplete="off" {...form.getInputProps('brand')} />
+            <Textarea label="Заметка" autosize minRows={2} {...form.getInputProps('note')} />
           </Stack>
         </Collapse>
 
@@ -185,7 +199,7 @@ function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
           <Button variant="default" onClick={onCancel} disabled={mutation.isPending}>
             Отмена
           </Button>
-          {!product && (
+          {withAddMore && !product && (
             <Button
               variant="light"
               onClick={() => form.onSubmit((values) => save(values, true))()}
@@ -213,10 +227,21 @@ export interface ProductFormModalProps {
   onClose: () => void
   /** The product to edit; without it the form creates a new one. */
   product?: Product
+  /** Prefills the article of a new product (for example, the search that found nothing). */
+  initialArticle?: string
+  /** "Сохранить и добавить ещё" for a new product; off where the caller needs the saved one. */
+  withAddMore?: boolean
   onSaved?: (product: Product) => void
 }
 
-export function ProductFormModal({ opened, onClose, product, onSaved }: ProductFormModalProps) {
+export function ProductFormModal({
+  opened,
+  onClose,
+  product,
+  initialArticle,
+  withAddMore = true,
+  onSaved,
+}: ProductFormModalProps) {
   return (
     <Modal
       opened={opened}
@@ -228,6 +253,8 @@ export function ProductFormModal({ opened, onClose, product, onSaved }: ProductF
       {opened && (
         <ProductForm
           product={product}
+          initialArticle={initialArticle}
+          withAddMore={withAddMore}
           onCancel={onClose}
           onSaved={(saved) => {
             onClose()

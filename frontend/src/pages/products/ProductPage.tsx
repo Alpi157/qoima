@@ -34,6 +34,7 @@ import {
   useUpdateProduct,
 } from './api'
 import { ProductFormModal } from './ProductFormModal'
+import { StockAdjustmentModal } from './StockAdjustmentModal'
 
 const DOCUMENT_PATHS: Record<string, string> = {
   receipt: '/receipts',
@@ -140,6 +141,7 @@ function MovementHistory({ productId }: { productId: number }) {
 function ProductDetails({ product }: { product: Product }) {
   const [editOpened, edit] = useDisclosure()
   const [archiveOpened, archive] = useDisclosure()
+  const [adjustOpened, adjust] = useDisclosure()
   const update = useUpdateProduct(product.id)
 
   const toggleArchived = () => {
@@ -190,6 +192,9 @@ function ProductDetails({ product }: { product: Product }) {
         </Stack>
         <Group>
           <Button onClick={edit.open}>Изменить</Button>
+          <Button variant="default" onClick={adjust.open}>
+            Корректировка остатка
+          </Button>
           <Button variant="default" onClick={archive.open}>
             {product.is_archived ? 'Вернуть из архива' : 'В архив'}
           </Button>
@@ -223,6 +228,7 @@ function ProductDetails({ product }: { product: Product }) {
       <MovementHistory productId={product.id} />
 
       <ProductFormModal opened={editOpened} onClose={edit.close} product={product} />
+      <StockAdjustmentModal product={product} opened={adjustOpened} onClose={adjust.close} />
       <ConfirmModal
         opened={archiveOpened}
         onClose={archive.close}

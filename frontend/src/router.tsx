@@ -10,6 +10,9 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ProductPage } from './pages/products/ProductPage'
 import { ProductsPage } from './pages/products/ProductsPage'
+import { NewReceiptPage } from './pages/receipts/NewReceiptPage'
+import { ReceiptPage } from './pages/receipts/ReceiptPage'
+import { ReceiptsPage } from './pages/receipts/ReceiptsPage'
 
 export const router = createBrowserRouter([
   { path: LOGIN_PATH, element: <LoginPage /> },
@@ -25,7 +28,9 @@ export const router = createBrowserRouter([
           { path: 'products/:id', element: <ProductPage /> },
           { path: 'customers', element: <CustomersPage /> },
           { path: 'customers/:id', element: <CustomerPage /> },
-          { path: 'receipts', element: <PlaceholderPage title="Приход" /> },
+          { path: 'receipts', element: <ReceiptsPage /> },
+          { path: 'receipts/new', element: <NewReceiptPage /> },
+          { path: 'receipts/:id', element: <ReceiptPage /> },
           { path: 'sales', element: <PlaceholderPage title="Продажи" /> },
           { path: 'settings', element: <PlaceholderPage title="Настройки" /> },
           { path: '*', element: <NotFoundPage /> },

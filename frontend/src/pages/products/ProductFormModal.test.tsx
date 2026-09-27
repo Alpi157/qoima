@@ -6,39 +6,23 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { renderWithProviders } from '../../test/render'
+import { makeProduct, ok } from '../../test/fixtures'
 import type { Product } from './api'
-import { ProductFormModal } from './ProductFormModal'
+import { PRICE_REQUIRED, ProductFormModal } from './ProductFormModal'
 
-function product(overrides: Partial<Product> = {}): Product {
-  return {
-    id: 1,
-    article: 'OC-90',
-    article_norm: 'OC90',
-    brand: null,
-    name: 'Фильтр масляный',
-    unit: 'шт',
-    sale_price: 1250000,
-    note: null,
-    is_archived: false,
-    created_at: '2026-09-27T09:00:00Z',
-    updated_at: '2026-09-27T09:00:00Z',
-    stock: 0,
-    ...overrides,
-  }
-}
+const product = makeProduct
 
 function mockPost() {
   return vi.spyOn(api, 'POST')
 }
 
-// openapi-fetch's response shape; the error middleware throws before callers see non-2xx.
-function ok(data: Product) {
-  return Promise.resolve({ data, response: new Response() }) as never
+function mockPatch() {
+  return vi.spyOn(api, 'PATCH')
 }
 
-function renderForm() {
+function renderForm(props: { product?: Product } = {}) {
   const onClose = vi.fn()
-  renderWithProviders(<ProductFormModal opened onClose={onClose} />)
+  renderWithProviders(<ProductFormModal opened onClose={onClose} {...props} />)
   return { onClose }
 }
 
@@ -53,6 +37,11 @@ function fieldError(label: string): string | null {
   const ids = input.getAttribute('aria-describedby')?.split(' ') ?? []
   const errorId = ids.find((id) => id.endsWith('-error'))
   return errorId ? (document.getElementById(errorId)?.textContent ?? null) : null
+}
+
+/** The unit Select: a combobox, not a textbox. */
+function unitField(): HTMLInputElement {
+  return screen.getByRole('combobox', { name: 'Единица' }) as HTMLInputElement
 }
 
 afterEach(() => {
@@ -103,6 +92,7 @@ describe('ProductFormModal', () => {
 
     await user.type(field('Артикул'), 'OC-90')
     await user.type(field('Наименование'), 'Фильтр')
+    await user.type(field('Цена'), '100')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     await waitFor(() => expect(fieldError('Наименование')).toBe('Максимальная длина: 255'))
@@ -117,6 +107,7 @@ describe('ProductFormModal', () => {
 
     await user.type(field('Артикул'), 'ос-90')
     await user.type(field('Наименование'), 'Фильтр')
+    await user.type(field('Цена'), '100')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     await waitFor(() => expect(fieldError('Артикул')).toBe(message))
@@ -138,11 +129,59 @@ describe('ProductFormModal', () => {
     expect(post).toHaveBeenCalledTimes(1)
     expect(field('Наименование').value).toBe('')
     expect(field('Цена').value).toBe('')
-    expect(field('Единица').value).toBe('шт')
+    expect(unitField().value).toBe('шт')
     expect(document.activeElement).toBe(field('Артикул'))
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Товар OC-90 добавлен' }),
     )
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('does not send an empty price', async () => {
+    const user = userEvent.setup()
+    const post = mockPost()
+    renderForm()
+
+    await user.type(field('Артикул'), 'OC-90')
+    await user.type(field('Наименование'), 'Фильтр')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    expect(post).not.toHaveBeenCalled()
+    expect(fieldError('Цена')).toBe(PRICE_REQUIRED)
+  })
+
+  it('sends an explicit zero price', async () => {
+    const user = userEvent.setup()
+    const post = mockPost().mockReturnValue(ok(product({ sale_price: 0 })))
+    const { onClose } = renderForm()
+
+    await user.type(field('Артикул'), 'OC-90')
+    await user.type(field('Наименование'), 'Фильтр')
+    await user.type(field('Цена'), '0')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(post).toHaveBeenCalledWith(
+      '/api/products',
+      expect.objectContaining({ body: expect.objectContaining({ sale_price: 0 }) }),
+    )
+  })
+
+  it('keeps a unit that is not in the list when editing', async () => {
+    const user = userEvent.setup()
+    const saved = product({ unit: 'бухта' })
+    const patch = mockPatch().mockReturnValue(ok(saved))
+    const { onClose } = renderForm({ product: saved })
+
+    expect(unitField().value).toBe('бухта')
+    await user.clear(field('Наименование'))
+    await user.type(field('Наименование'), 'Провод')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(patch).toHaveBeenCalledWith('/api/products/{product_id}', {
+      params: { path: { product_id: 1 } },
+      body: expect.objectContaining({ name: 'Провод', unit: 'бухта' }),
+    })
   })
 })
