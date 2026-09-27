@@ -1666,7 +1666,10 @@
           "document_customer_not_found",
           "sale_not_found",
           "sale_already_cancelled",
-          "sale_request_conflict"
+          "sale_request_conflict",
+          "not_found",
+          "method_not_allowed",
+          "http_error"
         ],
         "title": "ErrorCode",
         "description": "Machine-readable error code, sent as `code` in every 4xx error response."

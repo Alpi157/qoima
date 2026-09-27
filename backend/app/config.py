@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str
     test_database_url: str | None = None
     cookie_secure: bool = False
+    # false in production: /docs, /redoc and /openapi.json are not served.
+    enable_docs: bool = True
 
 
 @lru_cache

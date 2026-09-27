@@ -41,6 +41,14 @@
 - Генерация типов API: `make gen-api` (запускать backend и базу не нужно). Выгружает схему
   в `frontend/openapi.json` и генерирует `frontend/src/api/schema.ts`; оба файла в git,
   CI проверяет, что они актуальны. После изменения API бэкенда запускать обязательно.
+- Продакшн-стек (из корня репозитория, настройки в `deploy/.env.prod`, шаблон
+  `deploy/.env.prod.example`): `docker compose -f deploy/docker-compose.prod.yml up -d --build --wait`;
+  остановить: `docker compose -f deploy/docker-compose.prod.yml down` (`-v` удалит и данные).
+  Локальная проверка: `DOMAIN=localhost` в `deploy/.env.prod`, затем `curl -k https://localhost/api/health`.
+- Пользователь на проде: `docker compose -f deploy/docker-compose.prod.yml exec api python -m app.cli create-user --username owner --full-name "Имя"`
+- Бэкап (на сервере): `AGE_RECIPIENTS_FILE=/etc/qoima/backup.pub bash deploy/backup.sh`
+- Проверка бэкапа в базе `qoima_restore_check`: `bash deploy/restore.sh --identity КЛЮЧ ФАЙЛ.dump.age`
+  (подробно, включая `--into-main` и `pull-backups.sh`, в `deploy/README.md`)
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

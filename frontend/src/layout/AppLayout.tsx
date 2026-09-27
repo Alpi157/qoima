@@ -1,10 +1,12 @@
 import { AppShell, Burger, Button, Group, NavLink, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Suspense } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { api, unwrap } from '../api/client'
 import { useMe } from '../auth/useMe'
+import { PageLoader } from '../components/PageLoader'
 import { LOGIN_PATH } from '../lib/nextPath'
 
 const MENU = [
@@ -72,7 +74,9 @@ export function AppLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Outlet />
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
       </AppShell.Main>
     </AppShell>
   )

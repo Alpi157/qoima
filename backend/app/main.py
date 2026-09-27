@@ -10,6 +10,7 @@ from app import models  # noqa: F401  (registers every model so cross-module FKs
 from app.auth import router as auth_router
 from app.auth.dependencies import current_user
 from app.catalog import router as catalog_router
+from app.config import Settings, get_settings
 from app.customers import router as customers_router
 from app.db import get_db
 from app.errors import ErrorOut, register_exception_handlers
@@ -17,9 +18,6 @@ from app.inventory import router as inventory_router
 from app.receipts import router as receipts_router
 from app.sales import router as sales_router
 from app.settings import router as settings_router
-
-app = FastAPI(title="Qoima API")
-register_exception_handlers(app)
 
 # Documents the common error body (and ErrorCode) in OpenAPI for every endpoint.
 ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
@@ -34,6 +32,9 @@ protected_api = APIRouter(
 )
 
 
+# Uptime monitors often check with HEAD; kept out of the schema to avoid a duplicate operation.
+# Decorators apply bottom-up: GET is registered first, so a 405 here reports "Allow: GET".
+@public_api.head("/health", include_in_schema=False)
 @public_api.get("/health")
 def health(db: Session = Depends(get_db)) -> JSONResponse:
     try:
@@ -52,5 +53,18 @@ protected_api.include_router(sales_router.router)
 protected_api.include_router(inventory_router.router)
 protected_api.include_router(settings_router.router)
 
-app.include_router(public_api)
-app.include_router(protected_api)
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or get_settings()
+    docs: dict[str, Any] = {}
+    if not settings.enable_docs:
+        # app.openapi() still builds the schema, so `make gen-api` keeps working.
+        docs = {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    application = FastAPI(title="Qoima API", **docs)
+    register_exception_handlers(application)
+    application.include_router(public_api)
+    application.include_router(protected_api)
+    return application
+
+
+app = create_app()

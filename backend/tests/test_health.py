@@ -14,6 +14,13 @@ def test_health_ok(client: TestClient) -> None:
     assert response.json() == {"status": "ok", "db": "ok"}
 
 
+def test_health_answers_head(client: TestClient) -> None:
+    response = client.head("/api/health")
+
+    assert response.status_code == 200
+    assert response.content == b""
+
+
 class _BrokenSession:
     def execute(self, *_args: object, **_kwargs: object) -> None:
         raise OperationalError("SELECT 1", {}, Exception("connection refused"))

@@ -22,3 +22,6 @@ review/
 .idea/
 .DS_Store
 Thumbs.db
+
+# production settings (never committed)
+.env.prod

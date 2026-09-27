@@ -8,12 +8,13 @@ import { DatesProvider } from '@mantine/dates'
 import { Notifications } from '@mantine/notifications'
 import { QueryClientProvider } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { StrictMode } from 'react'
+import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 
 import { setUnauthorizedHandler } from './api/client'
 import { queryClient } from './api/queryClient'
+import { PageLoader } from './components/PageLoader'
 import { LOGIN_PATH, loginPathFor } from './lib/nextPath'
 import { router } from './router'
 import { theme } from './theme'
@@ -34,7 +35,9 @@ createRoot(document.getElementById('root')!).render(
       <Notifications position="top-right" />
       <DatesProvider settings={{ locale: 'ru' }}>
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          <Suspense fallback={<PageLoader fullScreen />}>
+            <RouterProvider router={router} />
+          </Suspense>
         </QueryClientProvider>
       </DatesProvider>
     </MantineProvider>

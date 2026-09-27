@@ -6,11 +6,13 @@ from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.auth.dependencies import SESSION_COOKIE
 from app.auth.models import UserSession
 from app.auth.rate_limit import LoginRateLimiter
 from app.auth.service import verify_password
+from app.main import app
 from tests.factories import create_user
 
 PASSWORD = "correct-horse-1"
@@ -214,6 +216,49 @@ def test_successful_logins_do_not_count_towards_limit(
     create_user(db_session, username="owner", password=PASSWORD)
     for _ in range(6):
         assert _login(client, "owner").status_code == 200
+
+
+def _proxied_client(trusted_hosts: list[str]) -> TestClient:
+    """The app behind uvicorn's --proxy-headers handling, as run in production.
+
+    TestClient connects from host "testclient"; uvicorn trusts it when it is listed.
+    Relies on the `client` fixture for the test database override.
+    """
+    return TestClient(ProxyHeadersMiddleware(app, trusted_hosts=trusted_hosts))
+
+
+def _login_from(client: TestClient, forwarded_for: str, password: str) -> int:
+    response = client.post(
+        "/api/auth/login",
+        json={"username": "owner", "password": password},
+        headers={"X-Forwarded-For": forwarded_for},
+    )
+    return response.status_code
+
+
+def test_rate_limit_uses_forwarded_ip_from_trusted_proxy(
+    client: TestClient, db_session: Session
+) -> None:
+    create_user(db_session, username="owner", password=PASSWORD)
+    proxied = _proxied_client(["testclient"])
+    for _ in range(5):
+        assert _login_from(proxied, "203.0.113.7", "wrong-password") == 401
+
+    assert _login_from(proxied, "203.0.113.7", PASSWORD) == 429
+    # Another client behind the same proxy is not blocked.
+    assert _login_from(proxied, "203.0.113.8", PASSWORD) == 200
+
+
+def test_rate_limit_ignores_forwarded_ip_from_untrusted_client(
+    client: TestClient, db_session: Session
+) -> None:
+    create_user(db_session, username="owner", password=PASSWORD)
+    proxied = _proxied_client(["172.30.0.10"])
+    for i in range(5):
+        assert _login_from(proxied, f"203.0.113.{i}", "wrong-password") == 401
+
+    # A fresh fake address does not help: the limit is on the real peer address.
+    assert _login_from(proxied, "203.0.113.99", PASSWORD) == 429
 
 
 def test_rate_limiter_window_expires() -> None:

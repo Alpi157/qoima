@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 class ErrorCode(StrEnum):
@@ -33,6 +34,21 @@ class ErrorCode(StrEnum):
     SALE_NOT_FOUND = "sale_not_found"
     SALE_ALREADY_CANCELLED = "sale_already_cancelled"
     SALE_REQUEST_CONFLICT = "sale_request_conflict"
+    NOT_FOUND = "not_found"
+    METHOD_NOT_ALLOWED = "method_not_allowed"
+    HTTP_ERROR = "http_error"
+
+
+# Codes not tied to an AppError subclass: set by the framework-level handlers below.
+FRAMEWORK_CODES = frozenset(
+    {
+        ErrorCode.APP_ERROR,
+        ErrorCode.VALIDATION_ERROR,
+        ErrorCode.NOT_FOUND,
+        ErrorCode.METHOD_NOT_ALLOWED,
+        ErrorCode.HTTP_ERROR,
+    }
+)
 
 
 class AppError(Exception):
@@ -218,6 +234,14 @@ def validation_field(loc: tuple[int | str, ...]) -> str:
     return ".".join(str(part) for part in parts)
 
 
+# Errors raised by the framework itself (unknown path, wrong method): status -> (code, message).
+HTTP_ERRORS = {
+    404: (ErrorCode.NOT_FOUND, "Не найдено"),
+    405: (ErrorCode.METHOD_NOT_ALLOWED, "Метод не поддерживается"),
+}
+DEFAULT_HTTP_ERROR = (ErrorCode.HTTP_ERROR, "Ошибка запроса")
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
@@ -240,4 +264,13 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "code": ErrorCode.VALIDATION_ERROR,
                 "errors": errors,
             },
+        )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def handle_http_error(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        code, message = HTTP_ERRORS.get(exc.status_code, DEFAULT_HTTP_ERROR)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": message, "code": code},
+            headers=exc.headers,
         )
