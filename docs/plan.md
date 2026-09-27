@@ -21,7 +21,7 @@ WSL2 Ubuntu, Docker, git, uv, Node.js LTS, Claude Code, VS Code с расшир�
 - Структура папок из `docs/architecture.md`: `backend/`, `frontend/`, `deploy/` (пока пустая, с .gitkeep).
 - `docker-compose.yml` с сервисом `db` (postgres:17, healthcheck, именованный volume, порт 5432 только на 127.0.0.1).
   При первом запуске создаётся и основная база, и тестовая `qoima_test` (init-скрипт).
-- `.env.example` со всеми нужными переменными (DATABASE_URL, TEST_DATABASE_URL, SECRET-настройки, COOKIE_SECURE и т.д.).
+- `.env.example` со всеми нужными переменными (DATABASE_URL, TEST_DATABASE_URL, COOKIE_SECURE и т.д.).
 - Backend: `pyproject.toml` (uv), `app/main.py`, `app/config.py`, `app/db.py`, `app/errors.py`.
   Эндпоинт `GET /api/health` возвращает `{"status": "ok", "db": "ok"}` и реально проверяет базу (`SELECT 1`).
 - Alembic настроен, берёт URL из настроек. Первая миграция включает расширение `pg_trgm`.

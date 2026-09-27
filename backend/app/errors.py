@@ -50,6 +50,20 @@ class InvalidUserDataError(AppError):
     status_code = 422
 
 
+class ProductNotFoundError(AppError):
+    status_code = 404
+    default_message = "Товар не найден"
+
+
+class DuplicateArticleError(AppError):
+    status_code = 409
+
+
+class CustomerNotFoundError(AppError):
+    status_code = 404
+    default_message = "Покупатель не найден"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:

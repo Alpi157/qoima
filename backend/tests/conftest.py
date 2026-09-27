@@ -12,6 +12,7 @@ from app.auth.rate_limit import login_rate_limiter
 from app.config import get_settings
 from app.db import get_db
 from app.main import app
+from tests import factories
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -82,3 +83,14 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture(autouse=True)
 def reset_login_rate_limit() -> None:
     login_rate_limiter.reset()
+
+
+@pytest.fixture
+def auth_client(client: TestClient, db_session: Session) -> TestClient:
+    """Client with a valid session cookie of a freshly created user."""
+    user = factories.create_user(db_session, password="test-password")
+    response = client.post(
+        "/api/auth/login", json={"username": user.username, "password": "test-password"}
+    )
+    assert response.status_code == 200
+    return client

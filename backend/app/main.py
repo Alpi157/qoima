@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app import models  # noqa: F401  (registers every model so cross-module FKs resolve)
 from app.auth import router as auth_router
 from app.auth.dependencies import current_user
+from app.catalog import router as catalog_router
+from app.customers import router as customers_router
 from app.db import get_db
 from app.errors import register_exception_handlers
 
@@ -30,6 +32,8 @@ def health(db: Session = Depends(get_db)) -> JSONResponse:
 
 public_api.include_router(auth_router.public_router)
 protected_api.include_router(auth_router.router)
+protected_api.include_router(catalog_router.router)
+protected_api.include_router(customers_router.router)
 
 app.include_router(public_api)
 app.include_router(protected_api)
