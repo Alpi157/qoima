@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.errors import register_exception_handlers
 
-app = FastAPI(title="Autoparts API")
+app = FastAPI(title="Qoima API")
 register_exception_handlers(app)
 
 

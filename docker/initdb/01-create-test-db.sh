@@ -4,5 +4,5 @@
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-SQL
-    CREATE DATABASE autoparts_test;
+    CREATE DATABASE qoima_test;
 SQL

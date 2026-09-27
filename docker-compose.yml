@@ -3,16 +3,16 @@ services:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-autoparts}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autoparts}
-      POSTGRES_DB: ${POSTGRES_DB:-autoparts}
+      POSTGRES_USER: ${POSTGRES_USER:-qoima}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qoima}
+      POSTGRES_DB: ${POSTGRES_DB:-qoima}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autoparts} -d ${POSTGRES_DB:-autoparts}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qoima} -d ${POSTGRES_DB:-qoima}"]
       interval: 5s
       timeout: 5s
       retries: 10

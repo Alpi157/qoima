@@ -1,7 +1,7 @@
 [project]
-name = "autoparts-backend"
+name = "qoima-backend"
 version = "0.1.0"
-description = "Autoparts: backend учёта продаж автозапчастей"
+description = "Qoima: backend учёта продаж автозапчастей"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

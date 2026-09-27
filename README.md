@@ -1,4 +1,4 @@
-# Autoparts
+# Qoima
 
 Веб-система учёта продаж автозапчастей. Подробности о проекте — в `CLAUDE.md`,
 архитектура — в `docs/architecture.md`, план работ — в `docs/plan.md`.
@@ -18,8 +18,8 @@ TypeScript, Vite, Mantine.
    cp .env.example .env
    ```
 
-2. Поднять базу данных (при первом запуске создаются база `autoparts` и
-   тестовая база `autoparts_test`):
+2. Поднять базу данных (при первом запуске создаются база `qoima` и
+   тестовая база `qoima_test`):
 
    ```bash
    make db

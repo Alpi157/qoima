@@ -11,7 +11,7 @@
 ## Шаг 1. Среда разработки (руками)
 
 WSL2 Ubuntu, Docker, git, uv, Node.js LTS, Claude Code, VS Code с расширением WSL,
-репозиторий на GitHub. Готово, когда в `~/projects/autoparts` работает `claude`.
+репозиторий на GitHub. Готово, когда в `~/projects/qoima` работает `claude`.
 
 ---
 
@@ -20,12 +20,12 @@ WSL2 Ubuntu, Docker, git, uv, Node.js LTS, Claude Code, VS Code с расшир�
 **Что входит**
 - Структура папок из `docs/architecture.md`: `backend/`, `frontend/`, `deploy/` (пока пустая, с .gitkeep).
 - `docker-compose.yml` с сервисом `db` (postgres:17, healthcheck, именованный volume, порт 5432 только на 127.0.0.1).
-  При первом запуске создаётся и основная база, и тестовая `autoparts_test` (init-скрипт).
+  При первом запуске создаётся и основная база, и тестовая `qoima_test` (init-скрипт).
 - `.env.example` со всеми нужными переменными (DATABASE_URL, TEST_DATABASE_URL, SECRET-настройки, COOKIE_SECURE и т.д.).
 - Backend: `pyproject.toml` (uv), `app/main.py`, `app/config.py`, `app/db.py`, `app/errors.py`.
   Эндпоинт `GET /api/health` возвращает `{"status": "ok", "db": "ok"}` и реально проверяет базу (`SELECT 1`).
 - Alembic настроен, берёт URL из настроек. Первая миграция включает расширение `pg_trgm`.
-- pytest: `conftest.py` прогоняет миграции на `autoparts_test`, каждый тест в транзакции с откатом.
+- pytest: `conftest.py` прогоняет миграции на `qoima_test`, каждый тест в транзакции с откатом.
   Тест на `/api/health`.
 - ruff настроен в `pyproject.toml`.
 - Frontend: Vite + React + TypeScript + Mantine (с русской локалью), React Router, TanStack Query.

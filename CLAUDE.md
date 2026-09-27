@@ -1,4 +1,4 @@
-# Autoparts: учёт продаж автозапчастей
+# Qoima: учёт продаж автозапчастей
 
 ## О проекте
 
@@ -16,7 +16,7 @@
   Pydantic v2, pydantic-settings, argon2-cffi. Зависимости и запуск через `uv`.
 - База данных: PostgreSQL 17 в docker compose, расширение `pg_trgm`.
 - Frontend: React, TypeScript, Vite, Mantine, TanStack Query, React Router. Пакеты через `npm`.
-- Тесты: pytest против настоящего PostgreSQL (отдельная база `autoparts_test`). SQLite не использовать.
+- Тесты: pytest против настоящего PostgreSQL (отдельная база `qoima_test`). SQLite не использовать.
 - Линтеры: ruff (lint и format), ESLint, Prettier.
 
 ## Команды

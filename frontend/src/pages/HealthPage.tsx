@@ -15,7 +15,7 @@ export function HealthPage() {
   return (
     <Container size="sm" py="xl">
       <Stack>
-        <Title order={1}>Autoparts</Title>
+        <Title order={1}>Qoima</Title>
         {isLoading && <Loader />}
         {isError && (
           <Alert color="red" title="Ошибка">
