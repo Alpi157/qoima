@@ -28,6 +28,9 @@
 - Применить миграции: `make migrate` (или `cd backend && uv run alembic upgrade head`)
 - Запустить backend (localhost:8000): `make backend`
 - Запустить frontend (localhost:5173, проксирует `/api` на backend): `make frontend`
+- Создать пользователя (пароль спросит дважды): `make create-user USERNAME=owner FULL_NAME="Имя"`
+  (или `cd backend && uv run python -m app.cli create-user --username owner --full-name "Имя"`)
+- Сменить пароль: `cd backend && uv run python -m app.cli set-password --username owner`
 - Тесты backend: `make test` (или `cd backend && uv run pytest`)
 - Линтеры backend и frontend: `make lint`
 - Форматирование backend: `cd backend && uv run ruff format .`
@@ -52,7 +55,7 @@
 7. Время хранится как `timestamptz` в UTC. Показывается пользователю в поясе `Asia/Almaty`.
 8. Артикулы сравниваются и ищутся только по нормализованному виду
    (`backend/app/catalog/normalize.py`).
-9. Все эндпоинты, кроме `/api/health` и `/api/auth/login`, требуют авторизации.
+9. Все эндпоинты, кроме `/api/health`, `/api/auth/login` и `/api/auth/logout`, требуют авторизации.
 10. Количество товара это целое положительное число в строках документов.
 11. Одна операция пользователя = один commit, его делает сервис документа верхнего уровня.
     post_movements и другие внутренние функции commit не делают. При бизнес-ошибке транзакция
@@ -66,6 +69,7 @@
 - Ошибки бизнес-логики: свои исключения из `backend/app/errors.py`, которые превращаются
   в HTTP 4xx с понятным русским сообщением.
 - Каждый новый эндпоинт и каждая бизнес-функция покрыты тестами.
+- Новые роутеры подключаются только к `protected_api` в `backend/app/main.py`; к `public_api` не добавлять ничего.
 - Типы API на фронтенде генерируются из OpenAPI-схемы бэкенда, руками не пишутся.
 - Не оставлять закомментированный код, отладочные print и TODO без пояснения.
 

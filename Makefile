@@ -1,4 +1,4 @@
-.PHONY: db backend frontend migrate test lint review
+.PHONY: db backend frontend migrate create-user test lint review
 
 db:
 	docker compose up -d db
@@ -11,6 +11,9 @@ frontend:
 
 migrate:
 	cd backend && uv run alembic upgrade head
+
+create-user:
+	cd backend && uv run python -m app.cli create-user --username "$(USERNAME)" --full-name "$(FULL_NAME)"
 
 test:
 	cd backend && uv run pytest

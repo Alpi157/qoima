@@ -25,7 +25,6 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://qoima:qoima@localhost:5432/qoima
       TEST_DATABASE_URL: postgresql+psycopg://qoima:qoima@localhost:5432/qoima_test
-      SECRET_KEY: ci-secret-key
       COOKIE_SECURE: "false"
     steps:
       - uses: actions/checkout@v4

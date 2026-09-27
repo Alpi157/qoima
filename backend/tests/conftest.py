@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.auth.rate_limit import login_rate_limiter
 from app.config import get_settings
 from app.db import get_db
 from app.main import app
@@ -76,3 +77,8 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
             yield test_client
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_login_rate_limit() -> None:
+    login_rate_limiter.reset()

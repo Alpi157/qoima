@@ -65,7 +65,7 @@ WSL2 Ubuntu, Docker, git, uv, Node.js LTS, Claude Code, VS Code с расшир�
 ## Шаг 4. Вход в систему
 
 **Что входит**
-- `auth/service.py`: хэширование argon2, создание и проверка сессий (хэш токена в базе, срок 30 дней, продление).
+- `auth/service.py`: хэширование argon2, создание и проверка сессий (хэш токена в базе, срок ровно 30 дней от входа).
 - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
 - Зависимость `current_user`, подключённая ко всем роутерам кроме health и login.
 - Ограничение попыток входа: 5 в минуту с IP (в памяти процесса).
