@@ -19,9 +19,11 @@ function showError(error: unknown): void {
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError(error) {
+    onError(error, query) {
       // 401 is handled by the redirect to /login.
       if (isApiError(error) && error.status === 401) return
+      // Detail pages show their own "not found" state.
+      if (isApiError(error) && error.status === 404 && query.meta?.handlesNotFound) return
       showError(error)
     },
   }),

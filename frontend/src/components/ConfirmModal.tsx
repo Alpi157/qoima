@@ -1,0 +1,41 @@
+import { Button, Group, Modal, Stack, Text } from '@mantine/core'
+import type { ReactNode } from 'react'
+
+export interface ConfirmModalProps {
+  opened: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  confirmLabel: string
+  onConfirm: () => void
+  loading?: boolean
+  color?: string
+}
+
+/** A yes/no question before an action that changes data. */
+export function ConfirmModal({
+  opened,
+  onClose,
+  title,
+  children,
+  confirmLabel,
+  onConfirm,
+  loading = false,
+  color,
+}: ConfirmModalProps) {
+  return (
+    <Modal opened={opened} onClose={onClose} title={title}>
+      <Stack>
+        <Text>{children}</Text>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={onClose} disabled={loading}>
+            Отмена
+          </Button>
+          <Button color={color} onClick={onConfirm} loading={loading} data-autofocus>
+            {confirmLabel}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  )
+}

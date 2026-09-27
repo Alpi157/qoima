@@ -26,3 +26,17 @@ export function parseMoney(input: string): number | null {
   const tiyn = Number(tenge) * TIYN_PER_TENGE + Number(fraction.padEnd(2, '0'))
   return Number.isSafeInteger(tiyn) ? tiyn : null
 }
+
+/** 1250000 -> "12500", 1250050 -> "12500,50": the tiyn value as the user would type it. */
+export function tiynToInput(tiyn: number): string {
+  const tenge = Math.floor(tiyn / TIYN_PER_TENGE)
+  const rest = tiyn % TIYN_PER_TENGE
+  return rest === 0 ? String(tenge) : `${tenge},${String(rest).padStart(2, '0')}`
+}
+
+export const MONEY_INPUT_ERROR = 'Введите сумму, например 12500'
+
+/** Validator for a typed amount: empty is allowed, the caller decides if it is required. */
+export function validateMoneyText(text: string): string | null {
+  return text.trim() && parseMoney(text) === null ? MONEY_INPUT_ERROR : null
+}

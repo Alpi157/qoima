@@ -16,7 +16,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, unwrap } from '../api/client'
 import { isApiError, SERVER_UNAVAILABLE } from '../api/errors'
 import { ME_QUERY_KEY, useMe } from '../auth/useMe'
-import { DEFAULT_PATH, safeNext } from '../lib/nextPath'
+import { safeNext } from '../lib/nextPath'
 
 interface LoginValues {
   username: string
@@ -52,7 +52,7 @@ export function LoginPage() {
     },
   })
 
-  if (me.isSuccess) return <Navigate to={DEFAULT_PATH} replace />
+  if (me.isSuccess) return <Navigate to={safeNext(searchParams.get('next'))} replace />
 
   if (me.isPending) {
     return (

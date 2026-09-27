@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMoney, parseMoney } from './money'
+import { formatMoney, MONEY_INPUT_ERROR, parseMoney, tiynToInput, validateMoneyText } from './money'
 
 const NBSP = '\u00a0'
 
@@ -62,5 +62,27 @@ describe('parseMoney', () => {
 
   it('round-trips with formatMoney', () => {
     expect(parseMoney(formatMoney(1250050).replace(`${NBSP}₸`, ''))).toBe(1250050)
+  })
+})
+
+describe('tiynToInput', () => {
+  it.each([
+    [0, '0'],
+    [1250000, '12500'],
+    [1250050, '12500,50'],
+    [1250005, '12500,05'],
+  ])('%i tiyn -> %j', (tiyn, expected) => {
+    expect(tiynToInput(tiyn)).toBe(expected)
+    expect(parseMoney(expected)).toBe(tiyn)
+  })
+})
+
+describe('validateMoneyText', () => {
+  it.each(['', '  ', '12 500', '0', '12500,5'])('%j is valid', (text) => {
+    expect(validateMoneyText(text)).toBeNull()
+  })
+
+  it.each(['abc', '-5', '12,345', '1.2.3'])('%j is invalid', (text) => {
+    expect(validateMoneyText(text)).toBe(MONEY_INPUT_ERROR)
   })
 })
