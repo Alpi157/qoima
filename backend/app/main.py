@@ -11,6 +11,8 @@ from app.catalog import router as catalog_router
 from app.customers import router as customers_router
 from app.db import get_db
 from app.errors import register_exception_handlers
+from app.inventory import router as inventory_router
+from app.receipts import router as receipts_router
 
 app = FastAPI(title="Qoima API")
 register_exception_handlers(app)
@@ -34,6 +36,8 @@ public_api.include_router(auth_router.public_router)
 protected_api.include_router(auth_router.router)
 protected_api.include_router(catalog_router.router)
 protected_api.include_router(customers_router.router)
+protected_api.include_router(receipts_router.router)
+protected_api.include_router(inventory_router.router)
 
 app.include_router(public_api)
 app.include_router(protected_api)

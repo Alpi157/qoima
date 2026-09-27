@@ -1,4 +1,6 @@
-from sqlalchemy import ColumnElement, func, or_, select
+import re
+
+from sqlalchemy import ColumnElement, Text, case, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.customers.models import Customer
@@ -29,16 +31,43 @@ def update_customer(db: Session, customer_id: int, data: CustomerUpdate) -> Cust
     return customer
 
 
+# Mobile number with the country prefix: 7XXXXXXXXXX or 8XXXXXXXXXX.
+FULL_PHONE_DIGITS = 11
+FULL_PHONE_PATTERN = "^[78][0-9]{10}$"
+
+
+def _phone_digits_match(q: str) -> ColumnElement[bool] | None:
+    """Match the digits of the query against the digits of the stored phone.
+
+    A full number drops its leading 7/8 on both sides, so that 8701..., +7 701... and 701...
+    find the same customer.
+    """
+    digits = re.sub(r"[^0-9]", "", q)
+    if not digits:
+        return None
+    phone_digits = func.regexp_replace(Customer.phone, "[^0-9]", "", "g", type_=Text)
+    if len(digits) == FULL_PHONE_DIGITS and digits[0] in "78":
+        digits = digits[1:]
+        phone_digits = case(
+            (phone_digits.regexp_match(FULL_PHONE_PATTERN), func.substr(phone_digits, 2)),
+            else_=phone_digits,
+        )
+    # digits holds only 0-9, so it needs no LIKE escaping.
+    return phone_digits.contains(digits)
+
+
 def search_customers(db: Session, q: str | None, limit: int, offset: int) -> CustomerPage:
     conditions: list[ColumnElement[bool]] = []
     if q is not None and q.strip():
         pattern = contains_pattern(q.strip().lower())
-        conditions.append(
-            or_(
-                func.lower(Customer.name).like(pattern, escape=LIKE_ESCAPE),
-                Customer.phone.like(pattern, escape=LIKE_ESCAPE),
-            )
-        )
+        matches = [
+            func.lower(Customer.name).like(pattern, escape=LIKE_ESCAPE),
+            Customer.phone.like(pattern, escape=LIKE_ESCAPE),
+        ]
+        digits_match = _phone_digits_match(q)
+        if digits_match is not None:
+            matches.append(digits_match)
+        conditions.append(or_(*matches))
 
     total = db.execute(select(func.count()).select_from(Customer).where(*conditions)).scalar_one()
     customers = db.execute(

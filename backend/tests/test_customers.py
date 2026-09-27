@@ -109,3 +109,32 @@ def test_list_customers_sorted_by_name(auth_client: TestClient) -> None:
 )
 def test_search_customers(auth_client: TestClient, q: str, expected: list[str]) -> None:
     assert _names(auth_client, q=q) == expected
+
+
+@pytest.mark.parametrize(
+    "stored", ["87011234567", "+7 701 123 45 67", "8 (701) 123-45-67", "7011234567"]
+)
+@pytest.mark.parametrize(
+    "q", ["87011234567", "+7 701 123 45 67", "77011234567", "8-701-123-45-67", "701123", "4567"]
+)
+def test_search_customers_by_phone_digits(
+    auth_client: TestClient, db_session: Session, stored: str, q: str
+) -> None:
+    create_customer(db_session, name="Ержан", phone=stored)
+    create_customer(db_session, name="Другой", phone="87771234000")
+
+    assert _names(auth_client, q=q) == ["Ержан"]
+
+
+@pytest.mark.parametrize("q", ["87011234568", "97011234567", "8701123456789"])
+def test_phone_digits_must_match(auth_client: TestClient, db_session: Session, q: str) -> None:
+    create_customer(db_session, name="Ержан", phone="+7 701 123 45 67")
+    assert _names(auth_client, q=q) == []
+
+
+def test_leading_digit_kept_for_short_query(auth_client: TestClient, db_session: Session) -> None:
+    create_customer(db_session, name="Ержан", phone="+7 701 123 45 67")
+    create_customer(db_session, name="Айгуль", phone="87775550011")
+
+    assert _names(auth_client, q="8777") == ["Айгуль"]
+    assert _names(auth_client, q="+7701") == ["Ержан"]

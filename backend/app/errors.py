@@ -64,6 +64,28 @@ class CustomerNotFoundError(AppError):
     default_message = "Покупатель не найден"
 
 
+class ProductArchivedError(AppError):
+    status_code = 409
+
+
+class InvalidDocumentLinesError(AppError):
+    status_code = 422
+
+
+class ReceiptNotFoundError(AppError):
+    status_code = 404
+    default_message = "Приход не найден"
+
+
+class ReceiptAlreadyCancelledError(AppError):
+    status_code = 409
+    default_message = "Приход уже отменён"
+
+
+class ReceiptCancelError(AppError):
+    status_code = 409
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:

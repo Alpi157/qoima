@@ -1,12 +1,14 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import Select, and_, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
+from app.auth.models import User
 from app.catalog.models import Product
-from app.errors import InsufficientStockError
+from app.errors import InsufficientStockError, ProductNotFoundError
 from app.inventory.models import (
     MAIN_WAREHOUSE_CODE,
     MOVEMENT_KINDS,
@@ -14,6 +16,9 @@ from app.inventory.models import (
     StockMovement,
     Warehouse,
 )
+from app.inventory.schemas import AdjustmentCreate, AdjustmentOut, MovementOut, MovementPage
+from app.receipts.models import Receipt
+from app.sales.models import Sale
 
 
 @dataclass(frozen=True)
@@ -96,3 +101,73 @@ def post_movements(
         balances[key][0].qty += deltas[key]
     db.flush()
     return created
+
+
+def _ensure_product_exists(db: Session, product_id: int) -> None:
+    if db.get(Product, product_id) is None:
+        raise ProductNotFoundError()
+
+
+def _product_stock(db: Session, product_id: int) -> int:
+    query = select(func.coalesce(func.sum(StockBalance.qty), 0)).where(
+        StockBalance.product_id == product_id
+    )
+    return db.execute(query).scalar_one()
+
+
+def _movements_query(product_id: int) -> Select[tuple[Any, ...]]:
+    """Movements of one product with the product's total stock after each of them."""
+    history = (
+        select(
+            StockMovement,
+            func.sum(StockMovement.qty)
+            .over(order_by=(StockMovement.created_at, StockMovement.id))
+            .label("balance_after"),
+        )
+        .where(StockMovement.product_id == product_id)
+        .subquery()
+    )
+    return (
+        select(
+            history.c.id,
+            history.c.created_at,
+            history.c.qty,
+            history.c.kind,
+            history.c.doc_type,
+            history.c.doc_id,
+            func.coalesce(Receipt.number, Sale.number).label("doc_number"),
+            history.c.note,
+            User.full_name.label("created_by_name"),
+            history.c.balance_after,
+        )
+        .join(User, User.id == history.c.created_by)
+        .outerjoin(Receipt, and_(history.c.doc_type == "receipt", Receipt.id == history.c.doc_id))
+        .outerjoin(Sale, and_(history.c.doc_type == "sale", Sale.id == history.c.doc_id))
+        .order_by(history.c.created_at.desc(), history.c.id.desc())
+    )
+
+
+def list_movements(db: Session, product_id: int, limit: int, offset: int) -> MovementPage:
+    _ensure_product_exists(db, product_id)
+    total = db.execute(
+        select(func.count()).where(StockMovement.product_id == product_id)
+    ).scalar_one()
+    rows = db.execute(_movements_query(product_id).limit(limit).offset(offset)).all()
+    items = [MovementOut.model_validate(row, from_attributes=True) for row in rows]
+    return MovementPage(items=items, total=total)
+
+
+def create_adjustment(db: Session, data: AdjustmentCreate, user_id: int) -> AdjustmentOut:
+    """Manual stock correction. Allowed for archived products too."""
+    _ensure_product_exists(db, data.product_id)
+    (movement,) = post_movements(
+        db, [MovementIn(data.product_id, data.qty, "adjustment", note=data.reason)], user_id
+    )
+    db.commit()
+
+    history = _movements_query(data.product_id).subquery()
+    row = db.execute(select(history).where(history.c.id == movement.id)).one()
+    return AdjustmentOut(
+        movement=MovementOut.model_validate(row, from_attributes=True),
+        stock=_product_stock(db, data.product_id),
+    )

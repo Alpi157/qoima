@@ -171,7 +171,8 @@ PK (`product_id`, `warehouse_id`), `qty int not null check (qty >= 0)`.
 
 ### Поиск товара
 Запрос нормализуется. Результаты в порядке: точное совпадение артикула, артикул начинается с запроса,
-артикул содержит запрос, похожесть названия (pg_trgm). Архивные товары скрыты. Максимум 20 результатов.
+артикул содержит запрос, похожесть названия (pg_trgm). Архивные товары скрыты. По умолчанию
+50 результатов (`limit`), максимум 200, дальше постранично через `offset`.
 В ответе есть остаток и цена.
 
 ### Проведение продажи (одна транзакция)
@@ -198,15 +199,15 @@ GET    /api/products?q=&include_archived=
 POST   /api/products
 GET    /api/products/{id}
 PATCH  /api/products/{id}               артикул, название, бренд, цена, заметка, архив (не остаток)
-GET    /api/products/{id}/movements
+GET    /api/products/{id}/movements     история движений, новые сверху, с balance_after
 
-GET    /api/customers?q=
+GET    /api/customers?q=                имя или телефон; цифры телефона сравниваются без 7/8 в начале
 POST   /api/customers
 GET    /api/customers/{id}
 PATCH  /api/customers/{id}
 
 POST   /api/receipts
-GET    /api/receipts?from=&to=
+GET    /api/receipts?date_from=&date_to=&status=   даты YYYY-MM-DD по Asia/Almaty, date_to включительно
 GET    /api/receipts/{id}
 POST   /api/receipts/{id}/cancel
 

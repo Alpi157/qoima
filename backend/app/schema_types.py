@@ -1,7 +1,16 @@
-from pydantic import BeforeValidator, StringConstraints
+from typing import Annotated
+
+from pydantic import BeforeValidator, Field, StringConstraints
 
 # Trimmed, non-empty string: use as Annotated[str, NonEmpty, MaxLen(n)].
 NonEmpty = StringConstraints(strip_whitespace=True, min_length=1)
+
+
+MAX_BIGINT = 2**63 - 1
+# Id of an existing row, sent in a request body.
+EntityId = Annotated[int, Field(strict=True, ge=1, le=MAX_BIGINT)]
+# Why a document was cancelled or a stock level adjusted.
+Reason = Annotated[str, NonEmpty, Field(min_length=3, max_length=500)]
 
 
 def _blank_to_none(value: object) -> object:
