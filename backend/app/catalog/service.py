@@ -1,3 +1,5 @@
+from collections import Counter
+
 from sqlalchemy import ColumnElement, Select, case, false, func, literal, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -6,7 +8,13 @@ from app.catalog.models import Product
 from app.catalog.normalize import normalize_article
 from app.catalog.schemas import ProductCreate, ProductOut, ProductPage, ProductUpdate
 from app.db_utils import LIKE_ESCAPE, contains_pattern
-from app.errors import DuplicateArticleError, InvalidArticleError, ProductNotFoundError
+from app.errors import (
+    DuplicateArticleError,
+    InvalidArticleError,
+    InvalidDocumentLinesError,
+    ProductArchivedError,
+    ProductNotFoundError,
+)
 from app.inventory.models import StockBalance
 
 ARTICLE_NORM_CONSTRAINT = "uq_products_article_norm"
@@ -39,6 +47,30 @@ def get_product(db: Session, product_id: int) -> ProductOut:
     if row is None:
         raise ProductNotFoundError()
     return _to_out(row[0], row[1])
+
+
+def load_line_products(db: Session, ids: list[int], doc_name: str) -> dict[int, Product]:
+    """Products of document lines, by id. Rejects missing, repeated and archived products.
+
+    doc_name completes the message «Товар X указан в <doc_name> дважды», e.g. "приходе".
+    """
+    products = {
+        p.id: p for p in db.execute(select(Product).where(Product.id.in_(set(ids)))).scalars()
+    }
+
+    missing = sorted(set(ids) - products.keys())
+    if missing:
+        raise InvalidDocumentLinesError(f"Товар не найден: {', '.join(map(str, missing))}")
+
+    for product_id, count in Counter(ids).items():
+        if count > 1:
+            article = products[product_id].article
+            raise InvalidDocumentLinesError(f"Товар {article} указан в {doc_name} дважды")
+
+    for product_id in ids:
+        if products[product_id].is_archived:
+            raise ProductArchivedError(f"Товар {products[product_id].article} в архиве")
+    return products
 
 
 def _duplicate_error(existing: Product) -> DuplicateArticleError:

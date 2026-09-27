@@ -7,7 +7,6 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Integer,
-    Sequence,
     Text,
     func,
     text,
@@ -15,8 +14,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
-
-receipt_number_seq = Sequence("receipt_number_seq", metadata=Base.metadata)
 
 
 class Receipt(Base):
@@ -29,9 +26,8 @@ class Receipt(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    number: Mapped[int] = mapped_column(
-        BigInteger, unique=True, server_default=receipt_number_seq.next_value()
-    )
+    # Gapless, taken from document_counters by app.numbering.next_number.
+    number: Mapped[int] = mapped_column(BigInteger, unique=True)
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

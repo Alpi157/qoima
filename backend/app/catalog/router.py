@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.catalog import service
 from app.catalog.schemas import ProductCreate, ProductOut, ProductPage, ProductUpdate
 from app.db import get_db
+from app.schema_types import DbId
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -20,7 +21,7 @@ def search_products(
 
 
 @router.get("/{product_id}", response_model=ProductOut)
-def get_product(product_id: int, db: Session = Depends(get_db)) -> ProductOut:
+def get_product(product_id: DbId, db: Session = Depends(get_db)) -> ProductOut:
     return service.get_product(db, product_id)
 
 
@@ -31,6 +32,6 @@ def create_product(payload: ProductCreate, db: Session = Depends(get_db)) -> Pro
 
 @router.patch("/{product_id}", response_model=ProductOut)
 def update_product(
-    product_id: int, payload: ProductUpdate, db: Session = Depends(get_db)
+    product_id: DbId, payload: ProductUpdate, db: Session = Depends(get_db)
 ) -> ProductOut:
     return service.update_product(db, product_id, payload)

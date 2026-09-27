@@ -70,7 +70,17 @@ def db_session() -> Generator[Session, None, None]:
 @pytest.fixture
 def client(db_session: Session) -> Generator[TestClient, None, None]:
     def _get_db_override() -> Generator[Session, None, None]:
-        yield db_session
+        # In production get_db closes the session, so a failed request leaves nothing behind.
+        # Here the session is shared with the test: undo only this request's uncommitted work.
+        request_tx = db_session.begin_nested()
+        try:
+            yield db_session
+        except Exception:
+            if request_tx.is_active:
+                request_tx.rollback()
+            raise
+        if request_tx.is_active:
+            request_tx.commit()
 
     app.dependency_overrides[get_db] = _get_db_override
     try:

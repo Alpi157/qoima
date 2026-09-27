@@ -118,7 +118,7 @@ backend/app/
 добавить склады. Если в движении склад не указан, `post_movements` использует склад `main`.
 
 ### receipts и receipt_lines (приход)
-receipts: `number` (bigint unique из sequence), `received_at`, `supplier` (text null),
+receipts: `number` (bigint unique, из `document_counters`), `received_at`, `supplier` (text null),
 `note`, `status` ('posted' | 'cancelled'), `cancelled_at`, `cancelled_by`, `cancel_reason`,
 `created_by`, `created_at`.
 
@@ -127,13 +127,28 @@ receipt_lines: `receipt_id`, `product_id`, `qty` (int, check > 0), `unit_cost` (
 Первое заполнение остатков делается обычным приходом с поставщиком «Начальные остатки».
 
 ### sales и sale_lines (продажа)
-sales: `number` (bigint unique из sequence), `request_id` (uuid unique, защита от двойной отправки),
+sales: `number` (bigint unique, из `document_counters`), `request_id` (uuid unique, защита от двойной отправки),
 `customer_id` (null допустим), `sold_at`, `total` (bigint), `note`, `status` ('posted' | 'cancelled'),
 `cancelled_at`, `cancelled_by`, `cancel_reason`, `created_by`, `created_at`.
 
 sale_lines: `sale_id`, `product_id`, `qty` (int, check > 0), `unit_price` (bigint, check >= 0),
 `line_total` (bigint). Цена подставляется из товара, но в строке её можно изменить.
 Сохраняется та цена, по которой реально продали.
+
+### document_counters (номера документов)
+`doc_type` (text PK, check `IN ('receipt', 'sale')`), `last_number` (bigint, check >= 0).
+Одна строка на тип документа, `last_number` — последний выданный номер.
+
+Номер берёт `app/numbering.py::next_number(db, doc_type)`:
+`UPDATE document_counters SET last_number = last_number + 1 WHERE doc_type = :t RETURNING last_number`,
+в той же транзакции, что и создание документа, без commit.
+
+Почему не sequence: `nextval` не откатывается, и каждая неудачная попытка (нехватка товара,
+повтор `request_id`, любая ошибка после получения номера) оставляла бы дыру в нумерации
+накладных. Строка счётчика меняется транзакционно: при откате номер возвращается, при commit
+закрепляется за документом. Блокировка строки `UPDATE` заставляет одновременные проведения
+одного типа документа брать номера по очереди (для одного пользователя это не заметно).
+Номер отменённого документа остаётся за ним и повторно не выдаётся.
 
 ### stock_movements (журнал движений)
 | поле | тип | заметки |
@@ -176,11 +191,20 @@ PK (`product_id`, `warehouse_id`), `qty int not null check (qty >= 0)`.
 В ответе есть остаток и цена.
 
 ### Проведение продажи (одна транзакция)
-1. Если продажа с таким `request_id` уже есть, вернуть её и ничего не создавать.
-2. Заблокировать строки `stock_balances` нужных товаров (`SELECT ... FOR UPDATE`, по возрастанию product_id).
-3. Проверить остатки. Если не хватает, ошибка вида «OC90: на остатке 2, в продаже 3».
-4. Создать продажу и строки, посчитать итог на сервере.
-5. Через `post_movements` записать движения с минусом и обновить остатки.
+1. Если продажа с таким `request_id` уже есть: при том же составе вернуть её со статусом 200
+   и ничего не создавать; при другом составе 409 «Этот запрос уже использован для другой
+   продажи». Состав: покупатель и набор строк (товар, количество, цена), где цена — после
+   подстановки `sale_price` товара, если `unit_price` не передан. Порядок строк не важен.
+2. Проверить покупателя и строки (товар существует, не повторяется, не в архиве). Цена строки:
+   переданная `unit_price` или `sale_price` товара; если цена не передана и у товара 0, ошибка 422.
+3. Создать продажу и строки, посчитать итог на сервере (`line_total = qty * unit_price`).
+4. Через `post_movements` записать движения с минусом и обновить остатки: он блокирует строки
+   `stock_balances` (`SELECT ... FOR UPDATE`, по возрастанию product_id) и при нехватке бросает
+   409 «Недостаточно товара. OC-90: на остатке 2, требуется 3». Транзакция откатывается целиком,
+   продажа не остаётся.
+5. Номер берётся из `document_counters` при создании продажи (шаг 3), поэтому неудачная
+   продажа номер не расходует. Один commit, ответ 201. Если два одинаковых запроса пришли одновременно, второй получает
+   нарушение `uq_sales_request_id`, откатывается и возвращает продажу первого (шаг 1).
 
 ### Отмена документа
 Продажа: статус 'cancelled', обратные движения 'sale_cancel'. Повторная отмена запрещена.
@@ -213,14 +237,43 @@ POST   /api/receipts/{id}/cancel
 
 POST   /api/stock/adjustments           корректировка остатка с обязательной причиной
 
-POST   /api/sales
-GET    /api/sales?from=&to=&customer_id=
+POST   /api/sales                       201 новая продажа, 200 повтор с тем же request_id
+GET    /api/sales?date_from=&date_to=&customer_id=&status=   как у приходов, плюс sum_posted
 GET    /api/sales/{id}
 POST   /api/sales/{id}/cancel
 
 GET    /api/settings                    (Шаг 12)
 PUT    /api/settings                    (Шаг 12)
 ```
+
+Id в пути, в query и в теле запроса: целое от 1 до 9223372036854775807 (тип `DbId`
+в `app/schema_types.py`). Больше или меньше — 422.
+
+### Формат ошибок API
+
+Бизнес-ошибка (`AppError` из `app/errors.py`, коды 401, 404, 409, 422, 429): только текст.
+
+```json
+{"detail": "Товар OC-90 в архиве"}
+```
+
+Ошибка валидации запроса (422 от Pydantic): общий текст и список полей.
+
+```json
+{
+  "detail": "Проверьте введённые данные",
+  "errors": [
+    {"field": "lines.0.qty", "message": "Должно быть не меньше 1"},
+    {"field": "note", "message": "Максимальная длина: 1000"}
+  ]
+}
+```
+
+`field` — путь к полю через точку; у полей тела без префикса `body`, у параметров пути и
+строки запроса с префиксом (`path.sale_id`, `query.limit`), у тела целиком пустая строка.
+`message` — русский текст; перевод типов ошибок Pydantic в `VALIDATION_MESSAGES`
+(`app/errors.py`), неизвестный тип даёт «Некорректное значение». Отличить два формата можно
+по наличию `errors`.
 
 ## Фронтенд
 

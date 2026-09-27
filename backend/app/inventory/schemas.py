@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.schema_types import EntityId, Reason
+from app.schema_types import DbId, Reason
 
 MAX_ADJUSTMENT_QTY = 100_000
 
@@ -13,7 +13,7 @@ AdjustmentQty = Annotated[int, Field(strict=True, ge=-MAX_ADJUSTMENT_QTY, le=MAX
 class AdjustmentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    product_id: EntityId
+    product_id: DbId
     qty: AdjustmentQty
     reason: Reason
 

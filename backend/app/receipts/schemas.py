@@ -1,20 +1,22 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from app.catalog.schemas import MAX_SALE_PRICE
-from app.schema_types import BlankToNone, EntityId, Reason, Trimmed
-
-MAX_LINES = 200
-MAX_QTY = 100_000
-# Tolerated difference between the client's and the server's clocks.
-CLOCK_SKEW = timedelta(minutes=1)
+from app.schema_types import (
+    MAX_LINES,
+    BlankToNone,
+    DbId,
+    Note,
+    Qty,
+    Reason,
+    Trimmed,
+    check_not_in_future,
+)
 
 ReceiptStatus = Literal["posted", "cancelled"]
 Supplier = Annotated[Annotated[str, Trimmed, Field(max_length=255)] | None, BlankToNone]
-Note = Annotated[Annotated[str, Trimmed, Field(max_length=1000)] | None, BlankToNone]
-Qty = Annotated[int, Field(strict=True, ge=1, le=MAX_QTY)]
 # Money in tiyn.
 UnitCost = Annotated[int, Field(strict=True, ge=0, le=MAX_SALE_PRICE)]
 
@@ -22,7 +24,7 @@ UnitCost = Annotated[int, Field(strict=True, ge=0, le=MAX_SALE_PRICE)]
 class ReceiptLineIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    product_id: EntityId
+    product_id: DbId
     qty: Qty
     unit_cost: UnitCost | None = None
 
@@ -38,9 +40,7 @@ class ReceiptCreate(BaseModel):
     @field_validator("received_at")
     @classmethod
     def _not_in_future(cls, value: datetime | None) -> datetime | None:
-        if value is not None and value > datetime.now(UTC) + CLOCK_SKEW:
-            raise ValueError("Дата прихода не может быть в будущем")
-        return value
+        return check_not_in_future(value, "Дата прихода не может быть в будущем")
 
 
 class ReceiptCancel(BaseModel):

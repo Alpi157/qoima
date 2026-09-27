@@ -6,6 +6,7 @@ from app.auth.models import User
 from app.db import get_db
 from app.inventory import service
 from app.inventory.schemas import AdjustmentCreate, AdjustmentOut, MovementPage
+from app.schema_types import DbId
 
 router = APIRouter(tags=["stock"])
 
@@ -23,7 +24,7 @@ def create_adjustment(
 
 @router.get("/products/{product_id}/movements", response_model=MovementPage)
 def list_movements(
-    product_id: int,
+    product_id: DbId,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),

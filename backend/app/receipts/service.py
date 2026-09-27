@@ -1,4 +1,3 @@
-from collections import Counter
 from datetime import date
 
 from sqlalchemy import BigInteger, ColumnElement, cast, func, select
@@ -6,20 +5,19 @@ from sqlalchemy.orm import Session
 
 from app.auth.models import User
 from app.catalog.models import Product
+from app.catalog.service import load_line_products
 from app.db_utils import local_date_range
 from app.errors import (
     InsufficientStockError,
-    InvalidDocumentLinesError,
-    ProductArchivedError,
     ReceiptAlreadyCancelledError,
     ReceiptCancelError,
     ReceiptNotFoundError,
 )
 from app.inventory.service import MovementIn, post_movements
+from app.numbering import next_number
 from app.receipts.models import Receipt, ReceiptLine
 from app.receipts.schemas import (
     ReceiptCreate,
-    ReceiptLineIn,
     ReceiptLineOut,
     ReceiptListItem,
     ReceiptOut,
@@ -30,30 +28,15 @@ from app.receipts.schemas import (
 DOC_TYPE = "receipt"
 
 
-def _check_products(db: Session, lines: list[ReceiptLineIn]) -> None:
-    ids = [line.product_id for line in lines]
-    products = {
-        p.id: p for p in db.execute(select(Product).where(Product.id.in_(set(ids)))).scalars()
-    }
-
-    missing = sorted(set(ids) - products.keys())
-    if missing:
-        raise InvalidDocumentLinesError(f"Товар не найден: {', '.join(map(str, missing))}")
-
-    for product_id, count in Counter(ids).items():
-        if count > 1:
-            article = products[product_id].article
-            raise InvalidDocumentLinesError(f"Товар {article} указан в приходе дважды")
-
-    for product_id in ids:
-        if products[product_id].is_archived:
-            raise ProductArchivedError(f"Товар {products[product_id].article} в архиве")
-
-
 def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
-    _check_products(db, data.lines)
+    load_line_products(db, [line.product_id for line in data.lines], "приходе")
 
-    receipt = Receipt(supplier=data.supplier, note=data.note, created_by=user_id)
+    receipt = Receipt(
+        number=next_number(db, DOC_TYPE),
+        supplier=data.supplier,
+        note=data.note,
+        created_by=user_id,
+    )
     if data.received_at is not None:
         receipt.received_at = data.received_at
     db.add(receipt)
@@ -210,7 +193,7 @@ def cancel_receipt(db: Session, receipt_id: int, reason: str, user_id: int) -> R
         )
     except InsufficientStockError as exc:
         raise ReceiptCancelError(
-            f"Нельзя отменить приход: часть товара уже продана. {exc.message}"
+            f"Нельзя отменить приход: товара на остатке меньше, чем было в приходе. {exc.message}"
         ) from exc
 
     receipt.status = "cancelled"

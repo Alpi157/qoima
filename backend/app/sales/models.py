@@ -9,7 +9,6 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Integer,
-    Sequence,
     Text,
     func,
     text,
@@ -17,8 +16,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
-
-sale_number_seq = Sequence("sale_number_seq", metadata=Base.metadata)
 
 
 class Sale(Base):
@@ -32,9 +29,8 @@ class Sale(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    number: Mapped[int] = mapped_column(
-        BigInteger, unique=True, server_default=sale_number_seq.next_value()
-    )
+    # Gapless, taken from document_counters by app.numbering.next_number.
+    number: Mapped[int] = mapped_column(BigInteger, unique=True)
     request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), unique=True)
     customer_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("customers.id"), index=True

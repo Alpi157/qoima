@@ -5,6 +5,7 @@ from app.customers import service
 from app.customers.models import Customer
 from app.customers.schemas import CustomerCreate, CustomerOut, CustomerPage, CustomerUpdate
 from app.db import get_db
+from app.schema_types import DbId
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
@@ -20,7 +21,7 @@ def search_customers(
 
 
 @router.get("/{customer_id}", response_model=CustomerOut)
-def get_customer(customer_id: int, db: Session = Depends(get_db)) -> Customer:
+def get_customer(customer_id: DbId, db: Session = Depends(get_db)) -> Customer:
     return service.get_customer(db, customer_id)
 
 
@@ -31,6 +32,6 @@ def create_customer(payload: CustomerCreate, db: Session = Depends(get_db)) -> C
 
 @router.patch("/{customer_id}", response_model=CustomerOut)
 def update_customer(
-    customer_id: int, payload: CustomerUpdate, db: Session = Depends(get_db)
+    customer_id: DbId, payload: CustomerUpdate, db: Session = Depends(get_db)
 ) -> Customer:
     return service.update_customer(db, customer_id, payload)

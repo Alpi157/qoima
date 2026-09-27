@@ -368,7 +368,7 @@ def test_cancel_after_sale_rejected(
 
     assert response.status_code == 409
     assert response.json() == {
-        "detail": "Нельзя отменить приход: часть товара уже продана. "
+        "detail": "Нельзя отменить приход: товара на остатке меньше, чем было в приходе. "
         "Недостаточно товара. OC-90: на остатке 2, требуется 5"
     }
     assert _stock(db_session, oc.id) == 2

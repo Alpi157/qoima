@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.catalog.models import Product
 from app.inventory.models import Warehouse
 from app.inventory.service import MovementIn, post_movements
+from app.numbering import next_number
 from app.receipts.models import Receipt
 from app.sales.models import Sale, SaleLine
 from tests.factories import create_product, create_user
@@ -64,14 +65,25 @@ def test_cancelled_status_requires_cancelled_at(db_session: Session) -> None:
 
     with pytest.raises(IntegrityError, match="ck_receipts_cancelled_consistent"):
         with db_session.begin_nested():
-            db_session.add(Receipt(status="cancelled", created_by=user.id))
+            db_session.add(
+                Receipt(
+                    number=next_number(db_session, "receipt"),
+                    status="cancelled",
+                    created_by=user.id,
+                )
+            )
             db_session.flush()
 
 
 @pytest.fixture
 def sale(db_session: Session) -> Sale:
     user = create_user(db_session)
-    sale = Sale(request_id=uuid.uuid4(), total=0, created_by=user.id)
+    sale = Sale(
+        number=next_number(db_session, "sale"),
+        request_id=uuid.uuid4(),
+        total=0,
+        created_by=user.id,
+    )
     db_session.add(sale)
     db_session.flush()
     return sale
@@ -100,13 +112,35 @@ def test_main_warehouse_is_seeded(db_session: Session) -> None:
     assert warehouse.name == "Основной"
 
 
-def test_receipt_numbers_come_from_sequence(db_session: Session) -> None:
+def test_document_number_is_required(db_session: Session) -> None:
     user = create_user(db_session)
-    first = Receipt(created_by=user.id)
-    second = Receipt(created_by=user.id)
-    db_session.add_all([first, second])
-    db_session.flush()
-    db_session.refresh(first)
-    db_session.refresh(second)
 
-    assert second.number > first.number
+    with pytest.raises(IntegrityError, match="number"):
+        with db_session.begin_nested():
+            db_session.add(Receipt(created_by=user.id))
+            db_session.flush()
+
+
+@pytest.mark.parametrize(
+    ("statement", "constraint"),
+    [
+        (
+            "INSERT INTO document_counters (doc_type, last_number) VALUES ('invoice', 0)",
+            "ck_document_counters_doc_type_valid",
+        ),
+        (
+            "UPDATE document_counters SET last_number = -1 WHERE doc_type = 'sale'",
+            "ck_document_counters_last_number_non_negative",
+        ),
+        (
+            "INSERT INTO document_counters (doc_type, last_number) VALUES ('sale', 0)",
+            "pk_document_counters",
+        ),
+    ],
+)
+def test_document_counters_constraints(
+    db_session: Session, statement: str, constraint: str
+) -> None:
+    with pytest.raises(IntegrityError, match=constraint):
+        with db_session.begin_nested():
+            db_session.execute(text(statement))

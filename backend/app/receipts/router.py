@@ -14,6 +14,7 @@ from app.receipts.schemas import (
     ReceiptPage,
     ReceiptStatus,
 )
+from app.schema_types import DbId
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -31,7 +32,7 @@ def list_receipts(
 
 
 @router.get("/{receipt_id}", response_model=ReceiptOut)
-def get_receipt(receipt_id: int, db: Session = Depends(get_db)) -> ReceiptOut:
+def get_receipt(receipt_id: DbId, db: Session = Depends(get_db)) -> ReceiptOut:
     return service.get_receipt(db, receipt_id)
 
 
@@ -46,7 +47,7 @@ def post_receipt(
 
 @router.post("/{receipt_id}/cancel", response_model=ReceiptOut)
 def cancel_receipt(
-    receipt_id: int,
+    receipt_id: DbId,
     payload: ReceiptCancel,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
