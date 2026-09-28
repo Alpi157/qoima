@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { MONEY_INPUT_ERROR } from '../lib/money'
 import { renderWithProviders } from '../test/render'
 import { MoneyInput } from './MoneyInput'
 
@@ -22,6 +21,8 @@ function Harness({ onTiyn }: { onTiyn: (tiyn: number | null) => void }) {
     />
   )
 }
+
+const MONEY_INPUT_ERROR = 'Введите сумму, например 12500'
 
 describe('MoneyInput', () => {
   it('turns "12 500" into 1250000 tiyn and shows it formatted', async () => {

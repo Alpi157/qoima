@@ -135,6 +135,50 @@
             "APIKeyCookie": []
           }
         ]
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Update Me",
+        "operationId": "update_me_api_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
       }
     },
     "/api/products": {
@@ -1659,7 +1703,9 @@
           "duplicate_article",
           "customer_not_found",
           "product_archived",
-          "invalid_document_lines",
+          "line_product_not_found",
+          "duplicate_line",
+          "missing_price",
           "receipt_not_found",
           "receipt_already_cancelled",
           "receipt_cancel_blocked",
@@ -1682,6 +1728,12 @@
           },
           "code": {
             "$ref": "#/components/schemas/ErrorCode"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params",
+            "default": {}
           },
           "errors": {
             "anyOf": [
@@ -1715,12 +1767,23 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params",
+            "default": {}
           }
         },
         "type": "object",
         "required": [
           "field",
-          "message"
+          "message",
+          "type"
         ],
         "title": "FieldErrorOut"
       },
@@ -2888,6 +2951,15 @@
           "role": {
             "type": "string",
             "title": "Role"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "kk",
+              "ru",
+              "zh"
+            ],
+            "title": "Locale"
           }
         },
         "type": "object",
@@ -2895,9 +2967,30 @@
           "id",
           "username",
           "full_name",
-          "role"
+          "role",
+          "locale"
         ],
         "title": "UserOut"
+      },
+      "UserUpdate": {
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": [
+              "kk",
+              "ru",
+              "zh"
+            ],
+            "title": "Locale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "locale"
+        ],
+        "title": "UserUpdate",
+        "description": "PATCH /api/auth/me: settings the user changes for themselves."
       }
     },
     "securitySchemes": {

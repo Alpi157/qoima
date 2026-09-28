@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401  (registers every model so cross-module FKs resolve)
 from app.auth import service
+from app.auth.models import DEFAULT_LOCALE
+from app.auth.schemas import LOCALES
 from app.db import SessionLocal
 from app.errors import AppError
 
@@ -21,12 +23,14 @@ def _read_password() -> str | None:
     return password
 
 
-def create_user_command(db: Session, username: str, full_name: str) -> int:
+def create_user_command(
+    db: Session, username: str, full_name: str, locale: str = DEFAULT_LOCALE
+) -> int:
     password = _read_password()
     if password is None:
         return 1
     try:
-        user = service.create_user(db, username, full_name, password)
+        user = service.create_user(db, username, full_name, password, locale)
     except AppError as exc:
         print(exc.message, file=sys.stderr)
         return 1
@@ -54,6 +58,12 @@ def main(argv: list[str] | None = None) -> int:
     create = commands.add_parser("create-user", help="создать пользователя")
     create.add_argument("--username", required=True, help="логин")
     create.add_argument("--full-name", required=True, help="имя для отображения")
+    create.add_argument(
+        "--locale",
+        choices=LOCALES,
+        default=DEFAULT_LOCALE,
+        help=f"язык интерфейса (по умолчанию {DEFAULT_LOCALE})",
+    )
 
     set_pw = commands.add_parser("set-password", help="сменить пароль пользователя")
     set_pw.add_argument("--username", required=True, help="логин")
@@ -61,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     with SessionLocal() as db:
         if args.command == "create-user":
-            return create_user_command(db, args.username, args.full_name)
+            return create_user_command(db, args.username, args.full_name, args.locale)
         return set_password_command(db, args.username)
 
 

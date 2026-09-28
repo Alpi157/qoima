@@ -1,5 +1,8 @@
+import { currentLanguage, intlLocale, type Language } from '../i18n/language'
+
 const TIME_ZONE = 'Asia/Almaty'
 
+// Splits a moment into Almaty calendar parts; the digits do not depend on the language.
 const formatter = new Intl.DateTimeFormat('ru-RU', {
   timeZone: TIME_ZONE,
   year: 'numeric',
@@ -32,16 +35,37 @@ function localParts(value: string | Date): LocalParts {
   }
 }
 
-/** "27.09.2026 14:30" in Asia/Almaty. Accepts an ISO string from the API or a Date. */
-export function formatDateTime(value: string | Date): string {
-  const p = localParts(value)
-  return `${p.day}.${p.month}.${p.year} ${p.hour}:${p.minute}`
+const dateFormatters = new Map<Language, Intl.DateTimeFormat>()
+
+function dateFormatter(language: Language): Intl.DateTimeFormat {
+  let result = dateFormatters.get(language)
+  if (!result) {
+    result = new Intl.DateTimeFormat(intlLocale(language), {
+      timeZone: TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    dateFormatters.set(language, result)
+  }
+  return result
 }
 
-/** "27.09.2026" in Asia/Almaty. */
-export function formatDate(value: string | Date): string {
+/**
+ * The date in Asia/Almaty in the language's own format: "27.09.2026" in Russian and Kazakh,
+ * "2026/09/27" in Chinese. Accepts an ISO string from the API or a Date.
+ */
+export function formatDate(value: string | Date, language: Language = currentLanguage()): string {
+  return dateFormatter(language).format(new Date(value))
+}
+
+/** formatDate plus the time: "27.09.2026 14:30". */
+export function formatDateTime(
+  value: string | Date,
+  language: Language = currentLanguage(),
+): string {
   const p = localParts(value)
-  return `${p.day}.${p.month}.${p.year}`
+  return `${formatDate(value, language)} ${p.hour}:${p.minute}`
 }
 
 /** Today's date in Asia/Almaty as "2026-09-27", regardless of the browser's time zone. */

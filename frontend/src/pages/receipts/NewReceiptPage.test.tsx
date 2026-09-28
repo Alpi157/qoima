@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { fieldErrorOf } from '../../test/fields'
-import { makeProduct, makeReceipt, ok } from '../../test/fixtures'
+import { fieldError, makeProduct, makeReceipt, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { NewReceiptPage } from './NewReceiptPage'
 
@@ -128,7 +128,9 @@ describe('NewReceiptPage', () => {
     mockSearch()
     vi.spyOn(api, 'POST').mockRejectedValue(
       new ApiError(422, 'Проверьте введённые данные', {
-        'lines.1.qty': 'Должно быть не больше 100000',
+        'lines.1.qty': fieldError('Должно быть не больше 100000', 'less_than_equal', {
+          le: 100000,
+        }),
       }),
     )
     renderPage()

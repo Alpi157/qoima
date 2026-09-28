@@ -1,5 +1,6 @@
 import { Anchor, Button, Card, Group, Loader, Stack, Table, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
@@ -16,23 +17,25 @@ import { type Customer, useCustomer } from './api'
 import { CustomerFormModal } from './CustomerFormModal'
 
 function SaleLink({ sale }: { sale: SaleListItem }) {
+  const { t } = useTranslation()
   return (
     <Anchor component={Link} to={`/sales/${sale.id}`} fw={600}>
-      № {sale.number}
+      {t('common.documentNumber', { number: sale.number })}
     </Anchor>
   )
 }
 
 function SaleTable({ items }: { items: SaleListItem[] }) {
+  const { t } = useTranslation()
   return (
     <Table.ScrollContainer minWidth={500} visibleFrom="sm">
       <Table verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>№</Table.Th>
-            <Table.Th>Дата</Table.Th>
-            <Table.Th ta="right">Сумма</Table.Th>
-            <Table.Th>Статус</Table.Th>
+            <Table.Th>{t('customers.purchases.number')}</Table.Th>
+            <Table.Th>{t('customers.purchases.date')}</Table.Th>
+            <Table.Th ta="right">{t('customers.purchases.total')}</Table.Th>
+            <Table.Th>{t('customers.purchases.status')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -80,13 +83,16 @@ function SaleCards({ items }: { items: SaleListItem[] }) {
 function PurchaseHistory({ customerId }: { customerId: number }) {
   const { page, setPage } = useListParams()
   const sales = useSales({ customerId, page })
+  const { t } = useTranslation()
 
   if (sales.isPending) return <Loader />
   if (sales.isError) return <QueryError error={sales.error} onRetry={() => sales.refetch()} />
-  if (sales.data.total === 0) return <Text c="dimmed">Покупок пока не было</Text>
+  if (sales.data.total === 0) return <Text c="dimmed">{t('customers.purchases.empty')}</Text>
   return (
     <Stack>
-      <Text fw={600}>Всего покупок на {formatMoney(sales.data.sum_posted)}</Text>
+      <Text fw={600}>
+        {t('customers.purchases.sum', { amount: formatMoney(sales.data.sum_posted) })}
+      </Text>
       <SaleTable items={sales.data.items} />
       <SaleCards items={sales.data.items} />
       <ListPagination total={sales.data.total} page={page} onChange={setPage} />
@@ -96,11 +102,12 @@ function PurchaseHistory({ customerId }: { customerId: number }) {
 
 function CustomerDetails({ customer }: { customer: Customer }) {
   const [editOpened, edit] = useDisclosure()
+  const { t } = useTranslation()
 
   return (
     <Stack>
       <Anchor component={Link} to="/customers" size="sm">
-        ← Покупатели
+        {t('customers.card.back')}
       </Anchor>
 
       <Group justify="space-between" align="flex-start">
@@ -110,17 +117,17 @@ function CustomerDetails({ customer }: { customer: Customer }) {
             <Group gap="xs">
               <Text size="lg">{customer.phone}</Text>
               <Anchor href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} size="sm">
-                Позвонить
+                {t('customers.card.call')}
               </Anchor>
             </Group>
           )}
           {customer.note && <Text style={{ whiteSpace: 'pre-wrap' }}>{customer.note}</Text>}
         </Stack>
-        <Button onClick={edit.open}>Изменить</Button>
+        <Button onClick={edit.open}>{t('customers.card.edit')}</Button>
       </Group>
 
       <Title order={3} mt="md">
-        История покупок
+        {t('customers.purchases.title')}
       </Title>
       <PurchaseHistory customerId={customer.id} />
 
@@ -130,11 +137,12 @@ function CustomerDetails({ customer }: { customer: Customer }) {
 }
 
 function CustomerNotFound() {
+  const { t } = useTranslation()
   return (
     <NotFoundState
-      title="Покупатель не найден"
+      title={t('customers.notFound')}
       backTo="/customers"
-      backLabel="К списку покупателей"
+      backLabel={t('customers.backToList')}
     />
   )
 }

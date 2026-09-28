@@ -1,0 +1,434 @@
+{
+  "common": {
+    "listSeparator": ", ",
+    "error": "Қате",
+    "retry": "Қайталау",
+    "cancel": "Бас тарту",
+    "save": "Сақтау",
+    "pagination": {
+      "first": "Бірінші бет",
+      "previous": "Алдыңғы бет",
+      "next": "Келесі бет",
+      "last": "Соңғы бет"
+    },
+    "period": {
+      "today": "Бүгін",
+      "week": "Осы апта",
+      "month": "Осы ай",
+      "label": "Кезең",
+      "all": "Барлық күндер"
+    },
+    "clearSearch": "Іздеуді тазарту",
+    "notFound": {
+      "title": "Бет табылмады",
+      "toSale": "Сатуға өту"
+    },
+    "input": {
+      "qtyRange": "1-ден 100 000-ға дейінгі бүтін сан",
+      "reasonTooShort_one": "Себебін жазыңыз, кемінде {{count}} әріп",
+      "reasonTooShort_other": "Себебін жазыңыз, кемінде {{count}} әріп",
+      "moneyFormat": "Соманы жазыңыз, мысалы 12500",
+      "priceRequired": "Бағасын жазыңыз"
+    },
+    "language": "Тіл",
+    "documentNumber": "№ {{number}}",
+    "nothingFound": "Ештеңе табылмады",
+    "found_one": "Табылды: {{count}}",
+    "found_other": "Табылды: {{count}}",
+    "notFoundShort": "Табылмады",
+    "searching": "Іздеуде…",
+    "cancelDocument": {
+      "reason": "Себебі",
+      "keep": "Қалдыру"
+    },
+    "cancelled": {
+      "when": "Қашан: {{date}}",
+      "who": "Кім: {{name}}",
+      "reason": "Себебі: {{reason}}"
+    },
+    "postedBy": "Сақтаған: {{name}}, {{date}}",
+    "removeLine": "{{article}} жолын өшіру",
+    "lineSum": "Сомасы: {{amount}}",
+    "leave": {
+      "title": "Сақтамай шығасыз ба?",
+      "confirm": "Шығу"
+    },
+    "units": {
+      "pcs": "дана",
+      "set": "жиынтық",
+      "pair": "жұп",
+      "liter": "л",
+      "kg": "кг",
+      "meter": "м",
+      "pack": "орам"
+    }
+  },
+  "errors": {
+    "serverUnavailable": "Серверге қосылу мүмкін емес. Кейінірек қайталап көріңіз",
+    "shortageItem": "{{article}}: қоймада {{available}}, керегі {{requested}}",
+    "shortageSeparator": "; ",
+    "validation_error": "Енгізілген деректерді тексеріңіз",
+    "not_authenticated": "Жүйеге кіріңіз",
+    "invalid_credentials": "Логин немесе құпиясөз қате",
+    "too_many_login_attempts": "Тым көп әрекет жасалды. Бір минуттан кейін қайталаңыз",
+    "invalid_article": "Артикулды жазыңыз",
+    "product_not_found": "Тауар табылмады",
+    "duplicate_article": "«{{article}}» артикулы бар тауар бұрыннан бар: {{existing_name}}",
+    "product_archived": "{{article}} тауары жасырылған",
+    "customer_not_found": "Сатып алушы табылмады",
+    "document_customer_not_found": "Сатып алушы табылмады",
+    "line_product_not_found": "Тауар табылмады: {{product_ids}}",
+    "duplicate_line": "{{article}} тауары екі рет жазылған",
+    "duplicate_line_receipt": "{{article}} тауары қабылдауда екі рет жазылған",
+    "duplicate_line_sale": "{{article}} тауары сатылымда екі рет жазылған",
+    "missing_price": "{{article}} тауарының бағасын жазыңыз",
+    "insufficient_stock": "Қоймада тауар жетпейді. {{items}}",
+    "receipt_not_found": "Қабылдау табылмады",
+    "receipt_already_cancelled": "Бұл қабылдаудың күші бұрын жойылған",
+    "receipt_cancel_blocked": "Қабылдаудың күшін жою мүмкін емес: қоймада қабылданғаннан аз тауар қалды. Тауар жетпейді. {{items}}",
+    "sale_not_found": "Сатылым табылмады",
+    "sale_already_cancelled": "Бұл сатылымның күші бұрын жойылған",
+    "sale_request_conflict": "Бұл сұраныс басқа сатылымға қолданылған",
+    "not_found": "Табылмады",
+    "method_not_allowed": "Бұл әрекетке рұқсат жоқ",
+    "http_error": "Сұраныс қатесі",
+    "app_error": "Сұраныс қатесі"
+  },
+  "validation": {
+    "missing": "Міндетті түрде толтырыңыз",
+    "extra_forbidden": "Артық өріс",
+    "string_too_short": "Кемінде {{min_length}} таңба",
+    "string_too_long": "Ең көбі {{max_length}} таңба",
+    "greater_than": "Мәні {{gt}} санынан үлкен болуы керек",
+    "greater_than_equal": "Кемінде {{ge}} болуы керек",
+    "less_than": "Мәні {{lt}} санынан кіші болуы керек",
+    "less_than_equal": "Ең көбі {{le}} болуы керек",
+    "int_type": "Бүтін сан жазыңыз",
+    "int_parsing": "Бүтін сан жазыңыз",
+    "uuid_parsing": "Идентификатор қате",
+    "date_parsing": "Күні қате жазылған",
+    "datetime_parsing": "Күні мен уақыты қате жазылған",
+    "too_short": "Кемінде {{min_length}} жол керек",
+    "too_long": "Ең көбі {{max_length}} жол",
+    "qty_zero": "Саны нөл бола алмайды",
+    "iin_bin_format": "ЖСН/БСН 12 цифрдан тұруы керек",
+    "date_in_future": "Келешектегі күнді таңдауға болмайды",
+    "date_in_future_received_at": "Қабылдау күні келешекте болмауы керек",
+    "date_in_future_sold_at": "Сатылым күні келешекте болмауы керек",
+    "null_not_allowed": "Бұл өрістер бос болмауы керек: {{fields}}"
+  },
+  "products": {
+    "movementKind": {
+      "receipt": "Қабылдау",
+      "receipt_cancel": "Қабылдаудың күшін жою",
+      "sale": "Сатылым",
+      "sale_cancel": "Сатылымның күшін жою",
+      "adjustment": "Санын түзету"
+    },
+    "archivedBadge": "Жасырылған",
+    "notFound": "Тауар табылмады",
+    "backToList": "Тауарлар тізіміне",
+    "movements": {
+      "date": "Күні",
+      "kind": "Әрекет",
+      "document": "Құжат",
+      "qty": "Саны",
+      "balanceAfter": "Кейінгі қалдық",
+      "author": "Кім",
+      "note": "Ескертпе",
+      "balance": "Қалдық: {{balance}}",
+      "empty": "Әзірге ешқандай өзгеріс болған жоқ",
+      "title": "Тауар тарихы"
+    },
+    "archive": {
+      "archived": "{{article}} тауары жасырылды",
+      "restored": "{{article}} тауары қайта көрсетілді",
+      "title": "Тауарды жасырасыз ба?",
+      "restoreTitle": "Тауарды қайта көрсетесіз бе?",
+      "confirm": "Жасыру",
+      "restoreConfirm": "Қайта көрсету",
+      "text": "{{article}} тауары тізімде және іздеуде көрінбейді. Тарихы мен қалдығы сақталады.",
+      "restoreText": "{{article}} тауары тізімде және іздеуде қайта көрінеді."
+    },
+    "card": {
+      "back": "← Тауарлар",
+      "brand": "Бренд: {{brand}}",
+      "edit": "Өзгерту",
+      "adjust": "Санын түзету",
+      "restore": "Қайта көрсету",
+      "archive": "Жасыру",
+      "stock": "Қалдық",
+      "price": "Бағасы"
+    },
+    "adjust": {
+      "add": "Қосу",
+      "remove": "Азайту",
+      "reasons": {
+        "recount": "Қайта санау",
+        "defect": "Ақау",
+        "loss": "Жоғалды"
+      },
+      "saved": "{{article}} қалдығы: {{stock}}",
+      "direction": "Не істейміз",
+      "qty": "Саны",
+      "reason": "Себебі",
+      "preview": "Қазір: {{before}} → болады: <after>{{after}}</after>",
+      "title": "Санын түзету: {{article}}"
+    },
+    "list": {
+      "article": "Артикул",
+      "name": "Атауы",
+      "price": "Бағасы",
+      "stock": "Қалдық",
+      "title": "Тауарлар",
+      "add": "Тауар қосу",
+      "searchPlaceholder": "Артикул немесе атауы",
+      "searchLabel": "Тауар іздеу",
+      "showArchived": "Жасырылғандарды көрсету",
+      "empty": "Әзірге тауар жоқ",
+      "addFirst": "Алғашқы тауарды қосу"
+    },
+    "form": {
+      "articleRequired": "Артикулды жазыңыз",
+      "nameRequired": "Атауын жазыңыз",
+      "unitRequired": "Өлшем бірлігін таңдаңыз",
+      "saved": "{{article}} тауары сақталды",
+      "added": "{{article}} тауары қосылды",
+      "article": "Артикул",
+      "name": "Атауы",
+      "price": "Бағасы",
+      "pricePlaceholder": "Мысалы, 12500",
+      "unit": "Өлшем бірлігі",
+      "hideMore": "Қосымшаны жасыру",
+      "showMore": "Қосымша: бренд, ескертпе",
+      "brand": "Бренд",
+      "note": "Ескертпе",
+      "saveAndAddMore": "Сақтап, тағы қосу",
+      "editTitle": "Тауарды өзгерту",
+      "newTitle": "Жаңа тауар"
+    },
+    "picker": {
+      "stock": "Қалдық: {{stock}}",
+      "create": "Жаңа тауар қосу: «{{article}}»"
+    }
+  },
+  "receipts": {
+    "status": {
+      "posted": "Сақталған",
+      "cancelled": "Күші жойылған"
+    },
+    "list": {
+      "statusAll": "Барлығы",
+      "statusPosted": "Сақталғандар",
+      "statusCancelled": "Күші жойылғандар",
+      "number": "№",
+      "date": "Күні",
+      "supplier": "Жеткізуші",
+      "positions": "Тауар түрлері",
+      "pieces": "Дана",
+      "cost": "Сатып алу сомасы",
+      "status": "Күйі",
+      "cardCounts": "Тауар түрлері: {{positions}}, барлығы: {{pieces}} дана",
+      "title": "Қабылдаулар",
+      "new": "Тауар қабылдау",
+      "empty": "Әзірге тауар қабылданған жоқ",
+      "addFirst": "Алғаш рет тауар қабылдау"
+    },
+    "notFound": "Қабылдау табылмады",
+    "backToList": "Қабылдаулар тізіміне",
+    "lines": {
+      "article": "Артикул",
+      "name": "Атауы",
+      "qty": "Саны",
+      "cost": "Бағасы",
+      "sum": "Сомасы"
+    },
+    "card": {
+      "back": "← Қабылдаулар",
+      "title": "Қабылдау №{{number}}, {{date}}",
+      "cancelled": "Қабылдаудың күші жойылды",
+      "supplier": "Жеткізуші: {{supplier}}",
+      "note": "Ескертпе: {{note}}",
+      "positions_one": "Тауар түрлері: {{count}}",
+      "positions_other": "Тауар түрлері: {{count}}",
+      "pieces_one": "Барлығы: {{count}} дана",
+      "pieces_other": "Барлығы: {{count}} дана",
+      "cost": "Сатып алу сомасы: {{amount}}"
+    },
+    "cancel": {
+      "confirm": "Қабылдаудың күшін жою",
+      "title": "№{{number}} қабылдаудың күшін жоясыз ба?",
+      "description": "Осы қабылдаудағы тауарлар қоймадан қайта азаяды. Қабылдаудың өзі тізімде «күші жойылған» болып қалады.",
+      "done": "№{{number}} қабылдаудың күші жойылды"
+    },
+    "new": {
+      "qty": "Саны",
+      "qtyOf": "{{article}} саны",
+      "cost": "Сатып алу бағасы",
+      "costOf": "{{article}} сатып алу бағасы",
+      "optional": "Міндетті емес",
+      "initialStock": "Бастапқы қалдық",
+      "posted": "№{{number}} қабылдау сақталды",
+      "title": "Тауар қабылдау",
+      "supplier": "Жеткізуші",
+      "date": "Күні мен уақыты",
+      "note": "Ескертпе",
+      "addProduct": "Тауар қосу",
+      "emptyLines": "Жол қосу үшін тауарды артикул бойынша іздеңіз",
+      "stock": "Қалдық",
+      "submit": "Қоймаға қосу",
+      "leaveText": "Қабылдау сақталмады, қосылған жолдар жойылады."
+    }
+  },
+  "sales": {
+    "status": {
+      "posted": "Сақталған",
+      "cancelled": "Күші жойылған"
+    },
+    "lines": {
+      "article": "Артикул",
+      "name": "Атауы",
+      "sum": "Сомасы",
+      "qty": "Саны",
+      "price": "Бағасы"
+    },
+    "new": {
+      "qty": "Саны",
+      "qtyOf": "{{article}} саны",
+      "inStock": "Қоймада: {{stock}}",
+      "price": "Бағасы",
+      "priceOf": "{{article}} бағасы",
+      "posted": "№{{number}} сатылым сақталды",
+      "requestConflict": "Сатылым сақталып қойған болуы мүмкін. <history>Сатылымдар тарихын</history> тексеріңіз",
+      "title": "Сату",
+      "addProduct": "Тауар қосу",
+      "emptyLines": "Жол қосу үшін тауарды артикул бойынша іздеңіз",
+      "stock": "Қалдық",
+      "date": "Күні мен уақыты",
+      "note": "Ескертпе",
+      "total": "БАРЛЫҒЫ",
+      "submit": "Сақтау және басып шығару",
+      "submitHint": "Ctrl+Enter: сақтау және басып шығару",
+      "leaveText": "Сатылым сақталмады, қосылған жолдар жойылады."
+    },
+    "list": {
+      "statusAll": "Барлығы",
+      "statusPosted": "Сақталғандар",
+      "statusCancelled": "Күші жойылғандар",
+      "number": "№",
+      "date": "Күні",
+      "customer": "Сатып алушы",
+      "positions": "Тауар түрлері",
+      "pieces": "Дана",
+      "total": "Сомасы",
+      "status": "Күйі",
+      "cardCounts": "Тауар түрлері: {{positions}}, барлығы: {{pieces}} дана",
+      "title": "Сатылымдар",
+      "new": "Жаңа сатылым",
+      "empty": "Әзірге сатылым жоқ",
+      "addFirst": "Алғашқы сатылымды жасау",
+      "periodTotal": "Осы кезеңде барлығы: {{amount}}",
+      "count_one": "Сатылымдар: {{count}}",
+      "count_other": "Сатылымдар: {{count}}"
+    },
+    "notFound": "Сатылым табылмады",
+    "backToList": "Сатылымдар тарихына",
+    "card": {
+      "back": "← Сатылымдар",
+      "title": "Сатылым №{{number}}, {{date}}",
+      "print": "Жүкқұжатты басып шығару",
+      "cancelled": "Сатылымның күші жойылды",
+      "customer": "Сатып алушы:",
+      "note": "Ескертпе: {{note}}",
+      "total": "БАРЛЫҒЫ: {{amount}}"
+    },
+    "cancel": {
+      "confirm": "Сатылымның күшін жою",
+      "title": "№{{number}} сатылымның күшін жоясыз ба?",
+      "description": "Сатылымдағы тауарлар қоймаға қайтарылады. Сатылымның өзі тарихта «күші жойылған» болып қалады.",
+      "done": "№{{number}} сатылымның күші жойылды"
+    },
+    "print": {
+      "print": "Басып шығару",
+      "back": "Артқа",
+      "fillSettings": "<settings>Баптауларда</settings> деректемелерді толтырыңыз"
+    }
+  },
+  "nav": {
+    "sale": "Сату",
+    "products": "Тауарлар",
+    "customers": "Сатып алушылар",
+    "receipts": "Тауар қабылдау",
+    "sales": "Сатылымдар",
+    "settings": "Баптаулар",
+    "menu": "Мәзір",
+    "logout": "Шығу"
+  },
+  "auth": {
+    "login": {
+      "username": "Логин",
+      "password": "Құпиясөз",
+      "submit": "Кіру",
+      "usernameRequired": "Логинді жазыңыз",
+      "passwordRequired": "Құпиясөзді жазыңыз"
+    }
+  },
+  "customers": {
+    "list": {
+      "name": "Аты",
+      "phone": "Телефон",
+      "note": "Ескертпе",
+      "title": "Сатып алушылар",
+      "add": "Сатып алушы қосу",
+      "searchPlaceholder": "Аты немесе телефоны",
+      "searchLabel": "Сатып алушыны іздеу",
+      "empty": "Әзірге сатып алушы жоқ",
+      "addFirst": "Алғашқы сатып алушыны қосу"
+    },
+    "form": {
+      "nameRequired": "Атын жазыңыз",
+      "saved": "Сатып алушы сақталды: {{name}}",
+      "added": "Сатып алушы қосылды: {{name}}",
+      "name": "Аты",
+      "phone": "Телефон",
+      "note": "Ескертпе",
+      "editTitle": "Сатып алушыны өзгерту",
+      "newTitle": "Жаңа сатып алушы"
+    },
+    "notFound": "Сатып алушы табылмады",
+    "backToList": "Сатып алушылар тізіміне",
+    "purchases": {
+      "number": "№",
+      "date": "Күні",
+      "total": "Сомасы",
+      "status": "Күйі",
+      "empty": "Әзірге ештеңе сатып алған жоқ",
+      "sum": "Барлық сатып алғаны: {{amount}}",
+      "title": "Сатып алу тарихы"
+    },
+    "card": {
+      "back": "← Сатып алушылар",
+      "call": "Қоңырау шалу",
+      "edit": "Өзгерту"
+    },
+    "picker": {
+      "label": "Сатып алушы",
+      "reset": "Сатып алушыны алып тастау",
+      "placeholder": "Аты немесе телефоны",
+      "create": "Жаңа сатып алушы қосу: «{{name}}»"
+    }
+  },
+  "settings": {
+    "saved": "Баптаулар сақталды",
+    "sellerName": "Ұйым (жеке кәсіпкер)",
+    "sellerNamePlaceholder": "ЖК Ахметов",
+    "iinBin": "ЖСН/БСН",
+    "responsiblePerson": "Жеткізуге жауапты адам (аты-жөні)",
+    "releasedBy": "Тауарды босатқан адам (аты-жөні)",
+    "releasedByHint": "Бос қалса, жүкқұжатқа сатылымды сақтаған адамның аты жазылады",
+    "chiefAccountant": "Бас бухгалтер (аты-жөні)",
+    "chiefAccountantHint": "мысалы, Қамтамасыз етілмейді",
+    "title": "Баптаулар",
+    "invoiceDetails": "Жүкқұжатқа арналған деректемелер (З-2 нысаны)"
+  }
+}

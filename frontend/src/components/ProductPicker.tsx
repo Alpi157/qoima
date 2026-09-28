@@ -1,13 +1,15 @@
 import { Combobox, Group, Loader, Stack, Text, TextInput, useCombobox } from '@mantine/core'
 import { useDebouncedValue, useMergedRef } from '@mantine/hooks'
 import { type Ref, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import { unitLabel } from '../lib/labels'
 import { formatMoney } from '../lib/money'
 import { type Product, useProductSearch } from '../pages/products/api'
 import { ProductFormModal } from '../pages/products/ProductFormModal'
 import { SEARCH_DELAY_MS } from './SearchInput'
 
-// Option value of "Создать товар …"; real options use product ids.
+// Option value of "create product …"; real options use product ids.
 const CREATE_OPTION = 'create'
 
 export interface ProductPickerProps {
@@ -17,10 +19,12 @@ export interface ProductPickerProps {
   ref?: Ref<HTMLInputElement>
   autoFocus?: boolean
   label?: string
+  /** Defaults to "Артикул или название" in the current language. */
   placeholder?: string
 }
 
 function ProductOption({ product }: { product: Product }) {
+  const { t } = useTranslation()
   return (
     <Group justify="space-between" wrap="nowrap" align="flex-start">
       <Stack gap={0} style={{ minWidth: 0 }}>
@@ -31,7 +35,7 @@ function ProductOption({ product }: { product: Product }) {
       </Stack>
       <Stack gap={0} align="flex-end" style={{ flexShrink: 0 }}>
         <Text size="sm" c={product.stock <= 0 ? 'red' : 'dimmed'}>
-          Остаток: {product.stock} {product.unit}
+          {t('products.picker.stock', { stock: `${product.stock} ${unitLabel(product.unit)}` })}
         </Text>
         <Text size="sm" fw={500}>
           {formatMoney(product.sale_price)}
@@ -47,8 +51,9 @@ export function ProductPicker({
   ref,
   autoFocus,
   label,
-  placeholder = 'Артикул или название',
+  placeholder,
 }: ProductPickerProps) {
+  const { t } = useTranslation()
   const combobox = useCombobox()
   const inputRef = useRef<HTMLInputElement>(null)
   const mergedRef = useMergedRef(inputRef, ref)
@@ -104,8 +109,8 @@ export function ProductPicker({
             autoComplete="off"
             autoFocus={autoFocus}
             label={label}
-            aria-label={label ? undefined : 'Поиск товара'}
-            placeholder={placeholder}
+            aria-label={label ? undefined : t('products.list.searchLabel')}
+            placeholder={placeholder ?? t('products.list.searchPlaceholder')}
             value={text}
             onChange={(event) => {
               const value = event.currentTarget.value
@@ -131,12 +136,12 @@ export function ProductPicker({
             {nothingFound && settled && (
               <Combobox.Option value={CREATE_OPTION}>
                 <Text fw={500} c="blue">
-                  Создать товар «{query}»
+                  {t('products.picker.create', { article: query })}
                 </Text>
               </Combobox.Option>
             )}
             {items.length === 0 && !(nothingFound && settled) && (
-              <Combobox.Empty>Поиск…</Combobox.Empty>
+              <Combobox.Empty>{t('common.searching')}</Combobox.Empty>
             )}
           </Combobox.Options>
         </Combobox.Dropdown>

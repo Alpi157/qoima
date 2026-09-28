@@ -7,7 +7,7 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.auth.models import User, UserSession
+from app.auth.models import DEFAULT_LOCALE, User, UserSession
 from app.errors import (
     InvalidCredentialsError,
     InvalidUserDataError,
@@ -44,7 +44,10 @@ def _hash_token(raw_token: str) -> str:
 
 def _validate_password(password: str) -> None:
     if len(password) < MIN_PASSWORD_LENGTH:
-        raise InvalidUserDataError(f"Пароль должен быть не короче {MIN_PASSWORD_LENGTH} символов")
+        raise InvalidUserDataError(
+            f"Пароль должен быть не короче {MIN_PASSWORD_LENGTH} символов",
+            {"field": "password", "min_length": MIN_PASSWORD_LENGTH},
+        )
 
 
 def login(db: Session, username: str, password: str) -> tuple[User, str]:
@@ -97,20 +100,27 @@ def logout(db: Session, raw_token: str) -> None:
     db.commit()
 
 
-def create_user(db: Session, username: str, full_name: str, password: str) -> User:
+def create_user(
+    db: Session, username: str, full_name: str, password: str, locale: str = DEFAULT_LOCALE
+) -> User:
     username = normalize_username(username)
     full_name = full_name.strip()
     if not username:
-        raise InvalidUserDataError("Логин не может быть пустым")
+        raise InvalidUserDataError("Логин не может быть пустым", {"field": "username"})
     if not full_name:
-        raise InvalidUserDataError("Имя не может быть пустым")
+        raise InvalidUserDataError("Имя не может быть пустым", {"field": "full_name"})
     _validate_password(password)
 
     exists = db.execute(select(User.id).where(User.username == username)).first()
     if exists is not None:
         raise UsernameTakenError()
 
-    user = User(username=username, full_name=full_name, password_hash=hash_password(password))
+    user = User(
+        username=username,
+        full_name=full_name,
+        password_hash=hash_password(password),
+        locale=locale,
+    )
     db.add(user)
     db.commit()
     return user
@@ -127,5 +137,12 @@ def set_password(db: Session, username: str, password: str) -> User:
     user.password_hash = hash_password(password)
     # Every device has to log in again with the new password.
     db.execute(delete(UserSession).where(UserSession.user_id == user.id))
+    db.commit()
+    return user
+
+
+def update_me(db: Session, user: User, locale: str) -> User:
+    """The user's own settings: for now only the interface language."""
+    user.locale = locale
     db.commit()
     return user

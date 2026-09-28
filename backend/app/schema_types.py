@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from pydantic import BeforeValidator, Field, StringConstraints
+from pydantic_core import PydanticCustomError
 
 # Trimmed, non-empty string: use as Annotated[str, NonEmpty, MaxLen(n)].
 NonEmpty = StringConstraints(strip_whitespace=True, min_length=1)
@@ -31,7 +32,11 @@ def reject_explicit_nulls(data: object, fields: tuple[str, ...]) -> object:
     if isinstance(data, dict):
         nulls = [f for f in fields if f in data and data[f] is None]
         if nulls:
-            raise ValueError(f"Поле не может быть пустым: {', '.join(nulls)}")
+            raise PydanticCustomError(
+                "null_not_allowed",
+                f"Поле не может быть пустым: {', '.join(nulls)}",
+                {"fields": nulls},
+            )
     return data
 
 
@@ -46,7 +51,7 @@ CLOCK_SKEW = timedelta(minutes=1)
 
 
 def check_not_in_future(value: datetime | None, message: str) -> datetime | None:
-    """For document dates: raise ValueError(message) if the value is in the future."""
+    """For document dates: a "date_in_future" validation error with this message."""
     if value is not None and value > datetime.now(UTC) + CLOCK_SKEW:
-        raise ValueError(message)
+        raise PydanticCustomError("date_in_future", message)
     return value

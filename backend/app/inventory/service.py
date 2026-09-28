@@ -79,9 +79,15 @@ def post_movements(
     for key in keys:
         balance, article = balances[key]
         if balance.qty + deltas[key] < 0:
-            shortages.append(f"{article}: на остатке {balance.qty}, требуется {-deltas[key]}")
+            shortages.append(
+                {"article": article, "available": balance.qty, "requested": -deltas[key]}
+            )
     if shortages:
-        raise InsufficientStockError("Недостаточно товара. " + "; ".join(shortages))
+        text = "; ".join(
+            f"{s['article']}: на остатке {s['available']}, требуется {s['requested']}"
+            for s in shortages
+        )
+        raise InsufficientStockError(f"Недостаточно товара. {text}", {"items": shortages})
 
     created = [
         StockMovement(

@@ -6,10 +6,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { fieldErrorOf } from '../../test/fields'
-import { makeBusinessSettings, ok } from '../../test/fixtures'
+import { fieldError, makeBusinessSettings, ok } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import type { BusinessSettingsUpdate } from './api'
-import { IIN_BIN_ERROR, SettingsPage } from './SettingsPage'
+import { SettingsPage } from './SettingsPage'
+
+const IIN_BIN_ERROR = 'ИИН/БИН должен состоять из 12 цифр'
 
 const EMPTY = makeBusinessSettings({
   seller_name: '',
@@ -93,7 +95,7 @@ describe('SettingsPage', () => {
       new ApiError(
         422,
         'Проверьте введённые данные',
-        { seller_iin_bin: 'ИИН/БИН должен состоять из 12 цифр' },
+        { seller_iin_bin: fieldError('ИИН/БИН должен состоять из 12 цифр', 'iin_bin_format') },
         'validation_error',
       ),
     )

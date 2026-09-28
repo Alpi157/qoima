@@ -1,6 +1,7 @@
 import { CloseButton, TextInput, type TextInputProps } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export const SEARCH_DELAY_MS = 300
 
@@ -12,6 +13,7 @@ export interface SearchInputProps extends Omit<TextInputProps, 'value' | 'onChan
 }
 
 export function SearchInput({ value, onSearch, ...props }: SearchInputProps) {
+  const { t } = useTranslation()
   const [text, setText] = useState(value)
   const [debounced] = useDebouncedValue(text, SEARCH_DELAY_MS)
 
@@ -43,7 +45,7 @@ export function SearchInput({ value, onSearch, ...props }: SearchInputProps) {
       rightSection={
         text ? (
           <CloseButton
-            aria-label="Очистить поиск"
+            aria-label={t('common.clearSearch')}
             onClick={() => {
               setText('')
               onSearch('')

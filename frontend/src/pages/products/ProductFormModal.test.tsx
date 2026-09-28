@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { renderWithProviders } from '../../test/render'
-import { makeProduct, ok } from '../../test/fixtures'
+import { fieldError as apiFieldError, makeProduct, ok } from '../../test/fixtures'
 import type { Product } from './api'
-import { PRICE_REQUIRED, ProductFormModal } from './ProductFormModal'
+import { ProductFormModal } from './ProductFormModal'
+
+const PRICE_REQUIRED = 'Укажите цену'
 
 const product = makeProduct
 
@@ -86,7 +88,9 @@ describe('ProductFormModal', () => {
   it('shows server field errors under their fields', async () => {
     const user = userEvent.setup()
     mockPost().mockRejectedValue(
-      new ApiError(422, 'Проверьте введённые данные', { name: 'Максимальная длина: 255' }),
+      new ApiError(422, 'Проверьте введённые данные', {
+        name: apiFieldError('Максимальная длина: 255', 'string_too_long', { max_length: 255 }),
+      }),
     )
     renderForm()
 

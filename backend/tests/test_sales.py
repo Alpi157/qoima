@@ -169,7 +169,8 @@ def test_price_required_when_product_has_none(
     assert response.status_code == 422
     assert response.json() == {
         "detail": "Укажите цену для товара 0986.452.041",
-        "code": "invalid_document_lines",
+        "code": "missing_price",
+        "params": {"article": "0986.452.041"},
     }
     assert _sale_count(db_session) == 0
     assert _stock(db_session, oc.id) == 10
@@ -210,7 +211,12 @@ def test_sold_at_in_the_future_rejected(
     )
     assert response.status_code == 422
     assert response.json()["errors"] == [
-        {"field": "sold_at", "message": "Дата продажи не может быть в будущем"}
+        {
+            "field": "sold_at",
+            "message": "Дата продажи не может быть в будущем",
+            "type": "date_in_future",
+            "params": {},
+        }
     ]
     assert _stock(db_session, oc.id) == 10
 
@@ -251,6 +257,7 @@ def test_missing_customer_rejected(
     assert response.json() == {
         "detail": "Покупатель не найден",
         "code": "document_customer_not_found",
+        "params": {},
     }
     assert _stock(db_session, oc.id) == 10
 
@@ -266,7 +273,8 @@ def test_missing_product_rejected(
     assert response.status_code == 422
     assert response.json() == {
         "detail": "Товар не найден: 999999999",
-        "code": "invalid_document_lines",
+        "code": "line_product_not_found",
+        "params": {"product_ids": [999999999]},
     }
 
 
@@ -281,7 +289,8 @@ def test_duplicate_product_rejected(
     assert response.status_code == 422
     assert response.json() == {
         "detail": "Товар OC-90 указан в продаже дважды",
-        "code": "invalid_document_lines",
+        "code": "duplicate_line",
+        "params": {"article": "OC-90", "document": "sale"},
     }
     assert _stock(db_session, oc.id) == 10
 
@@ -291,7 +300,11 @@ def test_archived_product_rejected(auth_client: TestClient, db_session: Session)
     _receive(db_session, product, 3)
     response = auth_client.post("/api/sales", json=_payload([{"product_id": product.id, "qty": 1}]))
     assert response.status_code == 409
-    assert response.json() == {"detail": "Товар ARH-1 в архиве", "code": "product_archived"}
+    assert response.json() == {
+        "detail": "Товар ARH-1 в архиве",
+        "code": "product_archived",
+        "params": {"article": "ARH-1"},
+    }
     assert _stock(db_session, product.id) == 3
 
 
@@ -312,6 +325,7 @@ def test_insufficient_stock_creates_nothing(
     assert response.json() == {
         "detail": "Недостаточно товара. 0986.452.041: на остатке 5, требуется 6",
         "code": "insufficient_stock",
+        "params": {"items": [{"article": "0986.452.041", "available": 5, "requested": 6}]},
     }
     assert _sale_count(db_session) == 0
     assert _stock(db_session, oc.id) == 10
@@ -392,6 +406,7 @@ def test_same_request_other_content_rejected(
     assert response.json() == {
         "detail": "Этот запрос уже использован для другой продажи",
         "code": "sale_request_conflict",
+        "params": {},
     }
     assert _sale_count(db_session) == 1
     assert _stock(db_session, oc.id) == 8
@@ -498,7 +513,11 @@ def test_cancel_twice_rejected(
     response = auth_client.post(url, json={"reason": "Ещё раз"})
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Продажа уже отменена", "code": "sale_already_cancelled"}
+    assert response.json() == {
+        "detail": "Продажа уже отменена",
+        "code": "sale_already_cancelled",
+        "params": {},
+    }
     assert _stock(db_session, oc.id) == 10
 
 
@@ -517,7 +536,11 @@ def test_missing_sale(auth_client: TestClient) -> None:
         auth_client.post("/api/sales/999999999/cancel", json={"reason": "Ошибка"}),
     ):
         assert response.status_code == 404
-        assert response.json() == {"detail": "Продажа не найдена", "code": "sale_not_found"}
+        assert response.json() == {
+            "detail": "Продажа не найдена",
+            "code": "sale_not_found",
+            "params": {},
+        }
 
 
 def test_list_sales(

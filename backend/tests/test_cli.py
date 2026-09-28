@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from contextlib import nullcontext
 
 import pytest
 from fastapi.testclient import TestClient
@@ -34,7 +35,28 @@ def test_create_user(
     assert user is not None
     assert user.full_name == "Владелец"
     assert user.is_active
+    assert user.locale == "kk"
     assert verify_password(user.password_hash, "secret-123")
+
+
+def test_create_user_with_locale(db_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "getpass", _fake_getpass("secret-123", "secret-123"))
+    monkeypatch.setattr(cli, "SessionLocal", lambda: nullcontext(db_session))
+
+    code = cli.main(
+        ["create-user", "--username", "owner", "--full-name", "Владелец", "--locale", "zh"]
+    )
+
+    assert code == 0
+    user = _get_user(db_session, "owner")
+    assert user is not None
+    assert user.locale == "zh"
+
+
+def test_create_user_rejects_unknown_locale(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        cli.main(["create-user", "--username", "o", "--full-name", "O", "--locale", "en"])
+    assert "--locale" in capsys.readouterr().err
 
 
 def test_create_user_duplicate_username(

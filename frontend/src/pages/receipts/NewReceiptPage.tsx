@@ -19,7 +19,9 @@ import { DateTimePicker } from '@mantine/dates'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useRef, useState } from 'react'
+import type { TFunction } from 'i18next'
 import { flushSync } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom'
 
 import { ConfirmModal } from '../../components/ConfirmModal'
@@ -28,6 +30,7 @@ import { ProductPicker } from '../../components/ProductPicker'
 import { WIDE_SCREEN } from '../../lib/breakpoints'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { serverFormErrors } from '../../lib/formErrors'
+import { unitLabel } from '../../lib/labels'
 import { formatMoney } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import type { Product } from '../products/api'
@@ -39,8 +42,6 @@ import {
   receiptBody,
   receiptTotals,
 } from './receiptLines'
-
-export const INITIAL_STOCK_SUPPLIER = 'Начальные остатки'
 
 const HEADER_FIELD_MAP = { supplier: 'supplier', note: 'note', received_at: 'receivedAt' }
 
@@ -58,6 +59,7 @@ interface LineInputsProps {
   onChange: (changes: Partial<Pick<ReceiptLine, 'qty' | 'cost'>>) => void
   onQtyEnter: () => void
   onRemove: () => void
+  t: TFunction
 }
 
 /** Quantity, price and the remove button of one line: the same in the table and in a card. */
@@ -69,13 +71,14 @@ function lineInputs({
   onChange,
   onQtyEnter,
   onRemove,
+  t,
 }: LineInputsProps) {
   const article = line.product.article
   const qty = (
     <NumberInput
       ref={qtyRef}
-      label={withLabels ? 'Количество' : undefined}
-      aria-label={`Количество ${article}`}
+      label={withLabels ? t('receipts.new.qty') : undefined}
+      aria-label={t('receipts.new.qtyOf', { article })}
       value={line.qty}
       onChange={(qty) => onChange({ qty })}
       onKeyDown={(event) => {
@@ -95,25 +98,26 @@ function lineInputs({
   )
   const cost = (
     <MoneyInput
-      label={withLabels ? 'Закупочная цена' : undefined}
-      aria-label={`Закупочная цена ${article}`}
-      placeholder="Необязательно"
+      label={withLabels ? t('receipts.new.cost') : undefined}
+      aria-label={t('receipts.new.costOf', { article })}
+      placeholder={t('receipts.new.optional')}
       value={line.cost}
       onChange={(cost) => onChange({ cost })}
       error={serverErrors[lineErrorKey(line.key, 'cost')]}
       w={withLabels ? undefined : 150}
     />
   )
-  const remove = <CloseButton aria-label={`Удалить строку ${article}`} onClick={onRemove} />
+  const remove = <CloseButton aria-label={t('common.removeLine', { article })} onClick={onRemove} />
   const total = lineTotal(line)
   const sum = total !== null ? formatMoney(total) : '—'
   return { qty, cost, remove, sum }
 }
 
-type LineRowProps = Omit<LineInputsProps, 'withLabels'>
+type LineRowProps = Omit<LineInputsProps, 'withLabels' | 't'>
 
 function LineTableRow(props: LineRowProps) {
-  const { qty, cost, remove, sum } = lineInputs({ ...props, withLabels: false })
+  const { t } = useTranslation()
+  const { qty, cost, remove, sum } = lineInputs({ ...props, withLabels: false, t })
   const { product } = props.line
   return (
     <Table.Tr>
@@ -122,7 +126,7 @@ function LineTableRow(props: LineRowProps) {
       </Table.Td>
       <Table.Td>{product.name}</Table.Td>
       <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-        {product.stock} {product.unit}
+        {product.stock} {unitLabel(product.unit)}
       </Table.Td>
       <Table.Td>{qty}</Table.Td>
       <Table.Td>{cost}</Table.Td>
@@ -135,7 +139,8 @@ function LineTableRow(props: LineRowProps) {
 }
 
 function LineCard(props: LineRowProps) {
-  const { qty, cost, remove, sum } = lineInputs({ ...props, withLabels: true })
+  const { t } = useTranslation()
+  const { qty, cost, remove, sum } = lineInputs({ ...props, withLabels: true, t })
   const { product } = props.line
   return (
     <Card withBorder padding="sm">
@@ -146,7 +151,7 @@ function LineCard(props: LineRowProps) {
           </Text>
           <Text>{product.name}</Text>
           <Text size="sm" c="dimmed">
-            Остаток: {product.stock} {product.unit}
+            {t('products.picker.stock', { stock: `${product.stock} ${unitLabel(product.unit)}` })}
           </Text>
         </Stack>
         {remove}
@@ -156,7 +161,7 @@ function LineCard(props: LineRowProps) {
         {cost}
       </SimpleGrid>
       <Text ta="right" fw={500}>
-        Сумма: {sum}
+        {t('common.lineSum', { amount: sum })}
       </Text>
     </Card>
   )
@@ -166,6 +171,8 @@ export function NewReceiptPage() {
   const navigate = useNavigate()
   const post = usePostReceipt()
   const wide = useMediaQuery(WIDE_SCREEN)
+  const { t } = useTranslation()
+  const initialStockSupplier = t('receipts.new.initialStock')
 
   const [supplier, setSupplier] = useState('')
   const [note, setNote] = useState('')
@@ -252,7 +259,10 @@ export function NewReceiptPage() {
     post.mutate(receiptBody(header, lines), {
       onSuccess: (receipt) => {
         posted.current = true
-        notifications.show({ color: 'green', message: `Приход №${receipt.number} проведён` })
+        notifications.show({
+          color: 'green',
+          message: t('receipts.new.posted', { number: receipt.number }),
+        })
         navigate(`/receipts/${receipt.id}`)
       },
       onError: (error) => {
@@ -278,14 +288,14 @@ export function NewReceiptPage() {
   return (
     <Stack>
       <Anchor component={Link} to="/receipts" size="sm">
-        ← Приходы
+        {t('receipts.card.back')}
       </Anchor>
-      <Title order={2}>Новый приход</Title>
+      <Title order={2}>{t('receipts.new.title')}</Title>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         <Group align="flex-end" wrap="nowrap" gap="xs">
           <TextInput
-            label="Поставщик"
+            label={t('receipts.new.supplier')}
             autoComplete="off"
             style={{ flex: 1 }}
             value={supplier}
@@ -298,15 +308,15 @@ export function NewReceiptPage() {
           <Button
             variant="light"
             onClick={() => {
-              setSupplier(INITIAL_STOCK_SUPPLIER)
+              setSupplier(initialStockSupplier)
               clearError('supplier')
             }}
           >
-            {INITIAL_STOCK_SUPPLIER}
+            {initialStockSupplier}
           </Button>
         </Group>
         <DateTimePicker
-          label="Дата и время"
+          label={t('receipts.new.date')}
           valueFormat="DD.MM.YYYY HH:mm"
           value={receivedAt ?? nowLocalInput()}
           maxDate={nowLocalInput()}
@@ -318,7 +328,7 @@ export function NewReceiptPage() {
         />
       </SimpleGrid>
       <Textarea
-        label="Заметка"
+        label={t('receipts.new.note')}
         autosize
         minRows={1}
         value={note}
@@ -329,12 +339,17 @@ export function NewReceiptPage() {
         error={fieldErrors.note}
       />
 
-      <ProductPicker ref={pickerRef} autoFocus label="Добавить товар" onSelect={addProduct} />
+      <ProductPicker
+        ref={pickerRef}
+        autoFocus
+        label={t('receipts.new.addProduct')}
+        onSelect={addProduct}
+      />
 
       {lines.length === 0 ? (
         <Paper withBorder p="lg" radius="md">
           <Text c="dimmed" ta="center">
-            Найдите товар по артикулу, чтобы добавить строку
+            {t('receipts.new.emptyLines')}
           </Text>
         </Paper>
       ) : wide ? (
@@ -342,12 +357,12 @@ export function NewReceiptPage() {
           <Table verticalSpacing="xs">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Артикул</Table.Th>
-                <Table.Th>Наименование</Table.Th>
-                <Table.Th ta="right">Остаток</Table.Th>
-                <Table.Th>Количество</Table.Th>
-                <Table.Th>Закупочная цена</Table.Th>
-                <Table.Th ta="right">Сумма</Table.Th>
+                <Table.Th>{t('receipts.lines.article')}</Table.Th>
+                <Table.Th>{t('receipts.lines.name')}</Table.Th>
+                <Table.Th ta="right">{t('receipts.new.stock')}</Table.Th>
+                <Table.Th>{t('receipts.new.qty')}</Table.Th>
+                <Table.Th>{t('receipts.new.cost')}</Table.Th>
+                <Table.Th ta="right">{t('receipts.lines.sum')}</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -368,9 +383,9 @@ export function NewReceiptPage() {
 
       <Paper withBorder p="md" radius="md">
         <Group justify="space-between">
-          <Text>Позиций: {totals.positions}</Text>
-          <Text>Штук: {totals.pieces}</Text>
-          <Text fw={600}>Сумма закупки: {formatMoney(totals.cost)}</Text>
+          <Text>{t('receipts.card.positions', { count: totals.positions })}</Text>
+          <Text>{t('receipts.card.pieces', { count: totals.pieces })}</Text>
+          <Text fw={600}>{t('receipts.card.cost', { amount: formatMoney(totals.cost) })}</Text>
         </Group>
       </Paper>
 
@@ -382,19 +397,19 @@ export function NewReceiptPage() {
 
       <Group justify="flex-end">
         <Button size="md" onClick={submit} disabled={!canPost} loading={post.isPending}>
-          Провести приход
+          {t('receipts.new.submit')}
         </Button>
       </Group>
 
       <ConfirmModal
         opened={blocker.state === 'blocked'}
         onClose={() => blocker.reset?.()}
-        title="Уйти без проведения?"
-        confirmLabel="Уйти"
+        title={t('common.leave.title')}
+        confirmLabel={t('common.leave.confirm')}
         color="red"
         onConfirm={() => blocker.proceed?.()}
       >
-        Приход не проведён, добавленные строки пропадут.
+        {t('receipts.new.leaveText')}
       </ConfirmModal>
     </Stack>
   )

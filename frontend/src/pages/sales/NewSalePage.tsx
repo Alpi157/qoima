@@ -20,7 +20,9 @@ import { DateTimePicker } from '@mantine/dates'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { type KeyboardEvent, type ReactNode, useRef, useState } from 'react'
+import type { TFunction } from 'i18next'
 import { flushSync } from 'react-dom'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom'
 
 import { hasErrorCode } from '../../api/errors'
@@ -31,6 +33,7 @@ import { ProductPicker } from '../../components/ProductPicker'
 import { WIDE_SCREEN } from '../../lib/breakpoints'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { serverFormErrors } from '../../lib/formErrors'
+import { unitLabel } from '../../lib/labels'
 import { formatMoney, tiynToInput } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import type { Product } from '../products/api'
@@ -39,7 +42,7 @@ import {
   exceedsStock,
   lineHasErrors,
   lineTotal,
-  PRICE_REQUIRED,
+  priceError,
   saleBody,
   type SaleLine,
   saleTotal,
@@ -65,6 +68,7 @@ interface LineInputsProps {
   onChange: (changes: Partial<Pick<SaleLine, 'qty' | 'price'>>) => void
   onEnter: () => void
   onRemove: () => void
+  t: TFunction
 }
 
 /** Quantity, price and the remove button of one line: the same in the table and in a card. */
@@ -76,6 +80,7 @@ function lineInputs({
   onChange,
   onEnter,
   onRemove,
+  t,
 }: LineInputsProps) {
   const { article, stock } = line.product
   // Plain Enter goes back to the search; Ctrl+Enter bubbles up and posts the sale.
@@ -89,8 +94,8 @@ function lineInputs({
     <Stack gap={2}>
       <NumberInput
         ref={qtyRef}
-        label={withLabels ? 'Количество' : undefined}
-        aria-label={`Количество ${article}`}
+        label={withLabels ? t('sales.new.qty') : undefined}
+        aria-label={t('sales.new.qtyOf', { article })}
         value={line.qty}
         onChange={(qty) => onChange({ qty })}
         onKeyDown={backToSearch}
@@ -104,36 +109,37 @@ function lineInputs({
       />
       {exceedsStock(line) && (
         <Text size="sm" c="orange" fw={500}>
-          На остатке {stock}
+          {t('sales.new.inStock', { stock })}
         </Text>
       )}
     </Stack>
   )
   const price = (
     <MoneyInput
-      label={withLabels ? 'Цена' : undefined}
-      aria-label={`Цена ${article}`}
+      label={withLabels ? t('sales.new.price') : undefined}
+      aria-label={t('sales.new.priceOf', { article })}
       value={line.price}
       onChange={(price) => onChange({ price })}
       onKeyDown={backToSearch}
       // A malformed amount is reported by MoneyInput itself.
       error={
         serverErrors[lineErrorKey(line.key, 'price')] ??
-        (line.price.trim() ? undefined : PRICE_REQUIRED)
+        (line.price.trim() ? undefined : (priceError(line.price) ?? undefined))
       }
       w={withLabels ? undefined : 140}
     />
   )
-  const remove = <CloseButton aria-label={`Удалить строку ${article}`} onClick={onRemove} />
+  const remove = <CloseButton aria-label={t('common.removeLine', { article })} onClick={onRemove} />
   const total = lineTotal(line)
   const sum = total !== null ? formatMoney(total) : '—'
   return { qty, price, remove, sum }
 }
 
-type LineRowProps = Omit<LineInputsProps, 'withLabels'>
+type LineRowProps = Omit<LineInputsProps, 'withLabels' | 't'>
 
 function LineTableRow(props: LineRowProps) {
-  const { qty, price, remove, sum } = lineInputs({ ...props, withLabels: false })
+  const { t } = useTranslation()
+  const { qty, price, remove, sum } = lineInputs({ ...props, withLabels: false, t })
   const { product } = props.line
   return (
     <Table.Tr>
@@ -142,7 +148,7 @@ function LineTableRow(props: LineRowProps) {
       </Table.Td>
       <Table.Td>{product.name}</Table.Td>
       <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-        {product.stock} {product.unit}
+        {product.stock} {unitLabel(product.unit)}
       </Table.Td>
       <Table.Td>{qty}</Table.Td>
       <Table.Td>{price}</Table.Td>
@@ -155,7 +161,8 @@ function LineTableRow(props: LineRowProps) {
 }
 
 function LineCard(props: LineRowProps) {
-  const { qty, price, remove, sum } = lineInputs({ ...props, withLabels: true })
+  const { t } = useTranslation()
+  const { qty, price, remove, sum } = lineInputs({ ...props, withLabels: true, t })
   const { product } = props.line
   return (
     <Card withBorder padding="sm">
@@ -166,7 +173,7 @@ function LineCard(props: LineRowProps) {
           </Text>
           <Text>{product.name}</Text>
           <Text size="sm" c="dimmed">
-            Остаток: {product.stock} {product.unit}
+            {t('products.picker.stock', { stock: `${product.stock} ${unitLabel(product.unit)}` })}
           </Text>
         </Stack>
         {remove}
@@ -176,7 +183,7 @@ function LineCard(props: LineRowProps) {
         {price}
       </SimpleGrid>
       <Text ta="right" fw={500}>
-        Сумма: {sum}
+        {t('common.lineSum', { amount: sum })}
       </Text>
     </Card>
   )
@@ -186,6 +193,7 @@ export function NewSalePage() {
   const navigate = useNavigate()
   const post = usePostSale()
   const wide = useMediaQuery(WIDE_SCREEN)
+  const { t } = useTranslation()
 
   // One id per sale form: a resend after any error reuses it, so the sale is not posted twice.
   // A new sale is a new page visit, and with it a new id.
@@ -282,18 +290,19 @@ export function NewSalePage() {
     post.mutate(saleBody(header, lines), {
       onSuccess: (sale) => {
         posted.current = true
-        notifications.show({ color: 'green', message: `Продажа №${sale.number} проведена` })
+        notifications.show({
+          color: 'green',
+          message: t('sales.new.posted', { number: sale.number }),
+        })
         navigate(`/sales/${sale.id}/print?auto=1`)
       },
       onError: (error) => {
         if (hasErrorCode(error, SALE_REQUEST_CONFLICT)) {
           setFormError(
-            <>
-              Продажа могла уже пройти. Проверьте{' '}
-              <Anchor component={Link} to="/sales" inherit>
-                историю продаж
-              </Anchor>
-            </>,
+            <Trans
+              i18nKey="sales.new.requestConflict"
+              components={{ history: <Anchor component={Link} to="/sales" inherit /> }}
+            />,
           )
           return
         }
@@ -327,17 +336,22 @@ export function NewSalePage() {
       }}
     >
       <Title order={2} mb="md">
-        Продажа
+        {t('sales.new.title')}
       </Title>
       <Grid gap="lg">
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Stack>
-            <ProductPicker ref={pickerRef} autoFocus label="Добавить товар" onSelect={addProduct} />
+            <ProductPicker
+              ref={pickerRef}
+              autoFocus
+              label={t('sales.new.addProduct')}
+              onSelect={addProduct}
+            />
 
             {lines.length === 0 ? (
               <Paper withBorder p="lg" radius="md">
                 <Text c="dimmed" ta="center">
-                  Найдите товар по артикулу, чтобы добавить строку
+                  {t('sales.new.emptyLines')}
                 </Text>
               </Paper>
             ) : wide ? (
@@ -345,12 +359,12 @@ export function NewSalePage() {
                 <Table verticalSpacing="xs">
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Артикул</Table.Th>
-                      <Table.Th>Наименование</Table.Th>
-                      <Table.Th ta="right">Остаток</Table.Th>
-                      <Table.Th>Количество</Table.Th>
-                      <Table.Th>Цена</Table.Th>
-                      <Table.Th ta="right">Сумма</Table.Th>
+                      <Table.Th>{t('sales.lines.article')}</Table.Th>
+                      <Table.Th>{t('sales.lines.name')}</Table.Th>
+                      <Table.Th ta="right">{t('sales.new.stock')}</Table.Th>
+                      <Table.Th>{t('sales.new.qty')}</Table.Th>
+                      <Table.Th>{t('sales.new.price')}</Table.Th>
+                      <Table.Th ta="right">{t('sales.lines.sum')}</Table.Th>
                       <Table.Th />
                     </Table.Tr>
                   </Table.Thead>
@@ -376,7 +390,7 @@ export function NewSalePage() {
             <Stack>
               <CustomerPicker value={customer} onChange={setCustomer} />
               <DateTimePicker
-                label="Дата и время"
+                label={t('sales.new.date')}
                 valueFormat="DD.MM.YYYY HH:mm"
                 value={soldAt ?? nowLocalInput()}
                 maxDate={nowLocalInput()}
@@ -387,7 +401,7 @@ export function NewSalePage() {
                 error={fieldErrors.soldAt}
               />
               <Textarea
-                label="Заметка"
+                label={t('sales.new.note')}
                 autosize
                 minRows={1}
                 value={note}
@@ -400,7 +414,7 @@ export function NewSalePage() {
 
               <Group justify="space-between" align="baseline">
                 <Text size="xl" fw={700}>
-                  ИТОГО
+                  {t('sales.new.total')}
                 </Text>
                 <Text fz={32} fw={700} data-testid="sale-total">
                   {formatMoney(total)}
@@ -414,10 +428,10 @@ export function NewSalePage() {
               )}
 
               <Button size="lg" onClick={submit} disabled={!canPost} loading={post.isPending}>
-                Провести и напечатать
+                {t('sales.new.submit')}
               </Button>
               <Text size="xs" c="dimmed" ta="center">
-                Ctrl+Enter — провести и напечатать
+                {t('sales.new.submitHint')}
               </Text>
             </Stack>
           </Paper>
@@ -427,12 +441,12 @@ export function NewSalePage() {
       <ConfirmModal
         opened={blocker.state === 'blocked'}
         onClose={() => blocker.reset?.()}
-        title="Уйти без проведения?"
-        confirmLabel="Уйти"
+        title={t('common.leave.title')}
+        confirmLabel={t('common.leave.confirm')}
         color="red"
         onConfirm={() => blocker.proceed?.()}
       >
-        Продажа не проведена, добавленные строки пропадут.
+        {t('sales.new.leaveText')}
       </ConfirmModal>
     </Box>
   )

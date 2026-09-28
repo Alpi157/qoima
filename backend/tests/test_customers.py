@@ -72,7 +72,11 @@ def test_update_customer_rejects_null_name(auth_client: TestClient) -> None:
 def test_missing_customer(auth_client: TestClient, method: str) -> None:
     response = auth_client.request(method, "/api/customers/999999999", json={"name": "X"})
     assert response.status_code == 404
-    assert response.json() == {"detail": "Покупатель не найден", "code": "customer_not_found"}
+    assert response.json() == {
+        "detail": "Покупатель не найден",
+        "code": "customer_not_found",
+        "params": {},
+    }
 
 
 @pytest.fixture

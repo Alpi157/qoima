@@ -69,6 +69,9 @@ fi
 if [ -f frontend/package.json ]; then
   run_check "npm lint"  frontend npm run lint
   run_check "npm format check" frontend npm run format:check
+  if grep -q '"i18n:check"' frontend/package.json; then
+    run_check "npm i18n check" frontend npm run i18n:check
+  fi
   run_check "npm build" frontend npm run build
   if grep -q '"test"' frontend/package.json; then
     run_check "npm test" frontend npm test -- --run

@@ -1,4 +1,5 @@
 from collections import Counter
+from typing import Literal
 
 from sqlalchemy import ColumnElement, Select, case, false, func, literal, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -10,8 +11,9 @@ from app.catalog.schemas import ProductCreate, ProductOut, ProductPage, ProductU
 from app.db_utils import LIKE_ESCAPE, contains_pattern
 from app.errors import (
     DuplicateArticleError,
+    DuplicateLineError,
     InvalidArticleError,
-    InvalidDocumentLinesError,
+    LineProductNotFoundError,
     ProductArchivedError,
     ProductNotFoundError,
 )
@@ -49,33 +51,43 @@ def get_product(db: Session, product_id: int) -> ProductOut:
     return _to_out(row[0], row[1])
 
 
-def load_line_products(db: Session, ids: list[int], doc_name: str) -> dict[int, Product]:
-    """Products of document lines, by id. Rejects missing, repeated and archived products.
+# Document type -> the word completing «Товар X указан в … дважды».
+_DOCUMENT_IN = {"receipt": "приходе", "sale": "продаже"}
 
-    doc_name completes the message «Товар X указан в <doc_name> дважды», e.g. "приходе".
-    """
+
+def load_line_products(
+    db: Session, ids: list[int], document: Literal["receipt", "sale"]
+) -> dict[int, Product]:
+    """Products of document lines, by id. Rejects missing, repeated and archived products."""
     products = {
         p.id: p for p in db.execute(select(Product).where(Product.id.in_(set(ids)))).scalars()
     }
 
     missing = sorted(set(ids) - products.keys())
     if missing:
-        raise InvalidDocumentLinesError(f"Товар не найден: {', '.join(map(str, missing))}")
+        raise LineProductNotFoundError(
+            f"Товар не найден: {', '.join(map(str, missing))}", {"product_ids": missing}
+        )
 
     for product_id, count in Counter(ids).items():
         if count > 1:
             article = products[product_id].article
-            raise InvalidDocumentLinesError(f"Товар {article} указан в {doc_name} дважды")
+            raise DuplicateLineError(
+                f"Товар {article} указан в {_DOCUMENT_IN[document]} дважды",
+                {"article": article, "document": document},
+            )
 
     for product_id in ids:
         if products[product_id].is_archived:
-            raise ProductArchivedError(f"Товар {products[product_id].article} в архиве")
+            article = products[product_id].article
+            raise ProductArchivedError(f"Товар {article} в архиве", {"article": article})
     return products
 
 
 def _duplicate_error(existing: Product) -> DuplicateArticleError:
     return DuplicateArticleError(
-        f"Товар с артикулом «{existing.article}» уже есть: {existing.name}"
+        f"Товар с артикулом «{existing.article}» уже есть: {existing.name}",
+        {"article": existing.article, "existing_name": existing.name},
     )
 
 

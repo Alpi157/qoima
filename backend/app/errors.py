@@ -26,7 +26,9 @@ class ErrorCode(StrEnum):
     DUPLICATE_ARTICLE = "duplicate_article"
     CUSTOMER_NOT_FOUND = "customer_not_found"
     PRODUCT_ARCHIVED = "product_archived"
-    INVALID_DOCUMENT_LINES = "invalid_document_lines"
+    LINE_PRODUCT_NOT_FOUND = "line_product_not_found"
+    DUPLICATE_LINE = "duplicate_line"
+    MISSING_PRICE = "missing_price"
     RECEIPT_NOT_FOUND = "receipt_not_found"
     RECEIPT_ALREADY_CANCELLED = "receipt_already_cancelled"
     RECEIPT_CANCEL_BLOCKED = "receipt_cancel_blocked"
@@ -52,14 +54,20 @@ FRAMEWORK_CODES = frozenset(
 
 
 class AppError(Exception):
-    """Base class for business-logic errors. Maps to an HTTP 4xx response with a Russian message."""
+    """Base class for business-logic errors. Maps to an HTTP 4xx response.
+
+    `message` is Russian text for logs and debugging (sent as `detail`); `params` carries the
+    data of the message, so the frontend builds the text by `code` in the user's language.
+    The params of every code are listed in "Формат ошибок API" in docs/architecture.md.
+    """
 
     status_code: int = 400
     code: ErrorCode = ErrorCode.APP_ERROR
     default_message: str = "Ошибка запроса"
 
-    def __init__(self, message: str | None = None) -> None:
+    def __init__(self, message: str | None = None, params: dict[str, Any] | None = None) -> None:
         self.message = message or self.default_message
+        self.params = params or {}
         super().__init__(self.message)
 
 
@@ -130,8 +138,24 @@ class ProductArchivedError(AppError):
     status_code = 409
 
 
-class InvalidDocumentLinesError(AppError):
-    code = ErrorCode.INVALID_DOCUMENT_LINES
+class LineProductNotFoundError(AppError):
+    """A document line refers to a product that does not exist."""
+
+    code = ErrorCode.LINE_PRODUCT_NOT_FOUND
+    status_code = 422
+
+
+class DuplicateLineError(AppError):
+    """The same product appears in two lines of one document."""
+
+    code = ErrorCode.DUPLICATE_LINE
+    status_code = 422
+
+
+class MissingPriceError(AppError):
+    """A sale line has no price, and the product has no sale price to fall back to."""
+
+    code = ErrorCode.MISSING_PRICE
     status_code = 422
 
 
@@ -180,7 +204,12 @@ class SaleRequestConflictError(AppError):
 
 class FieldErrorOut(BaseModel):
     field: str
+    # Russian text, for logs and as a fallback when the frontend has no translation.
     message: str
+    # Pydantic error type ("missing", "less_than_equal") or one of CUSTOM_VALIDATION_TYPES.
+    type: str
+    # Limits from the error context, e.g. {"le": 200}: JSON scalars only.
+    params: dict[str, Any] = {}
 
 
 class ErrorOut(BaseModel):
@@ -188,6 +217,7 @@ class ErrorOut(BaseModel):
 
     detail: str
     code: ErrorCode
+    params: dict[str, Any] = {}
     # Only in validation errors.
     errors: list[FieldErrorOut] | None = None
 
@@ -215,8 +245,16 @@ VALIDATION_MESSAGES = {
 }
 
 
+# Our own error types, raised as PydanticCustomError in the schemas; the message is our text.
+CUSTOM_VALIDATION_TYPES = frozenset(
+    {"qty_zero", "iin_bin_format", "date_in_future", "null_not_allowed"}
+)
+
+
 def validation_message(error: Mapping[str, Any]) -> str:
     ctx = error.get("ctx") or {}
+    if error["type"] in CUSTOM_VALIDATION_TYPES:
+        return str(error["msg"])
     if error["type"] == "value_error" and "error" in ctx:
         return str(ctx["error"])
     template = VALIDATION_MESSAGES.get(error["type"])
@@ -226,6 +264,17 @@ def validation_message(error: Mapping[str, Any]) -> str:
         return template.format(**ctx)
     except (KeyError, IndexError):
         return DEFAULT_VALIDATION_MESSAGE
+
+
+def validation_params(error: Mapping[str, Any]) -> dict[str, Any]:
+    """JSON-safe values of the error context, e.g. {"le": 200}; objects are left out."""
+    ctx = error.get("ctx") or {}
+    return {
+        key: value
+        for key, value in ctx.items()
+        if isinstance(value, str | int | float | bool)
+        or (isinstance(value, list) and all(isinstance(item, str | int) for item in value))
+    }
 
 
 def validation_field(loc: tuple[int | str, ...]) -> str:
@@ -246,7 +295,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
         return JSONResponse(
-            status_code=exc.status_code, content={"detail": exc.message, "code": exc.code}
+            status_code=exc.status_code,
+            content={"detail": exc.message, "code": exc.code, "params": exc.params},
         )
 
     @app.exception_handler(RequestValidationError)
@@ -254,7 +304,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         errors = [
-            {"field": validation_field(tuple(e["loc"])), "message": validation_message(e)}
+            {
+                "field": validation_field(tuple(e["loc"])),
+                "message": validation_message(e),
+                "type": e["type"],
+                "params": validation_params(e),
+            }
             for e in exc.errors()
         ]
         return JSONResponse(
@@ -262,6 +317,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "detail": VALIDATION_DETAIL,
                 "code": ErrorCode.VALIDATION_ERROR,
+                "params": {},
                 "errors": errors,
             },
         )
@@ -271,6 +327,6 @@ def register_exception_handlers(app: FastAPI) -> None:
         code, message = HTTP_ERRORS.get(exc.status_code, DEFAULT_HTTP_ERROR)
         return JSONResponse(
             status_code=exc.status_code,
-            content={"detail": message, "code": code},
+            content={"detail": message, "code": code, "params": {}},
             headers=exc.headers,
         )

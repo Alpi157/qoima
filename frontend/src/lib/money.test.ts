@@ -4,13 +4,14 @@ import {
   formatAmount,
   formatInteger,
   formatMoney,
-  MONEY_INPUT_ERROR,
   parseMoney,
   tiynToInput,
   validateMoneyText,
 } from './money'
 
 const NBSP = '\u00a0'
+
+const MONEY_INPUT_ERROR = 'Введите сумму, например 12500'
 
 describe('formatMoney', () => {
   it.each([

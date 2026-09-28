@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.errors import validation_field, validation_message
+from app.errors import validation_field, validation_message, validation_params
 
 HUGE_ID = 2**63
 
@@ -15,20 +15,53 @@ def test_validation_error_format(auth_client: TestClient) -> None:
     assert response.json() == {
         "detail": "Проверьте введённые данные",
         "code": "validation_error",
+        "params": {},
         "errors": [
-            {"field": "lines.0.qty", "message": "Должно быть не меньше 1"},
-            {"field": "extra", "message": "Лишнее поле"},
+            {
+                "field": "lines.0.qty",
+                "message": "Должно быть не меньше 1",
+                "type": "greater_than_equal",
+                "params": {"ge": 1},
+            },
+            {"field": "extra", "message": "Лишнее поле", "type": "extra_forbidden", "params": {}},
         ],
     }
 
 
-def test_validation_error_uses_our_value_error_text(auth_client: TestClient) -> None:
+def test_validation_error_uses_our_own_type_and_text(auth_client: TestClient) -> None:
     response = auth_client.post(
         "/api/stock/adjustments", json={"product_id": 1, "qty": 0, "reason": "Пересчёт"}
     )
     assert response.status_code == 422
     assert response.json()["errors"] == [
-        {"field": "qty", "message": "Количество не может быть нулём"}
+        {
+            "field": "qty",
+            "message": "Количество не может быть нулём",
+            "type": "qty_zero",
+            "params": {},
+        }
+    ]
+
+
+def test_validation_error_params_of_string_length(auth_client: TestClient) -> None:
+    response = auth_client.post("/api/customers", json={"name": "Покупатель", "note": "x" * 5000})
+    assert response.status_code == 422
+    [error] = response.json()["errors"]
+    assert error["field"] == "note"
+    assert error["type"] == "string_too_long"
+    assert error["params"] == {"max_length": 1000}
+
+
+def test_explicit_null_lists_the_fields(auth_client: TestClient) -> None:
+    response = auth_client.patch("/api/products/1", json={"name": None, "unit": None})
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        {
+            "field": "",
+            "message": "Поле не может быть пустым: name, unit",
+            "type": "null_not_allowed",
+            "params": {"fields": ["name", "unit"]},
+        }
     ]
 
 
@@ -36,14 +69,23 @@ def test_validation_error_in_query(auth_client: TestClient) -> None:
     response = auth_client.get("/api/sales", params={"limit": 500})
     assert response.status_code == 422
     assert response.json()["errors"] == [
-        {"field": "query.limit", "message": "Должно быть не больше 200"}
+        {
+            "field": "query.limit",
+            "message": "Должно быть не больше 200",
+            "type": "less_than_equal",
+            "params": {"le": 200},
+        }
     ]
 
 
 def test_app_error_format(auth_client: TestClient) -> None:
     response = auth_client.get("/api/sales/999999999")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Продажа не найдена", "code": "sale_not_found"}
+    assert response.json() == {
+        "detail": "Продажа не найдена",
+        "code": "sale_not_found",
+        "params": {},
+    }
 
 
 @pytest.mark.parametrize(
@@ -141,10 +183,58 @@ def test_huge_id_in_body_rejected(
     response = auth_client.post(path, json=body)
     assert response.status_code == 422
     assert response.json()["errors"] == [
-        {"field": field, "message": f"Должно быть не больше {HUGE_ID - 1}"}
+        {
+            "field": field,
+            "message": f"Должно быть не больше {HUGE_ID - 1}",
+            "type": "less_than_equal",
+            "params": {"le": HUGE_ID - 1},
+        }
     ]
 
 
 def test_max_bigint_id_is_valid(auth_client: TestClient) -> None:
     response = auth_client.get(f"/api/products/{HUGE_ID - 1}")
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("error", "params"),
+    [
+        ({"type": "missing"}, {}),
+        ({"type": "less_than_equal", "ctx": {"le": 200}}, {"le": 200}),
+        ({"type": "string_too_short", "ctx": {"min_length": 3}}, {"min_length": 3}),
+        ({"type": "value_error", "ctx": {"error": ValueError("Своя ошибка")}}, {}),
+        (
+            {"type": "literal_error", "ctx": {"expected": "'kk', 'ru' or 'zh'"}},
+            {"expected": "'kk', 'ru' or 'zh'"},
+        ),
+        ({"type": "null_not_allowed", "ctx": {"fields": ["name"]}}, {"fields": ["name"]}),
+    ],
+)
+def test_validation_params(error: dict[str, object], params: dict[str, object]) -> None:
+    assert validation_params(error) == params
+
+
+def test_iin_bin_error_type(auth_client: TestClient) -> None:
+    payload = dict.fromkeys(
+        ["seller_name", "responsible_person", "released_by_name", "chief_accountant"], ""
+    )
+    response = auth_client.put("/api/settings", json={**payload, "seller_iin_bin": "123"})
+    assert response.status_code == 422
+    [error] = response.json()["errors"]
+    assert (error["field"], error["type"]) == ("seller_iin_bin", "iin_bin_format")
+
+
+def test_future_date_error_type(auth_client: TestClient) -> None:
+    response = auth_client.post(
+        "/api/receipts",
+        json={"lines": [{"product_id": 1, "qty": 1}], "received_at": "2999-01-01T00:00:00Z"},
+    )
+    assert response.status_code == 422
+    [error] = response.json()["errors"]
+    assert error == {
+        "field": "received_at",
+        "message": "Дата прихода не может быть в будущем",
+        "type": "date_in_future",
+        "params": {},
+    }

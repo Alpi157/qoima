@@ -12,6 +12,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
@@ -19,6 +20,7 @@ import { CancelDocumentModal } from '../../components/CancelDocumentModal'
 import { NotFoundState } from '../../components/NotFoundState'
 import { QueryError } from '../../components/QueryError'
 import { formatDateTime } from '../../lib/dates'
+import { unitLabel } from '../../lib/labels'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { type Sale, useCancelSale, useSale } from './api'
@@ -35,16 +37,17 @@ function ProductLink({ line }: { line: SaleLineOut }) {
 }
 
 function LinesTable({ lines }: { lines: SaleLineOut[] }) {
+  const { t } = useTranslation()
   return (
     <Table.ScrollContainer minWidth={600} visibleFrom="sm">
       <Table verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Артикул</Table.Th>
-            <Table.Th>Наименование</Table.Th>
-            <Table.Th ta="right">Количество</Table.Th>
-            <Table.Th ta="right">Цена</Table.Th>
-            <Table.Th ta="right">Сумма</Table.Th>
+            <Table.Th>{t('sales.lines.article')}</Table.Th>
+            <Table.Th>{t('sales.lines.name')}</Table.Th>
+            <Table.Th ta="right">{t('sales.lines.qty')}</Table.Th>
+            <Table.Th ta="right">{t('sales.lines.price')}</Table.Th>
+            <Table.Th ta="right">{t('sales.lines.sum')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -55,7 +58,7 @@ function LinesTable({ lines }: { lines: SaleLineOut[] }) {
               </Table.Td>
               <Table.Td>{line.name}</Table.Td>
               <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {line.qty} {line.unit}
+                {line.qty} {unitLabel(line.unit)}
               </Table.Td>
               <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
                 {formatMoney(line.unit_price)}
@@ -80,7 +83,7 @@ function LinesCards({ lines }: { lines: SaleLineOut[] }) {
           <Text>{line.name}</Text>
           <Group justify="space-between">
             <Text size="sm">
-              {line.qty} {line.unit} × {formatMoney(line.unit_price)}
+              {line.qty} {unitLabel(line.unit)} × {formatMoney(line.unit_price)}
             </Text>
             <Text fw={500}>{formatMoney(line.line_total)}</Text>
           </Group>
@@ -93,43 +96,52 @@ function LinesCards({ lines }: { lines: SaleLineOut[] }) {
 function SaleDetails({ sale }: { sale: Sale }) {
   const [cancelOpened, cancelModal] = useDisclosure()
   const cancel = useCancelSale(sale.id)
+  const { t } = useTranslation()
 
   return (
     <Stack>
       <Anchor component={Link} to="/sales" size="sm">
-        ← Продажи
+        {t('sales.card.back')}
       </Anchor>
 
       <Group justify="space-between" align="flex-start">
         <Group gap="sm">
           <Title order={2}>
-            Продажа №{sale.number} от {formatDateTime(sale.sold_at)}
+            {t('sales.card.title', { number: sale.number, date: formatDateTime(sale.sold_at) })}
           </Title>
           <SaleStatusBadge status={sale.status} />
         </Group>
         <Group gap="sm">
           <Button component={Link} to={`/sales/${sale.id}/print`} variant="default">
-            Печать накладной
+            {t('sales.card.print')}
           </Button>
           {sale.status === 'posted' && (
             <Button color="red" variant="light" onClick={cancelModal.open}>
-              Отменить продажу
+              {t('sales.cancel.confirm')}
             </Button>
           )}
         </Group>
       </Group>
 
       {sale.status === 'cancelled' && (
-        <Alert color="red" title="Продажа отменена">
-          {sale.cancelled_at && <Text size="sm">Когда: {formatDateTime(sale.cancelled_at)}</Text>}
-          {sale.cancelled_by_name && <Text size="sm">Кто: {sale.cancelled_by_name}</Text>}
-          {sale.cancel_reason && <Text size="sm">Причина: {sale.cancel_reason}</Text>}
+        <Alert color="red" title={t('sales.card.cancelled')}>
+          {sale.cancelled_at && (
+            <Text size="sm">
+              {t('common.cancelled.when', { date: formatDateTime(sale.cancelled_at) })}
+            </Text>
+          )}
+          {sale.cancelled_by_name && (
+            <Text size="sm">{t('common.cancelled.who', { name: sale.cancelled_by_name })}</Text>
+          )}
+          {sale.cancel_reason && (
+            <Text size="sm">{t('common.cancelled.reason', { reason: sale.cancel_reason })}</Text>
+          )}
         </Alert>
       )}
 
       <Stack gap={4}>
         <Text>
-          Покупатель:{' '}
+          {t('sales.card.customer')}{' '}
           {sale.customer ? (
             <>
               <Anchor component={Link} to={`/customers/${sale.customer.id}`} fw={600}>
@@ -141,9 +153,16 @@ function SaleDetails({ sale }: { sale: Sale }) {
             '—'
           )}
         </Text>
-        {sale.note && <Text style={{ whiteSpace: 'pre-wrap' }}>Заметка: {sale.note}</Text>}
+        {sale.note && (
+          <Text style={{ whiteSpace: 'pre-wrap' }}>
+            {t('sales.card.note', { note: sale.note })}
+          </Text>
+        )}
         <Text c="dimmed" size="sm">
-          Провёл: {sale.created_by_name}, {formatDateTime(sale.created_at)}
+          {t('common.postedBy', {
+            name: sale.created_by_name,
+            date: formatDateTime(sale.created_at),
+          })}
         </Text>
       </Stack>
 
@@ -153,11 +172,13 @@ function SaleDetails({ sale }: { sale: Sale }) {
       <Paper withBorder p="md" radius="md">
         <Group justify="space-between" align="baseline">
           <Text>
-            Позиций: {sale.lines.length}, штук:{' '}
-            {sale.lines.reduce((sum, line) => sum + line.qty, 0)}
+            {t('sales.list.cardCounts', {
+              positions: sale.lines.length,
+              pieces: sale.lines.reduce((sum, line) => sum + line.qty, 0),
+            })}
           </Text>
           <Text fz={28} fw={700}>
-            ИТОГО: {formatMoney(sale.total)}
+            {t('sales.card.total', { amount: formatMoney(sale.total) })}
           </Text>
         </Group>
       </Paper>
@@ -165,18 +186,21 @@ function SaleDetails({ sale }: { sale: Sale }) {
       <CancelDocumentModal
         opened={cancelOpened}
         onClose={cancelModal.close}
-        title={`Отменить продажу №${sale.number}?`}
-        description="Товары из продажи вернутся на остаток. Сама продажа останется в истории как отменённая."
-        confirmLabel="Отменить продажу"
+        title={t('sales.cancel.title', { number: sale.number })}
+        description={t('sales.cancel.description')}
+        confirmLabel={t('sales.cancel.confirm')}
         cancel={cancel}
-        successMessage={(saved) => `Продажа №${saved.number} отменена`}
+        successMessage={(saved) => t('sales.cancel.done', { number: saved.number })}
       />
     </Stack>
   )
 }
 
 function SaleNotFound() {
-  return <NotFoundState title="Продажа не найдена" backTo="/sales" backLabel="К истории продаж" />
+  const { t } = useTranslation()
+  return (
+    <NotFoundState title={t('sales.notFound')} backTo="/sales" backLabel={t('sales.backToList')} />
+  )
 }
 
 function SaleLoader({ id }: { id: number }) {

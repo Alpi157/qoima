@@ -1,5 +1,6 @@
 import { Anchor, Button, Card, Group, Loader, Stack, Table, Text, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { EmptyState } from '../../components/EmptyState'
@@ -12,14 +13,15 @@ import { CustomerFormModal } from './CustomerFormModal'
 
 function CustomerTable({ items }: { items: Customer[] }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   return (
     <Table.ScrollContainer minWidth={600} visibleFrom="sm">
       <Table highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Имя</Table.Th>
-            <Table.Th>Телефон</Table.Th>
-            <Table.Th>Заметка</Table.Th>
+            <Table.Th>{t('customers.list.name')}</Table.Th>
+            <Table.Th>{t('customers.list.phone')}</Table.Th>
+            <Table.Th>{t('customers.list.note')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -82,20 +84,21 @@ export function CustomersPage() {
   const { q, page, setQ, setPage } = useListParams()
   const [formOpened, form] = useDisclosure()
   const customers = useCustomers({ q, page })
+  const { t } = useTranslation()
 
   return (
     <Stack>
       <Group justify="space-between">
-        <Title order={2}>Покупатели</Title>
-        <Button onClick={form.open}>Добавить покупателя</Button>
+        <Title order={2}>{t('customers.list.title')}</Title>
+        <Button onClick={form.open}>{t('customers.list.add')}</Button>
       </Group>
 
       <SearchInput
         value={q}
         onSearch={setQ}
         autoFocus
-        placeholder="Имя или телефон"
-        aria-label="Поиск покупателя"
+        placeholder={t('customers.list.searchPlaceholder')}
+        aria-label={t('customers.list.searchLabel')}
       />
 
       {customers.isPending ? (
@@ -106,18 +109,18 @@ export function CustomersPage() {
         <QueryError error={customers.error} onRetry={() => customers.refetch()} />
       ) : customers.data.items.length === 0 && page === 1 ? (
         q ? (
-          <EmptyState text="Ничего не найдено" />
+          <EmptyState text={t('common.nothingFound')} />
         ) : (
           <EmptyState
-            text="Покупателей пока нет"
-            actionLabel="Добавить первого покупателя"
+            text={t('customers.list.empty')}
+            actionLabel={t('customers.list.addFirst')}
             onAction={form.open}
           />
         )
       ) : (
         <>
           <Text c="dimmed" size="sm">
-            Найдено: {customers.data.total}
+            {t('common.found', { count: customers.data.total })}
           </Text>
           <CustomerTable items={customers.data.items} />
           <CustomerCards items={customers.data.items} />

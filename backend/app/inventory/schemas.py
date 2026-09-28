@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.schema_types import DbId, Reason
 
@@ -21,7 +22,7 @@ class AdjustmentCreate(BaseModel):
     @classmethod
     def _non_zero(cls, value: int) -> int:
         if value == 0:
-            raise ValueError("Количество не может быть нулём")
+            raise PydanticCustomError("qty_zero", "Количество не может быть нулём")
         return value
 
 

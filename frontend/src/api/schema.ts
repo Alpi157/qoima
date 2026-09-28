@@ -69,7 +69,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Me */
+        patch: operations["update_me_api_auth_me_patch"];
         trace?: never;
     };
     "/api/products": {
@@ -399,7 +400,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "invalid_document_lines" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "not_found" | "method_not_allowed" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "missing_price" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "not_found" | "method_not_allowed" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -408,6 +409,13 @@ export interface components {
             /** Detail */
             detail: string;
             code: components["schemas"]["ErrorCode"];
+            /**
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: unknown;
+            };
             /** Errors */
             errors?: components["schemas"]["FieldErrorOut"][] | null;
         };
@@ -417,6 +425,15 @@ export interface components {
             field: string;
             /** Message */
             message: string;
+            /** Type */
+            type: string;
+            /**
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: unknown;
+            };
         };
         /** LoginIn */
         LoginIn: {
@@ -785,6 +802,22 @@ export interface components {
             full_name: string;
             /** Role */
             role: string;
+            /**
+             * Locale
+             * @enum {string}
+             */
+            locale: "kk" | "ru" | "zh";
+        };
+        /**
+         * UserUpdate
+         * @description PATCH /api/auth/me: settings the user changes for themselves.
+         */
+        UserUpdate: {
+            /**
+             * Locale
+             * @enum {string}
+             */
+            locale: "kk" | "ru" | "zh";
         };
     };
     responses: never;
@@ -892,6 +925,39 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    update_me_api_auth_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

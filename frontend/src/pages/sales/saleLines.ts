@@ -1,9 +1,9 @@
+import i18n from 'i18next'
+
 import { parseMoney, validateMoneyText } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import type { Product } from '../products/api'
 import type { SaleCreate } from './api'
-
-export const PRICE_REQUIRED = 'Укажите цену'
 
 export interface SaleLine {
   /** Stable id of the row on the page; the product id is not enough while rows change. */
@@ -17,7 +17,7 @@ export interface SaleLine {
 }
 
 export function priceError(price: string): string | null {
-  return price.trim() ? validateMoneyText(price) : PRICE_REQUIRED
+  return price.trim() ? validateMoneyText(price) : i18n.t('common.input.priceRequired')
 }
 
 export function lineHasErrors(line: SaleLine): boolean {

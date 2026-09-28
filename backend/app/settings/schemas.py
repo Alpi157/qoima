@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.schema_types import Trimmed
 
@@ -31,7 +32,7 @@ class BusinessSettingsUpdate(BaseModel):
     @classmethod
     def _iin_bin_digits(cls, value: str) -> str:
         if value and not IIN_BIN_PATTERN.fullmatch(value):
-            raise ValueError(IIN_BIN_MESSAGE)
+            raise PydanticCustomError("iin_bin_format", IIN_BIN_MESSAGE)
         return value
 
 

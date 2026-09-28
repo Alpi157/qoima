@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
-import { REASON_ERROR } from '../../lib/validation'
 import { makeSale, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { SalePage } from './SalePage'
@@ -39,6 +38,8 @@ async function openCancel(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => {
   vi.restoreAllMocks()
 })
+
+const REASON_ERROR = 'Укажите причину, не короче 3 символов'
 
 describe('SalePage', () => {
   it('shows the sale with its customer, lines and total', async () => {

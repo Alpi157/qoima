@@ -32,7 +32,11 @@ def _field_errors(response_json: dict[str, object]) -> dict[str, str]:
 def test_settings_require_login(client: TestClient, method: str) -> None:
     response = client.request(method, "/api/settings", json=FILLED)
     assert response.status_code == 401
-    assert response.json() == {"detail": "Требуется вход", "code": "not_authenticated"}
+    assert response.json() == {
+        "detail": "Требуется вход",
+        "code": "not_authenticated",
+        "params": {},
+    }
 
 
 def test_default_settings_are_empty(auth_client: TestClient) -> None:

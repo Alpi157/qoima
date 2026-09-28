@@ -6,7 +6,7 @@ import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { formatMoney } from '../../lib/money'
 import { fieldErrorOf } from '../../test/fields'
-import { makeProduct, makeSale, ok } from '../../test/fixtures'
+import { fieldError, makeProduct, makeSale, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { SALE_REQUEST_CONFLICT, type SaleCreate } from './api'
 import { NewSalePage } from './NewSalePage'
@@ -203,17 +203,45 @@ describe('NewSalePage', () => {
     )
   })
 
-  it('a 409 with the conflict text but another code is shown as is', async () => {
+  it('builds the insufficient stock text from params, not from the detail', async () => {
     const user = userEvent.setup()
     mockSearch()
-    const message = 'Этот запрос уже использован для другой продажи'
-    vi.spyOn(api, 'POST').mockRejectedValue(new ApiError(409, message, {}, 'insufficient_stock'))
+    vi.spyOn(api, 'POST').mockRejectedValue(
+      new ApiError(
+        409,
+        'Этот запрос уже использован для другой продажи',
+        {},
+        'insufficient_stock',
+        {
+          items: [
+            { article: 'OC-90', available: 1, requested: 2 },
+            { article: 'BP-1', available: 0, requested: 3 },
+          ],
+        },
+      ),
+    )
     renderPage()
 
     await pick(user, 'OC-90')
     await user.click(postButton())
 
-    expect((await screen.findByRole('alert')).textContent).toBe(message)
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Недостаточно товара. OC-90: на остатке 1, требуется 2; BP-1: на остатке 0, требуется 3',
+    )
+  })
+
+  it('shows the detail of a code without a translation', async () => {
+    const user = userEvent.setup()
+    mockSearch()
+    vi.spyOn(api, 'POST').mockRejectedValue(
+      new ApiError(409, 'Текст с сервера', {}, 'code_from_the_future'),
+    )
+    renderPage()
+
+    await pick(user, 'OC-90')
+    await user.click(postButton())
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Текст с сервера')
   })
 
   it('shows line errors from the server under the right field', async () => {
@@ -221,7 +249,9 @@ describe('NewSalePage', () => {
     mockSearch()
     vi.spyOn(api, 'POST').mockRejectedValue(
       new ApiError(422, 'Проверьте введённые данные', {
-        'lines.1.unit_price': 'Должно быть не больше 100000000',
+        'lines.1.unit_price': fieldError('Должно быть не больше 100000000', 'less_than_equal', {
+          le: 100000000,
+        }),
       }),
     )
     renderPage()

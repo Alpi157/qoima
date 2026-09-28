@@ -1,7 +1,9 @@
 import './InvoicePrintPage.css'
 
 import { Alert, Anchor, Box, Button, Group, Loader } from '@mantine/core'
+import i18n from 'i18next'
 import { useEffect, useRef } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
@@ -14,7 +16,12 @@ import { parseId } from '../../lib/routeParams'
 import { type BusinessSettings, useBusinessSettings } from '../settings/api'
 import { type Sale, useSale } from './api'
 
-export const RETAIL_CUSTOMER = 'Розничный покупатель'
+// The invoice is a legal form: always in Russian, whatever the interface language.
+const INVOICE_LANGUAGE = 'ru'
+
+function invoiceT() {
+  return i18n.getFixedT(INVOICE_LANGUAGE)
+}
 
 type SaleLineOut = Sale['lines'][number]
 
@@ -42,54 +49,55 @@ function Slash() {
 }
 
 function Header({ sale, settings }: { sale: Sale; settings: BusinessSettings }) {
+  const t = invoiceT()
   return (
     <>
       <div className="z2-appendix">
-        <div>Приложение 26</div>
-        <div>к приказу Министра финансов</div>
-        <div>Республики Казахстан</div>
-        <div>20 декабря 2012 г. № 562</div>
+        <div>{t('invoice.appendix.line1')}</div>
+        <div>{t('invoice.appendix.line2')}</div>
+        <div>{t('invoice.appendix.line3')}</div>
+        <div>{t('invoice.appendix.line4')}</div>
       </div>
-      <div className="z2-form-name">Форма З-2</div>
+      <div className="z2-form-name">{t('invoice.formName')}</div>
 
       <div className="z2-org">
-        <span className="z2-bold">Организация (индивидуальный предприниматель)</span>
+        <span className="z2-bold">{t('invoice.organization')}</span>
         <span className="z2-org-name">{settings.seller_name || '\u00a0'}</span>
-        <span className="z2-bold">ИИН/БИН</span>
+        <span className="z2-bold">{t('invoice.iinBin')}</span>
         <span className="z2-iin">{settings.seller_iin_bin || '\u00a0'}</span>
       </div>
 
       <table className="z2-table z2-doc-number">
         <thead>
           <tr>
-            <th>Номер документа</th>
-            <th>Дата составления</th>
+            <th>{t('invoice.documentNumber')}</th>
+            <th>{t('invoice.documentDate')}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>{sale.number}</td>
-            <td>{formatDate(sale.sold_at)}</td>
+            <td>{formatDate(sale.sold_at, INVOICE_LANGUAGE)}</td>
           </tr>
         </tbody>
       </table>
 
-      <h1 className="z2-title">Накладная на отпуск запасов на сторону</h1>
+      <h1 className="z2-title">{t('invoice.title')}</h1>
 
       <table className="z2-table z2-parties">
         <thead>
           <tr>
-            <th>Организация (индивидуальный предприниматель) - отправитель</th>
-            <th>Организация (индивидуальный предприниматель) - получатель</th>
-            <th>Ответственный за поставку (Ф.И.О.)</th>
-            <th>Транспортная организация</th>
-            <th>Товарно-транспортная накладная (номер, дата)</th>
+            <th>{t('invoice.sender')}</th>
+            <th>{t('invoice.receiver')}</th>
+            <th>{t('invoice.responsiblePerson')}</th>
+            <th>{t('invoice.carrier')}</th>
+            <th>{t('invoice.waybill')}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>{settings.seller_name}</td>
-            <td>{sale.customer?.name ?? RETAIL_CUSTOMER}</td>
+            <td>{sale.customer?.name ?? t('invoice.retailCustomer')}</td>
             <td>{settings.responsible_person}</td>
             <td />
             <td />
@@ -109,6 +117,7 @@ function ItemsTable({
   total: number
   totalQty: number
 }) {
+  const t = invoiceT()
   return (
     <table className="z2-table z2-items">
       <colgroup>
@@ -124,18 +133,18 @@ function ItemsTable({
       </colgroup>
       <thead>
         <tr>
-          <th rowSpan={2}>Номер по порядку</th>
-          <th rowSpan={2}>Наименование, характеристика</th>
-          <th rowSpan={2}>Номенклатурный номер</th>
-          <th rowSpan={2}>Единица измерения</th>
-          <th colSpan={2}>Количество</th>
-          <th rowSpan={2}>Цена за единицу, в тенге</th>
-          <th rowSpan={2}>Сумма с НДС, в тенге</th>
-          <th rowSpan={2}>Сумма НДС, в тенге</th>
+          <th rowSpan={2}>{t('invoice.items.index')}</th>
+          <th rowSpan={2}>{t('invoice.items.name')}</th>
+          <th rowSpan={2}>{t('invoice.items.article')}</th>
+          <th rowSpan={2}>{t('invoice.items.unit')}</th>
+          <th colSpan={2}>{t('invoice.items.qty')}</th>
+          <th rowSpan={2}>{t('invoice.items.price')}</th>
+          <th rowSpan={2}>{t('invoice.items.sum')}</th>
+          <th rowSpan={2}>{t('invoice.items.vat')}</th>
         </tr>
         <tr>
-          <th>подлежит отпуску</th>
-          <th>отпущено</th>
+          <th>{t('invoice.items.qtyToRelease')}</th>
+          <th>{t('invoice.items.qtyReleased')}</th>
         </tr>
         <tr className="z2-column-numbers">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
@@ -159,10 +168,10 @@ function ItemsTable({
         ))}
         <tr className="z2-total-row" data-testid="invoice-total-row">
           <td className="z2-no-border" colSpan={3} />
-          <td className="z2-center">Итого</td>
+          <td className="z2-center">{t('invoice.items.total')}</td>
           <td className="z2-num">{formatInteger(totalQty)}</td>
           <td className="z2-num">{formatInteger(totalQty)}</td>
-          <td className="z2-center">х</td>
+          <td className="z2-center">{t('invoice.items.noValue')}</td>
           <td className="z2-num">{formatAmount(total)}</td>
           <td className="z2-num">0</td>
         </tr>
@@ -180,18 +189,19 @@ function Footer({
   settings: BusinessSettings
   totalQty: number
 }) {
+  const t = invoiceT()
   return (
     // Kept together, and after the totals when the page allows it.
     <div className="z2-footer">
       <div className="z2-in-words">
         <div>
-          <div className="z2-bold">Всего отпущено количество запасов (прописью)</div>
+          <div className="z2-bold">{t('invoice.qtyInWords')}</div>
           <div className="z2-words" data-testid="qty-in-words">
             {quantityInWords(totalQty)}
           </div>
         </div>
         <div>
-          <div className="z2-bold">на сумму (прописью), в тенге</div>
+          <div className="z2-bold">{t('invoice.amountInWords')}</div>
           <div className="z2-words" data-testid="amount-in-words">
             {amountInWords(sale.total)}
           </div>
@@ -201,31 +211,31 @@ function Footer({
       <div className="z2-signatures">
         <div className="z2-signatures-col">
           <div className="z2-sign">
-            <span className="z2-bold z2-sign-label">Отпуск разрешил</span>
-            <SignField caption="должность" />
+            <span className="z2-bold z2-sign-label">{t('invoice.sign.allowed')}</span>
+            <SignField caption={t('invoice.sign.position')} />
             <Slash />
-            <SignField caption="подпись" className="z2-field-sm" />
+            <SignField caption={t('invoice.sign.signature')} className="z2-field-sm" />
             <Slash />
-            <SignField caption="расшифровка подписи" />
+            <SignField caption={t('invoice.sign.transcript')} />
           </div>
           <div className="z2-sign">
-            <span className="z2-bold z2-sign-label">Главный бухгалтер</span>
-            <SignField caption="подпись" className="z2-field-sm" />
+            <span className="z2-bold z2-sign-label">{t('invoice.sign.chiefAccountant')}</span>
+            <SignField caption={t('invoice.sign.signature')} className="z2-field-sm" />
             <Slash />
             <SignField
-              caption="расшифровка подписи"
+              caption={t('invoice.sign.transcript')}
               value={settings.chief_accountant}
               testId="chief-accountant"
               className="z2-field-lg"
             />
           </div>
-          <div className="z2-bold z2-stamp">М.П.</div>
+          <div className="z2-bold z2-stamp">{t('invoice.sign.stamp')}</div>
           <div className="z2-sign">
-            <span className="z2-bold z2-sign-label">Отпустил</span>
-            <SignField caption="подпись" className="z2-field-sm" />
+            <span className="z2-bold z2-sign-label">{t('invoice.sign.released')}</span>
+            <SignField caption={t('invoice.sign.signature')} className="z2-field-sm" />
             <Slash />
             <SignField
-              caption="расшифровка подписи"
+              caption={t('invoice.sign.transcript')}
               value={settings.released_by_name || sale.created_by_name}
               testId="released-by"
               className="z2-field-lg"
@@ -234,19 +244,19 @@ function Footer({
         </div>
 
         <div className="z2-signatures-col">
-          <div className="z2-bold">По доверенности №_____ от «____»____________20 __ года</div>
+          <div className="z2-bold">{t('invoice.sign.powerOfAttorney')}</div>
           <div className="z2-sign">
-            <span className="z2-bold z2-sign-label">выданной</span>
+            <span className="z2-bold z2-sign-label">{t('invoice.sign.issuedTo')}</span>
             <span className="z2-field z2-field-lg">
               <span className="z2-field-value">{'\u00a0'}</span>
             </span>
           </div>
           <div className="z2-blank-line" />
           <div className="z2-sign">
-            <span className="z2-bold z2-sign-label">Запасы получил</span>
-            <SignField caption="подпись" className="z2-field-sm" />
+            <span className="z2-bold z2-sign-label">{t('invoice.sign.received')}</span>
+            <SignField caption={t('invoice.sign.signature')} className="z2-field-sm" />
             <Slash />
-            <SignField caption="расшифровка подписи" />
+            <SignField caption={t('invoice.sign.transcript')} />
           </div>
         </div>
       </div>
@@ -255,12 +265,13 @@ function Footer({
 }
 
 function Invoice({ sale, settings }: { sale: Sale; settings: BusinessSettings }) {
+  const t = invoiceT()
   const totalQty = sale.lines.reduce((sum, line) => sum + line.qty, 0)
   return (
-    <div className="invoice-sheet" data-testid="invoice">
+    <div className="invoice-sheet" data-testid="invoice" lang={INVOICE_LANGUAGE}>
       {sale.status === 'cancelled' && (
-        <div className="invoice-cancelled" aria-label="Продажа отменена">
-          ОТМЕНЕНА
+        <div className="invoice-cancelled" aria-label={t('invoice.cancelledLabel')}>
+          {t('invoice.cancelledStamp')}
         </div>
       )}
       <Header sale={sale} settings={settings} />
@@ -276,6 +287,7 @@ function InvoiceScreen({ sale, settings }: { sale: Sale; settings: BusinessSetti
   const [searchParams, setSearchParams] = useSearchParams()
   const printed = useRef(false)
   const autoPrint = searchParams.get('auto') === '1'
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!autoPrint || printed.current) return
@@ -295,17 +307,28 @@ function InvoiceScreen({ sale, settings }: { sale: Sale; settings: BusinessSetti
     <div className="invoice-screen">
       <div className="invoice-toolbar no-print">
         <Group mb="sm">
-          <Button onClick={() => window.print()}>Печать</Button>
+          <Button onClick={() => window.print()}>{t('sales.print.print')}</Button>
           <Button variant="default" onClick={back}>
-            Назад
+            {t('sales.print.back')}
           </Button>
         </Group>
         {!settings.seller_name && (
           <Alert color="yellow" variant="filled" c="black" data-testid="settings-warning">
-            Заполните реквизиты в{' '}
-            <Anchor component={Link} to="/settings" inherit c="black" fw={700} underline="always">
-              настройках
-            </Anchor>
+            <Trans
+              i18nKey="sales.print.fillSettings"
+              components={{
+                settings: (
+                  <Anchor
+                    component={Link}
+                    to="/settings"
+                    inherit
+                    c="black"
+                    fw={700}
+                    underline="always"
+                  />
+                ),
+              }}
+            />
           </Alert>
         )}
       </div>
@@ -315,9 +338,14 @@ function InvoiceScreen({ sale, settings }: { sale: Sale; settings: BusinessSetti
 }
 
 function SaleNotFound() {
+  const { t } = useTranslation()
   return (
     <Box p="md">
-      <NotFoundState title="Продажа не найдена" backTo="/sales" backLabel="К истории продаж" />
+      <NotFoundState
+        title={t('sales.notFound')}
+        backTo="/sales"
+        backLabel={t('sales.backToList')}
+      />
     </Box>
   )
 }

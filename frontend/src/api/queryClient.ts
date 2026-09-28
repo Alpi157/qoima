@@ -1,19 +1,17 @@
 import { notifications } from '@mantine/notifications'
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
+import i18n from 'i18next'
 
-import { isApiError, isClientError, SERVER_UNAVAILABLE } from './errors'
+import { apiErrorText } from '../i18n/errorText'
+import { isApiError, isClientError, isServerOrNetworkError } from './errors'
 
 const MAX_RETRIES = 1
-
-function isServerOrNetworkError(error: unknown): boolean {
-  return !isApiError(error) || error.status === 0 || error.status >= 500
-}
 
 function showError(error: unknown): void {
   notifications.show({
     color: 'red',
-    title: 'Ошибка',
-    message: isApiError(error) ? error.detail : SERVER_UNAVAILABLE,
+    title: i18n.t('common.error'),
+    message: apiErrorText(error),
   })
 }
 

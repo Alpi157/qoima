@@ -29,7 +29,7 @@ DOC_TYPE = "receipt"
 
 
 def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
-    load_line_products(db, [line.product_id for line in data.lines], "приходе")
+    load_line_products(db, [line.product_id for line in data.lines], "receipt")
 
     receipt = Receipt(
         number=next_number(db, DOC_TYPE),
@@ -199,7 +199,8 @@ def cancel_receipt(db: Session, receipt_id: int, reason: str, user_id: int) -> R
         )
     except InsufficientStockError as exc:
         raise ReceiptCancelError(
-            f"Нельзя отменить приход: товара на остатке меньше, чем было в приходе. {exc.message}"
+            f"Нельзя отменить приход: товара на остатке меньше, чем было в приходе. {exc.message}",
+            exc.params,
         ) from exc
 
     receipt.status = "cancelled"

@@ -2,8 +2,10 @@ import { Alert, Button, Group, Modal, Stack, Text, Textarea } from '@mantine/cor
 import { notifications } from '@mantine/notifications'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { isApiError, isClientError } from '../api/errors'
+import { apiErrorText, fieldErrorText } from '../i18n/errorText'
 import { reasonError as validateReason } from '../lib/validation'
 
 export interface CancelDocumentModalProps<T> {
@@ -31,6 +33,7 @@ export function CancelDocumentModal<T>({
   cancel,
   successMessage,
 }: CancelDocumentModalProps<T>) {
+  const { t } = useTranslation()
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -58,9 +61,9 @@ export function CancelDocumentModal<T>({
         // 409 (for example stock would go negative) and other 4xx stay in the window;
         // 5xx is a notification.
         if (!isClientError(error) || !isApiError(error)) return
-        const fieldMessage = error.fieldErrors.reason
-        if (fieldMessage) setReasonError(fieldMessage)
-        else setFormError(error.detail)
+        const reasonProblem = error.fieldErrors.reason
+        if (reasonProblem) setReasonError(fieldErrorText(reasonProblem, 'reason', t))
+        else setFormError(apiErrorText(error, t))
       },
     })
   }
@@ -77,7 +80,7 @@ export function CancelDocumentModal<T>({
         <Stack>
           <Text size="sm">{description}</Text>
           <Textarea
-            label="Причина"
+            label={t('common.cancelDocument.reason')}
             required
             autosize
             minRows={2}
@@ -96,7 +99,7 @@ export function CancelDocumentModal<T>({
           )}
           <Group justify="flex-end">
             <Button variant="default" onClick={close} disabled={cancel.isPending}>
-              Не отменять
+              {t('common.cancelDocument.keep')}
             </Button>
             <Button type="submit" color="red" loading={cancel.isPending}>
               {confirmLabel}

@@ -22,7 +22,12 @@ describe('apiErrorFromResponse', () => {
       jsonResponse(422, {
         detail: 'Проверьте введённые данные',
         errors: [
-          { field: 'lines.0.qty', message: 'Должно быть не меньше 1' },
+          {
+            field: 'lines.0.qty',
+            message: 'Должно быть не меньше 1',
+            type: 'greater_than_equal',
+            params: { ge: 1 },
+          },
           { field: 'note', message: 'Максимальная длина: 1000' },
           { field: 'note', message: 'Второе сообщение' },
         ],
@@ -36,19 +41,29 @@ describe('apiErrorFromResponse', () => {
     expect(error.message).toBe('Проверьте введённые данные')
     expect(error.code).toBe('validation_error')
     expect(error.fieldErrors).toEqual({
-      'lines.0.qty': 'Должно быть не меньше 1',
-      note: 'Максимальная длина: 1000',
+      'lines.0.qty': {
+        message: 'Должно быть не меньше 1',
+        type: 'greater_than_equal',
+        params: { ge: 1 },
+      },
+      note: { message: 'Максимальная длина: 1000', type: '', params: {} },
     })
+    expect(error.params).toEqual({})
   })
 
   it('reads detail and code from a business error without errors', async () => {
     const error = await apiErrorFromResponse(
-      jsonResponse(409, { detail: 'Товар OC-90 в архиве', code: 'product_archived' }),
+      jsonResponse(409, {
+        detail: 'Товар OC-90 в архиве',
+        code: 'product_archived',
+        params: { article: 'OC-90' },
+      }),
     )
 
     expect(error.status).toBe(409)
     expect(error.detail).toBe('Товар OC-90 в архиве')
     expect(error.code).toBe('product_archived')
+    expect(error.params).toEqual({ article: 'OC-90' })
     expect(error.fieldErrors).toEqual({})
     expect(hasErrorCode(error, 'product_archived')).toBe(true)
     expect(hasErrorCode(error, 'insufficient_stock')).toBe(false)
@@ -104,7 +119,7 @@ describe('apiErrorFromResponse', () => {
       }),
     )
 
-    expect(error.fieldErrors).toEqual({ a: 'ok' })
+    expect(error.fieldErrors).toEqual({ a: { message: 'ok', type: '', params: {} } })
   })
 })
 

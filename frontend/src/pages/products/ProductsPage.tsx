@@ -13,12 +13,14 @@ import {
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { EmptyState } from '../../components/EmptyState'
 import { ListPagination } from '../../components/ListPagination'
 import { QueryError } from '../../components/QueryError'
 import { SearchInput } from '../../components/SearchInput'
+import { unitLabel } from '../../lib/labels'
 import { formatMoney } from '../../lib/money'
 import { useListParams } from '../../lib/useListParams'
 import { type Product, useProducts } from './api'
@@ -34,30 +36,32 @@ function StockText({ product, size }: { product: Product; size?: string }) {
       c={product.stock <= 0 ? 'red' : undefined}
       fw={product.stock <= 0 ? 600 : undefined}
     >
-      {product.stock} {product.unit}
+      {product.stock} {unitLabel(product.unit)}
     </Text>
   )
 }
 
 function ArchivedBadge() {
+  const { t } = useTranslation()
   return (
     <Badge color="gray" variant="light">
-      Архив
+      {t('products.archivedBadge')}
     </Badge>
   )
 }
 
 function ProductTable({ items }: { items: Product[] }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   return (
     <Table.ScrollContainer minWidth={600} visibleFrom="sm">
       <Table highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Артикул</Table.Th>
-            <Table.Th>Наименование</Table.Th>
-            <Table.Th ta="right">Цена</Table.Th>
-            <Table.Th ta="right">Остаток</Table.Th>
+            <Table.Th>{t('products.list.article')}</Table.Th>
+            <Table.Th>{t('products.list.name')}</Table.Th>
+            <Table.Th ta="right">{t('products.list.price')}</Table.Th>
+            <Table.Th ta="right">{t('products.list.stock')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -132,14 +136,15 @@ export function ProductsPage() {
   const includeArchived = searchParams.get(ARCHIVED_PARAM) === '1'
   const [formOpened, form] = useDisclosure()
   const products = useProducts({ q, includeArchived, page })
+  const { t } = useTranslation()
 
   const isFiltered = Boolean(q) || includeArchived
 
   return (
     <Stack>
       <Group justify="space-between">
-        <Title order={2}>Товары</Title>
-        <Button onClick={form.open}>Добавить товар</Button>
+        <Title order={2}>{t('products.list.title')}</Title>
+        <Button onClick={form.open}>{t('products.list.add')}</Button>
       </Group>
 
       <Group align="center">
@@ -148,12 +153,12 @@ export function ProductsPage() {
             value={q}
             onSearch={setQ}
             autoFocus
-            placeholder="Артикул или название"
-            aria-label="Поиск товара"
+            placeholder={t('products.list.searchPlaceholder')}
+            aria-label={t('products.list.searchLabel')}
           />
         </Box>
         <Switch
-          label="Показывать архивные"
+          label={t('products.list.showArchived')}
           checked={includeArchived}
           onChange={(event) => setParam(ARCHIVED_PARAM, event.currentTarget.checked ? '1' : null)}
         />
@@ -167,18 +172,18 @@ export function ProductsPage() {
         <QueryError error={products.error} onRetry={() => products.refetch()} />
       ) : products.data.items.length === 0 && page === 1 ? (
         isFiltered ? (
-          <EmptyState text="Ничего не найдено" />
+          <EmptyState text={t('common.nothingFound')} />
         ) : (
           <EmptyState
-            text="Товаров пока нет"
-            actionLabel="Добавить первый товар"
+            text={t('products.list.empty')}
+            actionLabel={t('products.list.addFirst')}
             onAction={form.open}
           />
         )
       ) : (
         <>
           <Text c="dimmed" size="sm">
-            Найдено: {products.data.total}
+            {t('common.found', { count: products.data.total })}
           </Text>
           <ProductTable items={products.data.items} />
           <ProductCards items={products.data.items} />

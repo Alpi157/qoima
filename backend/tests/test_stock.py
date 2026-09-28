@@ -74,6 +74,7 @@ def test_adjustment_below_zero_rejected(
     assert response.json() == {
         "detail": "Недостаточно товара. OC-90: на остатке 2, требуется 3",
         "code": "insufficient_stock",
+        "params": {"items": [{"article": "OC-90", "available": 2, "requested": 3}]},
     }
     assert _stock(db_session, product.id) == 2
     count = select(func.count()).where(StockMovement.product_id == product.id)
@@ -121,7 +122,11 @@ def test_adjustment_missing_product(auth_client: TestClient) -> None:
         "/api/stock/adjustments", json={"product_id": 999999999, "qty": 1, "reason": "Пересчёт"}
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Товар не найден", "code": "product_not_found"}
+    assert response.json() == {
+        "detail": "Товар не найден",
+        "code": "product_not_found",
+        "params": {},
+    }
 
 
 def test_movement_history(auth_client: TestClient, db_session: Session, product: Product) -> None:
@@ -173,4 +178,8 @@ def test_movement_history_empty(auth_client: TestClient, product: Product) -> No
 def test_movement_history_missing_product(auth_client: TestClient) -> None:
     response = auth_client.get("/api/products/999999999/movements")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Товар не найден", "code": "product_not_found"}
+    assert response.json() == {
+        "detail": "Товар не найден",
+        "code": "product_not_found",
+        "params": {},
+    }

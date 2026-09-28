@@ -1,3 +1,4 @@
+import i18n from 'i18next'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -6,6 +7,8 @@ import {
   movementKindLabel,
   receiptStatusLabel,
   saleStatusLabel,
+  UNITS,
+  unitLabel,
 } from './labels'
 
 describe('movementKindLabel', () => {
@@ -45,5 +48,33 @@ describe('status labels', () => {
       expect(receiptStatusLabel(status)).not.toBe(status)
       expect(saleStatusLabel(status)).not.toBe(status)
     }
+  })
+})
+
+describe('unitLabel', () => {
+  it('keeps the stored unit in Russian', () => {
+    for (const unit of UNITS) expect(unitLabel(unit)).toBe(unit)
+  })
+
+  it.each([
+    ['kk', 'дана'],
+    ['zh', '件'],
+  ])('shows "шт" in %s as %s', async (language, label) => {
+    await i18n.changeLanguage(language)
+    expect(unitLabel('шт')).toBe(label)
+  })
+
+  it('translates every unit', async () => {
+    for (const language of ['kk', 'zh']) {
+      await i18n.changeLanguage(language)
+      for (const unit of UNITS.filter((unit) => !['л', 'кг', 'м'].includes(unit))) {
+        expect(unitLabel(unit)).not.toBe(unit)
+      }
+    }
+  })
+
+  it('shows an unknown unit as is', async () => {
+    await i18n.changeLanguage('zh')
+    expect(unitLabel('рулон')).toBe('рулон')
   })
 })

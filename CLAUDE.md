@@ -29,12 +29,17 @@
 - Запустить backend (localhost:8000): `make backend`
 - Запустить frontend (localhost:5173, проксирует `/api` на backend): `make frontend`
 - Создать пользователя (пароль спросит дважды): `make create-user USERNAME=owner FULL_NAME="Имя"`
-  (или `cd backend && uv run python -m app.cli create-user --username owner --full-name "Имя"`)
+  (язык интерфейса `LOCALE=kk|ru|zh`, по умолчанию `kk`; или
+  `cd backend && uv run python -m app.cli create-user --username owner --full-name "Имя" --locale kk`)
 - Сменить пароль: `cd backend && uv run python -m app.cli set-password --username owner`
 - Все тесты (backend и frontend): `make test`
 - Тесты backend: `cd backend && uv run pytest`
 - Тесты frontend (vitest): `cd frontend && npm test -- --run` (без `--run` в режиме наблюдения)
-- Линтеры backend и frontend: `make lint`
+- Линтеры backend и frontend: `make lint` (включает проверку ключей переводов)
+- Проверка ключей переводов: `cd frontend && npm run i18n:check` (падает, если ключа из кода нет
+  в `ru.json` или в `ru.json` есть лишний ключ; если в `kk.json`/`zh.json` не хватает ключа, есть
+  лишний или другой набор `{{переменных}}` и `<тегов>`, чем в русской строке; формы множественного
+  числа по `Intl.PluralRules` языка, `invoice.*` в kk и zh не нужны; печатает процент перевода)
 - Форматирование backend: `cd backend && uv run ruff format .`
 - Форматирование frontend: `cd frontend && npm run format`
 - Сборка frontend: `cd frontend && npm run build`

@@ -1,9 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import i18n from 'i18next'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { makeBusinessSettings, makeSale, ok } from '../../test/fixtures'
+import { fakeKazakh } from '../../test/i18n'
 import { renderWithDataRouter } from '../../test/render'
 import type { BusinessSettings } from '../settings/api'
 import type { Sale } from './api'
@@ -291,5 +293,40 @@ describe('InvoicePrintPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Назад' }))
     expect(router.state.location.pathname).toBe('/sales/9')
+  })
+
+  it('stays Russian whatever the interface language', async () => {
+    mockApi(makeSale({ ...SALE, customer: null, status: 'cancelled' }))
+    await fakeKazakh({
+      invoice: {
+        title: 'Жүкқұжат',
+        retailCustomer: 'Бөлшек сатып алушы',
+        cancelledStamp: 'ЖОЙЫЛДЫ',
+      },
+      sales: { print: { print: 'Басып шығару' } },
+    })
+    renderPage()
+
+    const sheet = await invoice()
+    expect(
+      within(sheet).getByRole('heading', { name: 'Накладная на отпуск запасов на сторону' }),
+    ).toBeTruthy()
+    expect(within(sheet).getByText('Розничный покупатель')).toBeTruthy()
+    expect(within(sheet).getByText('ОТМЕНЕНА')).toBeTruthy()
+    expect(within(sheet).getByText('27.09.2026')).toBeTruthy()
+    expect(within(sheet).getByText('Итого')).toBeTruthy()
+    expect(sheet.getAttribute('lang')).toBe('ru')
+    // The toolbar around the invoice is interface: it follows the language.
+    expect(screen.getByRole('button', { name: 'Басып шығару' })).toBeTruthy()
+  })
+
+  it.each(['kk', 'zh'])('keeps the stored Russian unit in %s', async (language) => {
+    mockApi()
+    await i18n.changeLanguage(language)
+    renderPage()
+
+    const row = (await screen.findByText('Фильтр масляный')).closest('tr')!
+    expect(cellTexts(row)).toContain('шт')
+    expect(cellTexts(row)).not.toContain(i18n.t('common.units.pcs'))
   })
 })

@@ -2,6 +2,7 @@ import { Alert, Button, Group, Loader, Paper, Stack, TextInput, Title } from '@m
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { QueryError } from '../../components/QueryError'
 import { serverFormErrors } from '../../lib/formErrors'
@@ -12,8 +13,7 @@ import {
   useSaveBusinessSettings,
 } from './api'
 
-// Same rule and text as the backend (app/settings/schemas.py).
-export const IIN_BIN_ERROR = 'ИИН/БИН должен состоять из 12 цифр'
+// Same rule as the backend (app/settings/schemas.py); the text is its error type's.
 const IIN_BIN_PATTERN = /^\d{12}$/
 
 type SettingsFormValues = BusinessSettingsUpdate
@@ -49,13 +49,14 @@ function toBody(values: SettingsFormValues): BusinessSettingsUpdate {
 function SettingsForm({ settings }: { settings: BusinessSettings }) {
   const save = useSaveBusinessSettings()
   const [formError, setFormError] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   const form = useForm<SettingsFormValues>({
     initialValues: formValues(settings),
     validate: {
       seller_iin_bin: (value) => {
         const trimmed = value.trim()
-        return trimmed && !IIN_BIN_PATTERN.test(trimmed) ? IIN_BIN_ERROR : null
+        return trimmed && !IIN_BIN_PATTERN.test(trimmed) ? t('validation.iin_bin_format') : null
       },
     },
   })
@@ -66,7 +67,7 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
       onSuccess: (saved) => {
         // Show the values as stored (trimmed).
         form.setValues(formValues(saved))
-        notifications.show({ color: 'green', message: 'Настройки сохранены' })
+        notifications.show({ color: 'green', message: t('settings.saved') })
       },
       onError: (error) => {
         const { fields, message } = serverFormErrors(error, { fieldMap: FIELD_MAP })
@@ -80,32 +81,32 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
     <form onSubmit={form.onSubmit(submit)} noValidate>
       <Stack>
         <TextInput
-          label="Организация (индивидуальный предприниматель)"
-          placeholder="ИП Ахметов"
+          label={t('settings.sellerName')}
+          placeholder={t('settings.sellerNamePlaceholder')}
           autoComplete="organization"
           {...form.getInputProps('seller_name')}
         />
         <TextInput
-          label="ИИН/БИН"
+          label={t('settings.iinBin')}
           inputMode="numeric"
           maxLength={20}
           autoComplete="off"
           {...form.getInputProps('seller_iin_bin')}
         />
         <TextInput
-          label="Ответственный за поставку (Ф.И.О.)"
+          label={t('settings.responsiblePerson')}
           autoComplete="off"
           {...form.getInputProps('responsible_person')}
         />
         <TextInput
-          label="Отпустил (расшифровка подписи)"
-          description="Если пусто, в накладной имя того, кто провёл продажу"
+          label={t('settings.releasedBy')}
+          description={t('settings.releasedByHint')}
           autoComplete="off"
           {...form.getInputProps('released_by_name')}
         />
         <TextInput
-          label="Главный бухгалтер (расшифровка подписи)"
-          description="например, Қамтамасыз етілмейді"
+          label={t('settings.chiefAccountant')}
+          description={t('settings.chiefAccountantHint')}
           autoComplete="off"
           {...form.getInputProps('chief_accountant')}
         />
@@ -118,7 +119,7 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
 
         <Group>
           <Button type="submit" loading={save.isPending}>
-            Сохранить
+            {t('common.save')}
           </Button>
         </Group>
       </Stack>
@@ -128,13 +129,14 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
 
 export function SettingsPage() {
   const settings = useBusinessSettings()
+  const { t } = useTranslation()
 
   return (
     <Stack maw={640}>
-      <Title order={2}>Настройки</Title>
+      <Title order={2}>{t('settings.title')}</Title>
       <Paper withBorder p="md" radius="md">
         <Title order={4} mb="sm">
-          Реквизиты для накладной (форма З-2)
+          {t('settings.invoiceDetails')}
         </Title>
         {settings.isPending ? (
           <Loader />

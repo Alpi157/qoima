@@ -1,0 +1,494 @@
+{
+  "common": {
+    "listSeparator": ", ",
+    "error": "Ошибка",
+    "retry": "Повторить",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "pagination": {
+      "first": "Первая страница",
+      "previous": "Предыдущая страница",
+      "next": "Следующая страница",
+      "last": "Последняя страница"
+    },
+    "period": {
+      "today": "Сегодня",
+      "week": "Неделя",
+      "month": "Месяц",
+      "label": "Период",
+      "all": "Все даты"
+    },
+    "clearSearch": "Очистить поиск",
+    "notFound": {
+      "title": "Страница не найдена",
+      "toSale": "Перейти к продаже"
+    },
+    "input": {
+      "qtyRange": "Целое число от 1 до 100 000",
+      "reasonTooShort_one": "Укажите причину, не короче {{count}} символа",
+      "reasonTooShort_few": "Укажите причину, не короче {{count}} символов",
+      "reasonTooShort_many": "Укажите причину, не короче {{count}} символов",
+      "reasonTooShort_other": "Укажите причину, не короче {{count}} символа",
+      "moneyFormat": "Введите сумму, например 12500",
+      "priceRequired": "Укажите цену"
+    },
+    "language": "Язык",
+    "documentNumber": "№ {{number}}",
+    "nothingFound": "Ничего не найдено",
+    "found_one": "Найдено: {{count}}",
+    "found_few": "Найдено: {{count}}",
+    "found_many": "Найдено: {{count}}",
+    "found_other": "Найдено: {{count}}",
+    "notFoundShort": "Не найдено",
+    "searching": "Поиск…",
+    "cancelDocument": {
+      "reason": "Причина",
+      "keep": "Не отменять"
+    },
+    "cancelled": {
+      "when": "Когда: {{date}}",
+      "who": "Кто: {{name}}",
+      "reason": "Причина: {{reason}}"
+    },
+    "postedBy": "Провёл: {{name}}, {{date}}",
+    "removeLine": "Удалить строку {{article}}",
+    "lineSum": "Сумма: {{amount}}",
+    "leave": {
+      "title": "Уйти без проведения?",
+      "confirm": "Уйти"
+    },
+    "units": {
+      "pcs": "шт",
+      "set": "компл.",
+      "pair": "пара",
+      "liter": "л",
+      "kg": "кг",
+      "meter": "м",
+      "pack": "упак."
+    }
+  },
+  "errors": {
+    "serverUnavailable": "Сервер недоступен, попробуйте позже",
+    "shortageItem": "{{article}}: на остатке {{available}}, требуется {{requested}}",
+    "shortageSeparator": "; ",
+    "validation_error": "Проверьте введённые данные",
+    "not_authenticated": "Требуется вход",
+    "invalid_credentials": "Неверный логин или пароль",
+    "too_many_login_attempts": "Слишком много попыток входа. Попробуйте через минуту",
+    "invalid_article": "Артикул не может быть пустым",
+    "product_not_found": "Товар не найден",
+    "duplicate_article": "Товар с артикулом «{{article}}» уже есть: {{existing_name}}",
+    "product_archived": "Товар {{article}} в архиве",
+    "customer_not_found": "Покупатель не найден",
+    "document_customer_not_found": "Покупатель не найден",
+    "line_product_not_found": "Товар не найден: {{product_ids}}",
+    "duplicate_line": "Товар {{article}} указан в документе дважды",
+    "duplicate_line_receipt": "Товар {{article}} указан в приходе дважды",
+    "duplicate_line_sale": "Товар {{article}} указан в продаже дважды",
+    "missing_price": "Укажите цену для товара {{article}}",
+    "insufficient_stock": "Недостаточно товара. {{items}}",
+    "receipt_not_found": "Приход не найден",
+    "receipt_already_cancelled": "Приход уже отменён",
+    "receipt_cancel_blocked": "Нельзя отменить приход: товара на остатке меньше, чем было в приходе. Недостаточно товара. {{items}}",
+    "sale_not_found": "Продажа не найдена",
+    "sale_already_cancelled": "Продажа уже отменена",
+    "sale_request_conflict": "Этот запрос уже использован для другой продажи",
+    "not_found": "Не найдено",
+    "method_not_allowed": "Метод не поддерживается",
+    "http_error": "Ошибка запроса",
+    "app_error": "Ошибка запроса"
+  },
+  "validation": {
+    "missing": "Обязательное поле",
+    "extra_forbidden": "Лишнее поле",
+    "string_too_short": "Минимальная длина: {{min_length}}",
+    "string_too_long": "Максимальная длина: {{max_length}}",
+    "greater_than": "Должно быть больше {{gt}}",
+    "greater_than_equal": "Должно быть не меньше {{ge}}",
+    "less_than": "Должно быть меньше {{lt}}",
+    "less_than_equal": "Должно быть не больше {{le}}",
+    "int_type": "Должно быть целым числом",
+    "int_parsing": "Должно быть целым числом",
+    "uuid_parsing": "Некорректный идентификатор (UUID)",
+    "date_parsing": "Некорректная дата",
+    "datetime_parsing": "Некорректные дата и время",
+    "too_short": "Минимум элементов: {{min_length}}",
+    "too_long": "Максимум элементов: {{max_length}}",
+    "qty_zero": "Количество не может быть нулём",
+    "iin_bin_format": "ИИН/БИН должен состоять из 12 цифр",
+    "date_in_future": "Дата не может быть в будущем",
+    "date_in_future_received_at": "Дата прихода не может быть в будущем",
+    "date_in_future_sold_at": "Дата продажи не может быть в будущем",
+    "null_not_allowed": "Поле не может быть пустым: {{fields}}"
+  },
+  "products": {
+    "movementKind": {
+      "receipt": "Приход",
+      "receipt_cancel": "Отмена прихода",
+      "sale": "Продажа",
+      "sale_cancel": "Отмена продажи",
+      "adjustment": "Корректировка"
+    },
+    "archivedBadge": "Архив",
+    "notFound": "Товар не найден",
+    "backToList": "К списку товаров",
+    "movements": {
+      "date": "Дата",
+      "kind": "Операция",
+      "document": "Документ",
+      "qty": "Количество",
+      "balanceAfter": "Остаток после",
+      "author": "Кто",
+      "note": "Примечание",
+      "balance": "Остаток: {{balance}}",
+      "empty": "Движений пока не было",
+      "title": "История движений"
+    },
+    "archive": {
+      "archived": "Товар {{article}} перенесён в архив",
+      "restored": "Товар {{article}} возвращён из архива",
+      "title": "Перенести в архив?",
+      "restoreTitle": "Вернуть из архива?",
+      "confirm": "В архив",
+      "restoreConfirm": "Вернуть",
+      "text": "Товар {{article}} пропадёт из списка и поиска. История и остаток сохранятся.",
+      "restoreText": "Товар {{article}} снова появится в списке и в поиске."
+    },
+    "card": {
+      "back": "← Товары",
+      "brand": "Бренд: {{brand}}",
+      "edit": "Изменить",
+      "adjust": "Корректировка остатка",
+      "restore": "Вернуть из архива",
+      "archive": "В архив",
+      "stock": "Остаток",
+      "price": "Цена"
+    },
+    "adjust": {
+      "add": "Добавить",
+      "remove": "Списать",
+      "reasons": {
+        "recount": "Пересчёт",
+        "defect": "Брак",
+        "loss": "Потеря"
+      },
+      "saved": "Остаток {{article}}: {{stock}}",
+      "direction": "Действие",
+      "qty": "Количество",
+      "reason": "Причина",
+      "preview": "Сейчас: {{before}} → станет: <after>{{after}}</after>",
+      "title": "Корректировка остатка: {{article}}"
+    },
+    "list": {
+      "article": "Артикул",
+      "name": "Наименование",
+      "price": "Цена",
+      "stock": "Остаток",
+      "title": "Товары",
+      "add": "Добавить товар",
+      "searchPlaceholder": "Артикул или название",
+      "searchLabel": "Поиск товара",
+      "showArchived": "Показывать архивные",
+      "empty": "Товаров пока нет",
+      "addFirst": "Добавить первый товар"
+    },
+    "form": {
+      "articleRequired": "Введите артикул",
+      "nameRequired": "Введите наименование",
+      "unitRequired": "Выберите единицу",
+      "saved": "Товар {{article}} сохранён",
+      "added": "Товар {{article}} добавлен",
+      "article": "Артикул",
+      "name": "Наименование",
+      "price": "Цена",
+      "pricePlaceholder": "Например, 12500",
+      "unit": "Единица",
+      "hideMore": "Скрыть дополнительное",
+      "showMore": "Дополнительно: бренд, заметка",
+      "brand": "Бренд",
+      "note": "Заметка",
+      "saveAndAddMore": "Сохранить и добавить ещё",
+      "editTitle": "Изменить товар",
+      "newTitle": "Новый товар"
+    },
+    "picker": {
+      "stock": "Остаток: {{stock}}",
+      "create": "Создать товар «{{article}}»"
+    }
+  },
+  "receipts": {
+    "status": {
+      "posted": "Проведён",
+      "cancelled": "Отменён"
+    },
+    "list": {
+      "statusAll": "Все",
+      "statusPosted": "Проведённые",
+      "statusCancelled": "Отменённые",
+      "number": "№",
+      "date": "Дата",
+      "supplier": "Поставщик",
+      "positions": "Позиций",
+      "pieces": "Штук",
+      "cost": "Сумма закупки",
+      "status": "Статус",
+      "cardCounts": "Позиций: {{positions}}, штук: {{pieces}}",
+      "title": "Приходы",
+      "new": "Новый приход",
+      "empty": "Приходов пока нет",
+      "addFirst": "Провести первый приход"
+    },
+    "notFound": "Приход не найден",
+    "backToList": "К списку приходов",
+    "lines": {
+      "article": "Артикул",
+      "name": "Наименование",
+      "qty": "Количество",
+      "cost": "Цена",
+      "sum": "Сумма"
+    },
+    "card": {
+      "back": "← Приходы",
+      "title": "Приход №{{number}} от {{date}}",
+      "cancelled": "Приход отменён",
+      "supplier": "Поставщик: {{supplier}}",
+      "note": "Заметка: {{note}}",
+      "positions_one": "Позиций: {{count}}",
+      "positions_few": "Позиций: {{count}}",
+      "positions_many": "Позиций: {{count}}",
+      "positions_other": "Позиций: {{count}}",
+      "pieces_one": "Штук: {{count}}",
+      "pieces_few": "Штук: {{count}}",
+      "pieces_many": "Штук: {{count}}",
+      "pieces_other": "Штук: {{count}}",
+      "cost": "Сумма закупки: {{amount}}"
+    },
+    "cancel": {
+      "confirm": "Отменить приход",
+      "title": "Отменить приход №{{number}}?",
+      "description": "Остатки товаров из прихода уменьшатся обратно. Сам приход останется в списке как отменённый.",
+      "done": "Приход №{{number}} отменён"
+    },
+    "new": {
+      "qty": "Количество",
+      "qtyOf": "Количество {{article}}",
+      "cost": "Закупочная цена",
+      "costOf": "Закупочная цена {{article}}",
+      "optional": "Необязательно",
+      "initialStock": "Начальные остатки",
+      "posted": "Приход №{{number}} проведён",
+      "title": "Новый приход",
+      "supplier": "Поставщик",
+      "date": "Дата и время",
+      "note": "Заметка",
+      "addProduct": "Добавить товар",
+      "emptyLines": "Найдите товар по артикулу, чтобы добавить строку",
+      "stock": "Остаток",
+      "submit": "Провести приход",
+      "leaveText": "Приход не проведён, добавленные строки пропадут."
+    }
+  },
+  "sales": {
+    "status": {
+      "posted": "Проведена",
+      "cancelled": "Отменена"
+    },
+    "lines": {
+      "article": "Артикул",
+      "name": "Наименование",
+      "sum": "Сумма",
+      "qty": "Количество",
+      "price": "Цена"
+    },
+    "new": {
+      "qty": "Количество",
+      "qtyOf": "Количество {{article}}",
+      "inStock": "На остатке {{stock}}",
+      "price": "Цена",
+      "priceOf": "Цена {{article}}",
+      "posted": "Продажа №{{number}} проведена",
+      "requestConflict": "Продажа могла уже пройти. Проверьте <history>историю продаж</history>",
+      "title": "Продажа",
+      "addProduct": "Добавить товар",
+      "emptyLines": "Найдите товар по артикулу, чтобы добавить строку",
+      "stock": "Остаток",
+      "date": "Дата и время",
+      "note": "Заметка",
+      "total": "ИТОГО",
+      "submit": "Провести и напечатать",
+      "submitHint": "Ctrl+Enter — провести и напечатать",
+      "leaveText": "Продажа не проведена, добавленные строки пропадут."
+    },
+    "list": {
+      "statusAll": "Все",
+      "statusPosted": "Проведённые",
+      "statusCancelled": "Отменённые",
+      "number": "№",
+      "date": "Дата",
+      "customer": "Покупатель",
+      "positions": "Позиций",
+      "pieces": "Штук",
+      "total": "Сумма",
+      "status": "Статус",
+      "cardCounts": "Позиций: {{positions}}, штук: {{pieces}}",
+      "title": "Продажи",
+      "new": "Новая продажа",
+      "empty": "Продаж пока нет",
+      "addFirst": "Провести первую продажу",
+      "periodTotal": "Итого за период: {{amount}}",
+      "count_one": "Продаж: {{count}}",
+      "count_few": "Продаж: {{count}}",
+      "count_many": "Продаж: {{count}}",
+      "count_other": "Продаж: {{count}}"
+    },
+    "notFound": "Продажа не найдена",
+    "backToList": "К истории продаж",
+    "card": {
+      "back": "← Продажи",
+      "title": "Продажа №{{number}} от {{date}}",
+      "print": "Печать накладной",
+      "cancelled": "Продажа отменена",
+      "customer": "Покупатель:",
+      "note": "Заметка: {{note}}",
+      "total": "ИТОГО: {{amount}}"
+    },
+    "cancel": {
+      "confirm": "Отменить продажу",
+      "title": "Отменить продажу №{{number}}?",
+      "description": "Товары из продажи вернутся на остаток. Сама продажа останется в истории как отменённая.",
+      "done": "Продажа №{{number}} отменена"
+    },
+    "print": {
+      "print": "Печать",
+      "back": "Назад",
+      "fillSettings": "Заполните реквизиты в <settings>настройках</settings>"
+    }
+  },
+  "nav": {
+    "sale": "Продажа",
+    "products": "Товары",
+    "customers": "Покупатели",
+    "receipts": "Приход",
+    "sales": "Продажи",
+    "settings": "Настройки",
+    "menu": "Меню",
+    "logout": "Выйти"
+  },
+  "auth": {
+    "login": {
+      "username": "Логин",
+      "password": "Пароль",
+      "submit": "Войти",
+      "usernameRequired": "Введите логин",
+      "passwordRequired": "Введите пароль"
+    }
+  },
+  "customers": {
+    "list": {
+      "name": "Имя",
+      "phone": "Телефон",
+      "note": "Заметка",
+      "title": "Покупатели",
+      "add": "Добавить покупателя",
+      "searchPlaceholder": "Имя или телефон",
+      "searchLabel": "Поиск покупателя",
+      "empty": "Покупателей пока нет",
+      "addFirst": "Добавить первого покупателя"
+    },
+    "form": {
+      "nameRequired": "Введите имя",
+      "saved": "Покупатель {{name}} сохранён",
+      "added": "Покупатель {{name}} добавлен",
+      "name": "Имя",
+      "phone": "Телефон",
+      "note": "Заметка",
+      "editTitle": "Изменить покупателя",
+      "newTitle": "Новый покупатель"
+    },
+    "notFound": "Покупатель не найден",
+    "backToList": "К списку покупателей",
+    "purchases": {
+      "number": "№",
+      "date": "Дата",
+      "total": "Сумма",
+      "status": "Статус",
+      "empty": "Покупок пока не было",
+      "sum": "Всего покупок на {{amount}}",
+      "title": "История покупок"
+    },
+    "card": {
+      "back": "← Покупатели",
+      "call": "Позвонить",
+      "edit": "Изменить"
+    },
+    "picker": {
+      "label": "Покупатель",
+      "reset": "Сбросить покупателя",
+      "placeholder": "Имя или телефон",
+      "create": "Создать покупателя «{{name}}»"
+    }
+  },
+  "settings": {
+    "saved": "Настройки сохранены",
+    "sellerName": "Организация (индивидуальный предприниматель)",
+    "sellerNamePlaceholder": "ИП Ахметов",
+    "iinBin": "ИИН/БИН",
+    "responsiblePerson": "Ответственный за поставку (Ф.И.О.)",
+    "releasedBy": "Отпустил (расшифровка подписи)",
+    "releasedByHint": "Если пусто, в накладной имя того, кто провёл продажу",
+    "chiefAccountant": "Главный бухгалтер (расшифровка подписи)",
+    "chiefAccountantHint": "например, Қамтамасыз етілмейді",
+    "title": "Настройки",
+    "invoiceDetails": "Реквизиты для накладной (форма З-2)"
+  },
+  "invoice": {
+    "appendix": {
+      "line1": "Приложение 26",
+      "line2": "к приказу Министра финансов",
+      "line3": "Республики Казахстан",
+      "line4": "20 декабря 2012 г. № 562"
+    },
+    "formName": "Форма З-2",
+    "organization": "Организация (индивидуальный предприниматель)",
+    "iinBin": "ИИН/БИН",
+    "documentNumber": "Номер документа",
+    "documentDate": "Дата составления",
+    "title": "Накладная на отпуск запасов на сторону",
+    "sender": "Организация (индивидуальный предприниматель) - отправитель",
+    "receiver": "Организация (индивидуальный предприниматель) - получатель",
+    "responsiblePerson": "Ответственный за поставку (Ф.И.О.)",
+    "carrier": "Транспортная организация",
+    "waybill": "Товарно-транспортная накладная (номер, дата)",
+    "retailCustomer": "Розничный покупатель",
+    "items": {
+      "index": "Номер по порядку",
+      "name": "Наименование, характеристика",
+      "article": "Номенклатурный номер",
+      "unit": "Единица измерения",
+      "qty": "Количество",
+      "price": "Цена за единицу, в тенге",
+      "sum": "Сумма с НДС, в тенге",
+      "vat": "Сумма НДС, в тенге",
+      "qtyToRelease": "подлежит отпуску",
+      "qtyReleased": "отпущено",
+      "total": "Итого",
+      "noValue": "х"
+    },
+    "qtyInWords": "Всего отпущено количество запасов (прописью)",
+    "amountInWords": "на сумму (прописью), в тенге",
+    "sign": {
+      "allowed": "Отпуск разрешил",
+      "position": "должность",
+      "signature": "подпись",
+      "transcript": "расшифровка подписи",
+      "chiefAccountant": "Главный бухгалтер",
+      "stamp": "М.П.",
+      "released": "Отпустил",
+      "powerOfAttorney": "По доверенности №_____ от «____»____________20 __ года",
+      "issuedTo": "выданной",
+      "received": "Запасы получил"
+    },
+    "cancelledLabel": "Продажа отменена",
+    "cancelledStamp": "ОТМЕНЕНА"
+  }
+}

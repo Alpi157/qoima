@@ -12,6 +12,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
@@ -43,16 +44,17 @@ function ProductLink({ line }: { line: ReceiptLineOut }) {
 }
 
 function LinesTable({ lines }: { lines: ReceiptLineOut[] }) {
+  const { t } = useTranslation()
   return (
     <Table.ScrollContainer minWidth={600} visibleFrom="sm">
       <Table verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Артикул</Table.Th>
-            <Table.Th>Наименование</Table.Th>
-            <Table.Th ta="right">Количество</Table.Th>
-            <Table.Th ta="right">Цена</Table.Th>
-            <Table.Th ta="right">Сумма</Table.Th>
+            <Table.Th>{t('receipts.lines.article')}</Table.Th>
+            <Table.Th>{t('receipts.lines.name')}</Table.Th>
+            <Table.Th ta="right">{t('receipts.lines.qty')}</Table.Th>
+            <Table.Th ta="right">{t('receipts.lines.cost')}</Table.Th>
+            <Table.Th ta="right">{t('receipts.lines.sum')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -99,42 +101,59 @@ function LinesCards({ lines }: { lines: ReceiptLineOut[] }) {
 function ReceiptDetails({ receipt }: { receipt: Receipt }) {
   const [cancelOpened, cancelModal] = useDisclosure()
   const cancel = useCancelReceipt(receipt.id)
+  const { t } = useTranslation()
 
   return (
     <Stack>
       <Anchor component={Link} to="/receipts" size="sm">
-        ← Приходы
+        {t('receipts.card.back')}
       </Anchor>
 
       <Group justify="space-between" align="flex-start">
         <Group gap="sm">
           <Title order={2}>
-            Приход №{receipt.number} от {formatDateTime(receipt.received_at)}
+            {t('receipts.card.title', {
+              number: receipt.number,
+              date: formatDateTime(receipt.received_at),
+            })}
           </Title>
           <ReceiptStatusBadge status={receipt.status} />
         </Group>
         {receipt.status === 'posted' && (
           <Button color="red" variant="light" onClick={cancelModal.open}>
-            Отменить приход
+            {t('receipts.cancel.confirm')}
           </Button>
         )}
       </Group>
 
       {receipt.status === 'cancelled' && (
-        <Alert color="red" title="Приход отменён">
+        <Alert color="red" title={t('receipts.card.cancelled')}>
           {receipt.cancelled_at && (
-            <Text size="sm">Когда: {formatDateTime(receipt.cancelled_at)}</Text>
+            <Text size="sm">
+              {t('common.cancelled.when', { date: formatDateTime(receipt.cancelled_at) })}
+            </Text>
           )}
-          {receipt.cancelled_by_name && <Text size="sm">Кто: {receipt.cancelled_by_name}</Text>}
-          {receipt.cancel_reason && <Text size="sm">Причина: {receipt.cancel_reason}</Text>}
+          {receipt.cancelled_by_name && (
+            <Text size="sm">{t('common.cancelled.who', { name: receipt.cancelled_by_name })}</Text>
+          )}
+          {receipt.cancel_reason && (
+            <Text size="sm">{t('common.cancelled.reason', { reason: receipt.cancel_reason })}</Text>
+          )}
         </Alert>
       )}
 
       <Stack gap={4}>
-        <Text>Поставщик: {receipt.supplier ?? '—'}</Text>
-        {receipt.note && <Text style={{ whiteSpace: 'pre-wrap' }}>Заметка: {receipt.note}</Text>}
+        <Text>{t('receipts.card.supplier', { supplier: receipt.supplier ?? '—' })}</Text>
+        {receipt.note && (
+          <Text style={{ whiteSpace: 'pre-wrap' }}>
+            {t('receipts.card.note', { note: receipt.note })}
+          </Text>
+        )}
         <Text c="dimmed" size="sm">
-          Провёл: {receipt.created_by_name}, {formatDateTime(receipt.created_at)}
+          {t('common.postedBy', {
+            name: receipt.created_by_name,
+            date: formatDateTime(receipt.created_at),
+          })}
         </Text>
       </Stack>
 
@@ -143,27 +162,34 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
 
       <Paper withBorder p="md" radius="md">
         <Group justify="space-between">
-          <Text>Позиций: {receipt.lines.length}</Text>
-          <Text>Штук: {receipt.total_qty}</Text>
-          <Text fw={600}>Сумма закупки: {money(receipt.total_cost)}</Text>
+          <Text>{t('receipts.card.positions', { count: receipt.lines.length })}</Text>
+          <Text>{t('receipts.card.pieces', { count: receipt.total_qty })}</Text>
+          <Text fw={600}>{t('receipts.card.cost', { amount: money(receipt.total_cost) })}</Text>
         </Group>
       </Paper>
 
       <CancelDocumentModal
         opened={cancelOpened}
         onClose={cancelModal.close}
-        title={`Отменить приход №${receipt.number}?`}
-        description="Остатки товаров из прихода уменьшатся обратно. Сам приход останется в списке как отменённый."
-        confirmLabel="Отменить приход"
+        title={t('receipts.cancel.title', { number: receipt.number })}
+        description={t('receipts.cancel.description')}
+        confirmLabel={t('receipts.cancel.confirm')}
         cancel={cancel}
-        successMessage={(saved) => `Приход №${saved.number} отменён`}
+        successMessage={(saved) => t('receipts.cancel.done', { number: saved.number })}
       />
     </Stack>
   )
 }
 
 function ReceiptNotFound() {
-  return <NotFoundState title="Приход не найден" backTo="/receipts" backLabel="К списку приходов" />
+  const { t } = useTranslation()
+  return (
+    <NotFoundState
+      title={t('receipts.notFound')}
+      backTo="/receipts"
+      backLabel={t('receipts.backToList')}
+    />
+  )
 }
 
 function ReceiptLoader({ id }: { id: number }) {

@@ -66,7 +66,7 @@ def test_validation_error_code(auth_client: TestClient) -> None:
 def test_unknown_path_is_not_found_even_without_session(client: TestClient) -> None:
     response = client.get("/api/no-such-endpoint")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Не найдено", "code": "not_found"}
+    assert response.json() == {"detail": "Не найдено", "code": "not_found", "params": {}}
 
 
 def test_unknown_path_is_not_found_with_session(auth_client: TestClient) -> None:
@@ -78,7 +78,11 @@ def test_unknown_path_is_not_found_with_session(auth_client: TestClient) -> None
 def test_wrong_method_is_method_not_allowed(client: TestClient) -> None:
     response = client.delete("/api/health")
     assert response.status_code == 405
-    assert response.json() == {"detail": "Метод не поддерживается", "code": "method_not_allowed"}
+    assert response.json() == {
+        "detail": "Метод не поддерживается",
+        "code": "method_not_allowed",
+        "params": {},
+    }
     assert response.headers["allow"] == "GET"
 
 
@@ -92,5 +96,5 @@ def test_other_http_errors_get_generic_code() -> None:
 
     response = TestClient(other_app).get("/teapot")
     assert response.status_code == 418
-    assert response.json() == {"detail": "Ошибка запроса", "code": "http_error"}
+    assert response.json() == {"detail": "Ошибка запроса", "code": "http_error", "params": {}}
     assert response.headers["x-reason"] == "teapot"

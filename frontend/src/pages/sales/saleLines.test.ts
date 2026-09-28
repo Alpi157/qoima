@@ -5,7 +5,6 @@ import {
   exceedsStock,
   lineHasErrors,
   lineTotal,
-  PRICE_REQUIRED,
   priceError,
   saleBody,
   type SaleLine,
@@ -17,6 +16,8 @@ function line(overrides: Partial<SaleLine> = {}): SaleLine {
 }
 
 const HEADER = { requestId: 'r-1', customerId: null, note: '', soldAt: null }
+
+const PRICE_REQUIRED = 'Укажите цену'
 
 describe('saleLines', () => {
   it('a price is required and must be an amount', () => {

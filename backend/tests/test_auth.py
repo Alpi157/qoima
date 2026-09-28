@@ -16,8 +16,12 @@ from app.main import app
 from tests.factories import create_user
 
 PASSWORD = "correct-horse-1"
-INVALID_CREDENTIALS = {"detail": "Неверный логин или пароль", "code": "invalid_credentials"}
-NOT_AUTHENTICATED = {"detail": "Требуется вход", "code": "not_authenticated"}
+INVALID_CREDENTIALS = {
+    "detail": "Неверный логин или пароль",
+    "code": "invalid_credentials",
+    "params": {},
+}
+NOT_AUTHENTICATED = {"detail": "Требуется вход", "code": "not_authenticated", "params": {}}
 
 
 def _login(client: TestClient, username: str, password: str = PASSWORD):
@@ -55,6 +59,7 @@ def test_login_success_sets_cookie_and_stores_token_hash(
         "username": "owner",
         "full_name": "Владелец",
         "role": "owner",
+        "locale": "kk",
     }
     set_cookie = response.headers["set-cookie"].lower()
     assert set_cookie.startswith(f"{SESSION_COOKIE}=")
@@ -81,6 +86,50 @@ def test_me_returns_current_user(client: TestClient, db_session: Session) -> Non
 
     assert response.status_code == 200
     assert response.json()["id"] == user.id
+    assert response.json()["locale"] == "kk"
+
+
+def test_update_my_locale(client: TestClient, db_session: Session) -> None:
+    user = create_user(db_session, username="owner", password=PASSWORD)
+    _login(client, "owner")
+
+    response = client.patch("/api/auth/me", json={"locale": "zh"})
+
+    assert response.status_code == 200
+    assert response.json()["locale"] == "zh"
+    db_session.refresh(user)
+    assert user.locale == "zh"
+    assert client.get("/api/auth/me").json()["locale"] == "zh"
+
+
+@pytest.mark.parametrize(
+    ("body", "error_type"),
+    [
+        ({"locale": "en"}, "literal_error"),
+        ({"locale": None}, "literal_error"),
+        ({}, "missing"),
+        ({"locale": "ru", "role": "admin"}, "extra_forbidden"),
+    ],
+)
+def test_update_my_locale_rejects_bad_input(
+    client: TestClient, db_session: Session, body: dict[str, object], error_type: str
+) -> None:
+    user = create_user(db_session, username="owner", password=PASSWORD)
+    _login(client, "owner")
+
+    response = client.patch("/api/auth/me", json=body)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+    assert [e["type"] for e in response.json()["errors"]] == [error_type]
+    db_session.refresh(user)
+    assert user.locale == "kk"
+
+
+def test_update_my_locale_requires_login(client: TestClient) -> None:
+    response = client.patch("/api/auth/me", json={"locale": "ru"})
+    assert response.status_code == 401
+    assert response.json() == NOT_AUTHENTICATED
 
 
 @pytest.mark.parametrize(
@@ -207,6 +256,7 @@ def test_rate_limit_blocks_sixth_attempt_even_with_correct_password(
     assert response.json() == {
         "detail": "Слишком много попыток входа. Попробуйте через минуту",
         "code": "too_many_login_attempts",
+        "params": {},
     }
 
 

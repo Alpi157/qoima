@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { qtyError, QTY_ERROR, reasonError, REASON_ERROR } from './validation'
+import { qtyError, reasonError } from './validation'
+
+const QTY_ERROR = 'Целое число от 1 до 100 000'
+const REASON_ERROR = 'Укажите причину, не короче 3 символов'
 
 describe('qtyError', () => {
   it('accepts whole numbers from 1 to 100 000', () => {

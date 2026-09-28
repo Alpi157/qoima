@@ -153,3 +153,12 @@ def test_business_settings_has_single_row(db_session: Session) -> None:
     with pytest.raises(IntegrityError, match="ck_business_settings_single_row"):
         with db_session.begin_nested():
             db_session.execute(text("INSERT INTO business_settings (id) VALUES (2)"))
+
+
+def test_user_locale_must_be_supported(db_session: Session) -> None:
+    user = create_user(db_session)
+    with pytest.raises(IntegrityError, match="ck_users_locale_supported"):
+        with db_session.begin_nested():
+            db_session.execute(
+                text("UPDATE users SET locale = 'en' WHERE id = :id"), {"id": user.id}
+            )

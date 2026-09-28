@@ -73,6 +73,7 @@ backend/app/
 | full_name | text not null | |
 | role | text not null default 'owner' | на будущее |
 | is_active | bool not null default true | |
+| locale | text not null default 'kk' | язык интерфейса: `kk`, `ru` или `zh` (CHECK) |
 | created_at | timestamptz | |
 
 ### user_sessions
@@ -224,7 +225,8 @@ API: `GET /api/settings`, `PUT /api/settings` (все поля обязател�
 GET    /api/health
 POST   /api/auth/login
 POST   /api/auth/logout
-GET    /api/auth/me
+GET    /api/auth/me                     текущий пользователь, в том числе locale
+PATCH  /api/auth/me                     {locale}: сменить язык интерфейса (Шаг 14)
 
 GET    /api/products?q=&include_archived=
 POST   /api/products
@@ -258,16 +260,19 @@ Id в пути, в query и в теле запроса: целое от 1 до 9
 
 ### Формат ошибок API
 
-Каждый ответ 4xx содержит `detail` (русский текст для пользователя) и `code` (машинный код
-в snake_case). Фронтенд принимает решения только по `code`; `detail` показывает как есть.
+Каждый ответ 4xx содержит `detail`, `code` и `params`. `code` — машинный код в snake_case,
+`params` — данные сообщения (объект, по умолчанию пустой). `detail` — русский текст для логов
+и отладки. Фронтенд принимает решения только по `code`, а текст для пользователя собирает
+по `code` и `params` из `errors.*` в текущем языке; если перевода для кода нет, показывает `detail`.
 Схема тела `ErrorOut` и список кодов `ErrorCode` есть в OpenAPI (ответ `4XX` у каждого эндпоинта),
 на фронтенд они попадают через `make gen-api`.
 
-Бизнес-ошибка (`AppError` из `app/errors.py`): текст и код. Код задаётся атрибутом `code`
-у класса исключения; у каждого наследника `AppError` свой код (проверяет тест).
+Бизнес-ошибка (`AppError` из `app/errors.py`): текст, код и параметры. Код задаётся атрибутом
+`code` у класса исключения; у каждого наследника `AppError` свой код (проверяет тест).
+Параметры передаются вторым аргументом: `ProductArchivedError(текст, {"article": ...})`.
 
 ```json
-{"detail": "Товар OC-90 в архиве", "code": "product_archived"}
+{"detail": "Товар OC-90 в архиве", "code": "product_archived", "params": {"article": "OC-90"}}
 ```
 
 Ошибка валидации запроса (422 от Pydantic): общий текст, код `validation_error` и список полей.
@@ -276,47 +281,66 @@ Id в пути, в query и в теле запроса: целое от 1 до 9
 {
   "detail": "Проверьте введённые данные",
   "code": "validation_error",
+  "params": {},
   "errors": [
-    {"field": "lines.0.qty", "message": "Должно быть не меньше 1"},
-    {"field": "note", "message": "Максимальная длина: 1000"}
+    {"field": "lines.0.qty", "message": "Должно быть не меньше 1",
+     "type": "greater_than_equal", "params": {"ge": 1}},
+    {"field": "note", "message": "Максимальная длина: 1000",
+     "type": "string_too_long", "params": {"max_length": 1000}}
   ]
 }
 ```
 
 `field` — путь к полю через точку; у полей тела без префикса `body`, у параметров пути и
 строки запроса с префиксом (`path.sale_id`, `query.limit`), у тела целиком пустая строка.
-`message` — русский текст; перевод типов ошибок Pydantic в `VALIDATION_MESSAGES`
+`type` — тип ошибки Pydantic (`missing`, `string_too_long`, `less_than_equal`, ...) или свой тип.
+`params` — значения из контекста ошибки, только числа, строки и списки (`ge`, `le`, `gt`, `lt`,
+`min_length`, `max_length`, `expected`, ...). Фронтенд переводит поле по `type` и `params` из
+`validation.*`. `message` — русский текст; перевод типов Pydantic в `VALIDATION_MESSAGES`
 (`app/errors.py`), неизвестный тип даёт «Некорректное значение».
 
-Коды (новый код добавляется в `ErrorCode` и в эту таблицу, тест сверяет список):
+Свои типы (`PydanticCustomError` в схемах, список в `CUSTOM_VALIDATION_TYPES`):
 
-| Код | HTTP | Когда |
+| type | params | Когда |
 |---|---|---|
-| `validation_error` | 422 | запрос не прошёл проверку схемы (поля в `errors`) |
-| `app_error` | 400 | базовый `AppError` без своего кода (не должен встречаться) |
-| `not_authenticated` | 401 | нет сессии или она истекла |
-| `invalid_credentials` | 401 | неверный логин или пароль |
-| `too_many_login_attempts` | 429 | больше 5 неудачных входов в минуту |
-| `username_taken` | 409 | логин уже занят (CLI) |
-| `user_not_found` | 404 | пользователь не найден (CLI) |
-| `invalid_user_data` | 422 | некорректные данные пользователя (CLI) |
-| `invalid_article` | 422 | артикул пуст после нормализации |
-| `product_not_found` | 404 | товар из адреса не найден |
-| `duplicate_article` | 409 | товар с таким нормализованным артикулом уже есть |
-| `product_archived` | 409 | товар в архиве, в документ его добавить нельзя |
-| `customer_not_found` | 404 | покупатель из адреса не найден |
-| `document_customer_not_found` | 422 | покупатель, указанный в продаже, не найден |
-| `invalid_document_lines` | 422 | строки документа: товар не найден, повторяется, нет цены |
-| `insufficient_stock` | 409 | не хватает товара на остатке |
-| `receipt_not_found` | 404 | приход не найден |
-| `receipt_already_cancelled` | 409 | приход уже отменён |
-| `receipt_cancel_blocked` | 409 | отмена прихода увела бы остаток в минус |
-| `sale_not_found` | 404 | продажа не найдена |
-| `sale_already_cancelled` | 409 | продажа уже отменена |
-| `sale_request_conflict` | 409 | `request_id` уже использован продажей с другим содержимым |
-| `not_found` | 404 | неизвестный адрес (ответ самого FastAPI, «Не найдено») |
-| `method_not_allowed` | 405 | метод не поддерживается для этого адреса (заголовок `Allow` сохраняется) |
-| `http_error` | прочие | другая HTTP-ошибка фреймворка, «Ошибка запроса» |
+| `qty_zero` | — | корректировка остатка на 0 |
+| `iin_bin_format` | — | ИИН/БИН не из 12 цифр |
+| `date_in_future` | — | дата прихода или продажи в будущем |
+| `null_not_allowed` | `fields` (список имён полей) | в PATCH поле передано как `null` |
+
+Коды (новый код добавляется в `ErrorCode` и в эту таблицу, тест сверяет список).
+`items` у ошибок остатка — список `{article, available, requested}`: артикул, сколько есть
+на остатке и сколько требуется.
+
+| Код | HTTP | params | Когда |
+|---|---|---|---|
+| `validation_error` | 422 | — (поля в `errors`) | запрос не прошёл проверку схемы |
+| `app_error` | 400 | — | базовый `AppError` без своего кода (не должен встречаться) |
+| `not_authenticated` | 401 | — | нет сессии или она истекла |
+| `invalid_credentials` | 401 | — | неверный логин или пароль |
+| `too_many_login_attempts` | 429 | — | больше 5 неудачных входов в минуту |
+| `username_taken` | 409 | — | логин уже занят (CLI) |
+| `user_not_found` | 404 | — | пользователь не найден (CLI) |
+| `invalid_user_data` | 422 | `field` (`username`, `full_name`, `password`), для пароля `min_length` | некорректные данные пользователя (CLI) |
+| `invalid_article` | 422 | — | артикул пуст после нормализации |
+| `product_not_found` | 404 | — | товар из адреса не найден |
+| `duplicate_article` | 409 | `article`, `existing_name` | товар с таким нормализованным артикулом уже есть |
+| `product_archived` | 409 | `article` | товар в архиве, в документ его добавить нельзя |
+| `customer_not_found` | 404 | — | покупатель из адреса не найден |
+| `document_customer_not_found` | 422 | — | покупатель, указанный в продаже, не найден |
+| `line_product_not_found` | 422 | `product_ids` (список id) | в строках документа товар, которого нет |
+| `duplicate_line` | 422 | `article`, `document` (`receipt` или `sale`) | товар указан в документе дважды |
+| `missing_price` | 422 | `article` | у строки продажи нет цены, и у товара нет цены продажи |
+| `insufficient_stock` | 409 | `items` | не хватает товара на остатке |
+| `receipt_not_found` | 404 | — | приход не найден |
+| `receipt_already_cancelled` | 409 | — | приход уже отменён |
+| `receipt_cancel_blocked` | 409 | `items` | отмена прихода увела бы остаток в минус |
+| `sale_not_found` | 404 | — | продажа не найдена |
+| `sale_already_cancelled` | 409 | — | продажа уже отменена |
+| `sale_request_conflict` | 409 | — | `request_id` уже использован продажей с другим содержимым |
+| `not_found` | 404 | — | неизвестный адрес (ответ самого FastAPI, «Не найдено») |
+| `method_not_allowed` | 405 | — | метод не поддерживается для этого адреса (заголовок `Allow` сохраняется) |
+| `http_error` | прочие | — | другая HTTP-ошибка фреймворка, «Ошибка запроса» |
 
 Ответы самого FastAPI (неизвестный адрес, неверный метод) идут в том же формате: обработчик
 `StarletteHTTPException` в `app/errors.py` подставляет русский текст и код из `HTTP_ERRORS`.
@@ -343,6 +367,40 @@ Id в пути, в query и в теле запроса: целое от 1 до 9
 диалог печати один раз после загрузки и убирает флаг из адреса. Реквизиты берутся из
 `/api/settings`, количество и сумма прописью — `lib/amountInWords.ts`. Отменённая продажа
 печатается с диагональной надписью «ОТМЕНЕНА».
+
+### Языки интерфейса (Шаги 14 и 15)
+
+Интерфейс на казахском, русском и китайском: i18next + react-i18next, ресурсы собраны в бандл
+(`src/i18n/locales/ru.json`, `kk.json`, `zh.json`), `fallbackLng: 'ru'`. Все видимые тексты
+лежат в `ru.json` по разделам: common, nav, auth, products, customers, receipts, sales, settings,
+errors, validation, invoice. Ключи называются по смыслу (`sales.new.submit`), множественное число
+через `count` (`_one`, `_few`, `_many`, `_other`), данные только интерполяцией `{{name}}`,
+ссылки внутри фразы через `<Trans>`. Ключи в `t()` проверяются TypeScript по `ru.json`
+(`src/i18n/i18next.d.ts`), а `npm run i18n:check` ищет ключи из кода, которых нет в `ru.json`,
+лишние ключи в `ru.json` и печатает процент перевода kk и zh. Для kk и zh он падает, если ключа
+не хватает, есть лишний или в переводе другой набор `{{переменных}}` и `<тегов>`, чем в русской
+строке. Формы множественного числа берутся из `Intl.PluralRules` языка (ru: one/few/many/other,
+kk: one/other, zh: other), ключи `invoice.*` в kk и zh не нужны.
+
+Единица товара хранится в базе как есть, по-русски («шт», «компл.», …). Интерфейс показывает её
+подпись на текущем языке (`unitLabel` в `lib/labels.ts`, ключи `common.units.*`), неизвестная
+единица показывается как есть, в накладной остаётся русская.
+
+Mantine обрезает многоточием подписи `Badge` и `SegmentedControl`; в `theme.ts` они переносятся
+на следующую строку, чтобы длинные казахские слова не терялись на телефоне.
+
+Язык: после входа — `users.locale` (`PATCH /api/auth/me` при смене в шапке); до входа —
+выбор, сохранённый в localStorage (`qoima.language`), иначе язык браузера, иначе `kk`.
+Вместе с языком меняются `<html lang>`, локаль dayjs для календарей Mantine (`kk`, `ru`, `zh-cn`)
+и формат дат через Intl (`lib/dates.ts`). Деньги одинаковы для всех языков: «12 500 ₸».
+
+Ошибки API: `apiErrorText` (`src/i18n/errorText.ts`) берёт `errors.<code>` с `params`, без
+перевода показывает `detail`; ошибка поля — `validation.<type>` с `params`, иначе `message`.
+Вариант текста выбирается контекстом i18next: `params.document` у `duplicate_line`, имя поля
+у ошибок валидации (`validation.date_in_future_sold_at`).
+
+Накладная всегда на русском: её тексты в `invoice.*`, страница берёт их через
+`i18n.getFixedT('ru')`, дату форматирует по-русски. Панель над накладной следует языку.
 
 ## Безопасность
 

@@ -5,7 +5,7 @@ from app.auth import service
 from app.auth.dependencies import SESSION_COOKIE, current_user, session_cookie
 from app.auth.models import User
 from app.auth.rate_limit import login_rate_limiter
-from app.auth.schemas import LoginIn, UserOut
+from app.auth.schemas import LoginIn, UserOut, UserUpdate
 from app.config import get_settings
 from app.db import get_db
 from app.errors import InvalidCredentialsError, TooManyLoginAttemptsError
@@ -62,3 +62,10 @@ def logout(
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(current_user)) -> User:
     return user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    payload: UserUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)
+) -> User:
+    return service.update_me(db, user, payload.locale)

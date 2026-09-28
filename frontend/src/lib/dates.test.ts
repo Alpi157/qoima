@@ -1,3 +1,4 @@
+import i18n from 'i18next'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -39,6 +40,17 @@ describe('formatDate', () => {
 
   it('UTC midnight belongs to the same Almaty day', () => {
     expect(formatDate('2026-09-27T00:00:00Z')).toBe('27.09.2026')
+  })
+
+  it('follows the language format', () => {
+    expect(formatDate('2026-09-27T09:30:00Z', 'kk')).toBe('27.09.2026')
+    expect(formatDate('2026-09-27T09:30:00Z', 'zh')).toBe('2026/09/27')
+    expect(formatDateTime('2026-09-27T09:30:00Z', 'zh')).toBe('2026/09/27 14:30')
+  })
+
+  it('uses the current interface language by default', async () => {
+    await i18n.changeLanguage('zh')
+    expect(formatDate('2026-09-27T09:30:00Z')).toBe('2026/09/27')
   })
 })
 

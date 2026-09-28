@@ -2,6 +2,7 @@ import {
   Alert,
   Button,
   Center,
+  Group,
   Loader,
   Paper,
   PasswordInput,
@@ -11,11 +12,15 @@ import {
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { api, unwrap } from '../api/client'
-import { isApiError, SERVER_UNAVAILABLE } from '../api/errors'
+import { isApiError } from '../api/errors'
 import { ME_QUERY_KEY, useMe } from '../auth/useMe'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { apiErrorText, fieldErrorText } from '../i18n/errorText'
+import { applyLanguage } from '../i18n/language'
 import { safeNext } from '../lib/nextPath'
 
 interface LoginValues {
@@ -28,13 +33,14 @@ export function LoginPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { t } = useTranslation()
 
   const form = useForm<LoginValues>({
     mode: 'uncontrolled',
     initialValues: { username: '', password: '' },
     validate: {
-      username: (value) => (value.trim() ? null : 'Введите логин'),
-      password: (value) => (value ? null : 'Введите пароль'),
+      username: (value) => (value.trim() ? null : t('auth.login.usernameRequired')),
+      password: (value) => (value ? null : t('auth.login.passwordRequired')),
     },
   })
 
@@ -48,7 +54,15 @@ export function LoginPage() {
       navigate(safeNext(searchParams.get('next')), { replace: true })
     },
     onError: (error) => {
-      if (isApiError(error)) form.setErrors(error.fieldErrors)
+      if (!isApiError(error)) return
+      form.setErrors(
+        Object.fromEntries(
+          Object.entries(error.fieldErrors).map(([field, fieldError]) => [
+            field,
+            fieldErrorText(fieldError, field),
+          ]),
+        ),
+      )
     },
   })
 
@@ -62,11 +76,7 @@ export function LoginPage() {
     )
   }
 
-  const errorText = login.isError
-    ? isApiError(login.error)
-      ? login.error.detail
-      : SERVER_UNAVAILABLE
-    : null
+  const errorText = login.isError ? apiErrorText(login.error, t) : null
 
   return (
     <Center mih="100vh" p="md">
@@ -76,15 +86,18 @@ export function LoginPage() {
             <Title order={2} ta="center">
               Qoima
             </Title>
+            <Group justify="center">
+              <LanguageSwitcher onChange={(language) => void applyLanguage(language)} />
+            </Group>
             <TextInput
-              label="Логин"
+              label={t('auth.login.username')}
               autoComplete="username"
               autoFocus
               key={form.key('username')}
               {...form.getInputProps('username')}
             />
             <PasswordInput
-              label="Пароль"
+              label={t('auth.login.password')}
               autoComplete="current-password"
               key={form.key('password')}
               {...form.getInputProps('password')}
@@ -95,7 +108,7 @@ export function LoginPage() {
               </Alert>
             )}
             <Button type="submit" loading={login.isPending} fullWidth>
-              Войти
+              {t('auth.login.submit')}
             </Button>
           </Stack>
         </form>

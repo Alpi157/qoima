@@ -1,5 +1,6 @@
 import { Button, Group, Modal, Stack, Text } from '@mantine/core'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface ConfirmModalProps {
   opened: boolean
@@ -23,13 +24,14 @@ export function ConfirmModal({
   loading = false,
   color,
 }: ConfirmModalProps) {
+  const { t } = useTranslation()
   return (
     <Modal opened={opened} onClose={onClose} title={title}>
       <Stack>
         <Text>{children}</Text>
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose} disabled={loading}>
-            Отмена
+            {t('common.cancel')}
           </Button>
           <Button color={color} onClick={onConfirm} loading={loading} data-autofocus>
             {confirmLabel}

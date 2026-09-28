@@ -15,21 +15,24 @@ import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { MoneyInput } from '../../components/MoneyInput'
 import { serverFormErrors } from '../../lib/formErrors'
+import { type Unit, UNITS, unitLabel } from '../../lib/labels'
 import { parseMoney, tiynToInput, validateMoneyText } from '../../lib/money'
 import { type Product, type ProductCreate, useCreateProduct, useUpdateProduct } from './api'
 
-export const DEFAULT_UNIT = 'шт'
+export const DEFAULT_UNIT: Unit = 'шт'
 
-const UNITS = [DEFAULT_UNIT, 'компл.', 'пара', 'л', 'кг', 'м', 'упак.']
-
-export const PRICE_REQUIRED = 'Укажите цену'
-
-/** The unit list plus the product's own unit if it is not in the list, so editing keeps it. */
-function unitOptions(current: string): string[] {
-  return current && !UNITS.includes(current) ? [...UNITS, current] : UNITS
+/**
+ * The unit list plus the product's own unit if it is not in the list, so editing keeps it.
+ * The value is stored as is (Russian), the label is in the interface language.
+ */
+function unitOptions(current: string): { value: string; label: string }[] {
+  const units: string[] = [...UNITS]
+  if (current && !units.includes(current)) units.push(current)
+  return units.map((unit) => ({ value: unit, label: unitLabel(unit) }))
 }
 
 interface ProductFormValues {
@@ -105,14 +108,15 @@ function ProductForm({
   )
   const [formError, setFormError] = useState<string | null>(null)
   const [addingMore, setAddingMore] = useState(false)
+  const { t } = useTranslation()
 
   const form = useForm<ProductFormValues>({
     initialValues: product ? toFormValues(product) : { ...EMPTY_VALUES, article: initialArticle },
     validate: {
-      article: (value) => (value.trim() ? null : 'Введите артикул'),
-      name: (value) => (value.trim() ? null : 'Введите наименование'),
-      price: (value) => (value.trim() ? validateMoneyText(value) : PRICE_REQUIRED),
-      unit: (value) => (value.trim() ? null : 'Выберите единицу'),
+      article: (value) => (value.trim() ? null : t('products.form.articleRequired')),
+      name: (value) => (value.trim() ? null : t('products.form.nameRequired')),
+      price: (value) => (value.trim() ? validateMoneyText(value) : t('common.input.priceRequired')),
+      unit: (value) => (value.trim() ? null : t('products.form.unitRequired')),
     },
   })
 
@@ -123,7 +127,9 @@ function ProductForm({
       onSuccess: (saved) => {
         notifications.show({
           color: 'green',
-          message: product ? `Товар ${saved.article} сохранён` : `Товар ${saved.article} добавлен`,
+          message: product
+            ? t('products.form.saved', { article: saved.article })
+            : t('products.form.added', { article: saved.article }),
         })
         if (addMore) {
           // The next product starts empty, without the prefilled article.
@@ -147,31 +153,31 @@ function ProductForm({
   }
 
   return (
-    // Enter in any field submits the form, which is "Сохранить".
+    // Enter in any field submits the form, which is "Save".
     <form onSubmit={form.onSubmit((values) => save(values, false))} noValidate>
       <Stack>
         <TextInput
-          label="Артикул"
+          label={t('products.form.article')}
           required
           autoComplete="off"
           data-autofocus
           {...form.getInputProps('article')}
         />
         <TextInput
-          label="Наименование"
+          label={t('products.form.name')}
           required
           autoComplete="off"
           {...form.getInputProps('name')}
         />
         <SimpleGrid cols={2}>
           <MoneyInput
-            label="Цена"
+            label={t('products.form.price')}
             required
-            placeholder="Например, 12500"
+            placeholder={t('products.form.pricePlaceholder')}
             {...form.getInputProps('price')}
           />
           <Select
-            label="Единица"
+            label={t('products.form.unit')}
             required
             data={unitOptions(form.values.unit)}
             allowDeselect={false}
@@ -180,12 +186,21 @@ function ProductForm({
         </SimpleGrid>
 
         <UnstyledButton onClick={toggleMore} c="blue" aria-expanded={moreOpened}>
-          {moreOpened ? 'Скрыть дополнительное' : 'Дополнительно: бренд, заметка'}
+          {moreOpened ? t('products.form.hideMore') : t('products.form.showMore')}
         </UnstyledButton>
         <Collapse expanded={moreOpened}>
           <Stack>
-            <TextInput label="Бренд" autoComplete="off" {...form.getInputProps('brand')} />
-            <Textarea label="Заметка" autosize minRows={2} {...form.getInputProps('note')} />
+            <TextInput
+              label={t('products.form.brand')}
+              autoComplete="off"
+              {...form.getInputProps('brand')}
+            />
+            <Textarea
+              label={t('products.form.note')}
+              autosize
+              minRows={2}
+              {...form.getInputProps('note')}
+            />
           </Stack>
         </Collapse>
 
@@ -197,7 +212,7 @@ function ProductForm({
 
         <Group justify="flex-end">
           <Button variant="default" onClick={onCancel} disabled={mutation.isPending}>
-            Отмена
+            {t('common.cancel')}
           </Button>
           {withAddMore && !product && (
             <Button
@@ -206,7 +221,7 @@ function ProductForm({
               loading={mutation.isPending && addingMore}
               disabled={mutation.isPending && !addingMore}
             >
-              Сохранить и добавить ещё
+              {t('products.form.saveAndAddMore')}
             </Button>
           )}
           <Button
@@ -214,7 +229,7 @@ function ProductForm({
             loading={mutation.isPending && !addingMore}
             disabled={mutation.isPending && addingMore}
           >
-            Сохранить
+            {t('common.save')}
           </Button>
         </Group>
       </Stack>
@@ -229,7 +244,7 @@ export interface ProductFormModalProps {
   product?: Product
   /** Prefills the article of a new product (for example, the search that found nothing). */
   initialArticle?: string
-  /** "Сохранить и добавить ещё" for a new product; off where the caller needs the saved one. */
+  /** "Save and add more" for a new product; off where the caller needs the saved one. */
   withAddMore?: boolean
   onSaved?: (product: Product) => void
 }
@@ -242,11 +257,12 @@ export function ProductFormModal({
   withAddMore = true,
   onSaved,
 }: ProductFormModalProps) {
+  const { t } = useTranslation()
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={product ? 'Изменить товар' : 'Новый товар'}
+      title={product ? t('products.form.editTitle') : t('products.form.newTitle')}
       size="lg"
     >
       {/* The form is mounted only while the modal is open, so it starts clean every time. */}

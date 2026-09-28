@@ -10,6 +10,7 @@ import {
   Text,
   Title,
 } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { EmptyState } from '../../components/EmptyState'
@@ -23,10 +24,10 @@ import { isReceiptStatus, type ReceiptListItem, useReceipts } from './api'
 import { ReceiptStatusBadge } from './ReceiptStatusBadge'
 
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'Все' },
-  { value: 'posted', label: 'Проведённые' },
-  { value: 'cancelled', label: 'Отменённые' },
-]
+  { value: 'all', label: 'receipts.list.statusAll' },
+  { value: 'posted', label: 'receipts.list.statusPosted' },
+  { value: 'cancelled', label: 'receipts.list.statusCancelled' },
+] as const
 
 function costText(receipt: ReceiptListItem): string {
   return receipt.total_cost !== null ? formatMoney(receipt.total_cost) : '—'
@@ -34,18 +35,19 @@ function costText(receipt: ReceiptListItem): string {
 
 function ReceiptTable({ items }: { items: ReceiptListItem[] }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   return (
     <Table.ScrollContainer minWidth={800} visibleFrom="sm">
       <Table highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>№</Table.Th>
-            <Table.Th>Дата</Table.Th>
-            <Table.Th>Поставщик</Table.Th>
-            <Table.Th ta="right">Позиций</Table.Th>
-            <Table.Th ta="right">Штук</Table.Th>
-            <Table.Th ta="right">Сумма закупки</Table.Th>
-            <Table.Th>Статус</Table.Th>
+            <Table.Th>{t('receipts.list.number')}</Table.Th>
+            <Table.Th>{t('receipts.list.date')}</Table.Th>
+            <Table.Th>{t('receipts.list.supplier')}</Table.Th>
+            <Table.Th ta="right">{t('receipts.list.positions')}</Table.Th>
+            <Table.Th ta="right">{t('receipts.list.pieces')}</Table.Th>
+            <Table.Th ta="right">{t('receipts.list.cost')}</Table.Th>
+            <Table.Th>{t('receipts.list.status')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -86,6 +88,7 @@ function ReceiptTable({ items }: { items: ReceiptListItem[] }) {
 }
 
 function ReceiptCards({ items }: { items: ReceiptListItem[] }) {
+  const { t } = useTranslation()
   return (
     <Stack gap="sm" hiddenFrom="sm">
       {items.map((receipt) => (
@@ -98,7 +101,7 @@ function ReceiptCards({ items }: { items: ReceiptListItem[] }) {
           style={{ textDecoration: 'none' }}
         >
           <Group justify="space-between" wrap="nowrap">
-            <Text fw={700}>№ {receipt.number}</Text>
+            <Text fw={700}>{t('common.documentNumber', { number: receipt.number })}</Text>
             <ReceiptStatusBadge status={receipt.status} />
           </Group>
           <Text size="sm" c="dimmed">
@@ -107,7 +110,10 @@ function ReceiptCards({ items }: { items: ReceiptListItem[] }) {
           {receipt.supplier && <Text>{receipt.supplier}</Text>}
           <Group justify="space-between" mt={4}>
             <Text size="sm">
-              Позиций: {receipt.lines_count}, штук: {receipt.total_qty}
+              {t('receipts.list.cardCounts', {
+                positions: receipt.lines_count,
+                pieces: receipt.total_qty,
+              })}
             </Text>
             <Text fw={500}>{costText(receipt)}</Text>
           </Group>
@@ -125,23 +131,24 @@ export function ReceiptsPage() {
   const status = isReceiptStatus(rawStatus) ? rawStatus : ''
   const receipts = useReceipts({ from, to, status, page })
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const isFiltered = Boolean(from || to || status)
 
   return (
     <Stack>
       <Group justify="space-between">
-        <Title order={2}>Приходы</Title>
+        <Title order={2}>{t('receipts.list.title')}</Title>
         <Button component={Link} to="/receipts/new">
-          Новый приход
+          {t('receipts.list.new')}
         </Button>
       </Group>
 
       <Group align="flex-end">
         <PeriodInput from={from} to={to} onChange={(from, to) => setParams({ from, to })} />
         <SegmentedControl
-          aria-label="Статус"
-          data={STATUS_OPTIONS}
+          aria-label={t('receipts.list.status')}
+          data={STATUS_OPTIONS.map(({ value, label }) => ({ value, label: t(label) }))}
           value={status || 'all'}
           onChange={(value) => setParam('status', value === 'all' ? null : value)}
         />
@@ -155,18 +162,18 @@ export function ReceiptsPage() {
         <QueryError error={receipts.error} onRetry={() => receipts.refetch()} />
       ) : receipts.data.items.length === 0 && page === 1 ? (
         isFiltered ? (
-          <EmptyState text="Ничего не найдено" />
+          <EmptyState text={t('common.nothingFound')} />
         ) : (
           <EmptyState
-            text="Приходов пока нет"
-            actionLabel="Провести первый приход"
+            text={t('receipts.list.empty')}
+            actionLabel={t('receipts.list.addFirst')}
             onAction={() => navigate('/receipts/new')}
           />
         )
       ) : (
         <>
           <Text c="dimmed" size="sm">
-            Найдено: {receipts.data.total}
+            {t('common.found', { count: receipts.data.total })}
           </Text>
           <ReceiptTable items={receipts.data.items} />
           <ReceiptCards items={receipts.data.items} />

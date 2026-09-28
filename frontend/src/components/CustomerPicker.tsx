@@ -13,12 +13,13 @@ import {
 import { useDebouncedValue } from '@mantine/hooks'
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 
 import { type Customer, useCustomerSearch } from '../pages/customers/api'
 import { CustomerFormModal } from '../pages/customers/CustomerFormModal'
 import { SEARCH_DELAY_MS } from './SearchInput'
 
-// Option value of "Создать покупателя …"; real options use customer ids.
+// Option value of "create customer …"; real options use customer ids.
 const CREATE_OPTION = 'create'
 
 /** What the picker needs to show a chosen customer; a full Customer or a sale's customer fits. */
@@ -32,8 +33,9 @@ export interface CustomerPickerProps {
   value: PickedCustomer | null
   /** Receives the chosen (or just created) customer, or null when the choice is reset. */
   onChange: (customer: PickedCustomer | null) => void
+  /** Defaults to "Покупатель" in the current language. */
   label?: string
-  /** Offer "Создать покупателя …" when nothing is found. */
+  /** Offer "create customer …" when nothing is found. */
   allowCreate?: boolean
 }
 
@@ -54,9 +56,11 @@ function CustomerOption({ customer }: { customer: Customer }) {
 export function CustomerPicker({
   value,
   onChange,
-  label = 'Покупатель',
+  label,
   allowCreate = true,
 }: CustomerPickerProps) {
+  const { t } = useTranslation()
+  const fieldLabel = label ?? t('customers.picker.label')
   const combobox = useCombobox()
   const inputRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
@@ -114,7 +118,7 @@ export function CustomerPicker({
   if (value) {
     return (
       <>
-        <Input.Wrapper label={label}>
+        <Input.Wrapper label={fieldLabel}>
           <Paper withBorder px="sm" py={6} radius="sm">
             <Group justify="space-between" wrap="nowrap">
               <Stack gap={0} style={{ minWidth: 0 }}>
@@ -125,7 +129,7 @@ export function CustomerPicker({
                   </Text>
                 )}
               </Stack>
-              <CloseButton aria-label="Сбросить покупателя" onClick={reset} />
+              <CloseButton aria-label={t('customers.picker.reset')} onClick={reset} />
             </Group>
           </Paper>
         </Input.Wrapper>
@@ -142,8 +146,8 @@ export function CustomerPicker({
             ref={inputRef}
             type="search"
             autoComplete="off"
-            label={label}
-            placeholder="Имя или телефон"
+            label={fieldLabel}
+            placeholder={t('customers.picker.placeholder')}
             value={text}
             onChange={(event) => {
               const next = event.currentTarget.value
@@ -169,12 +173,14 @@ export function CustomerPicker({
             {offerCreate && (
               <Combobox.Option value={CREATE_OPTION}>
                 <Text fw={500} c="blue">
-                  Создать покупателя «{query}»
+                  {t('customers.picker.create', { name: query })}
                 </Text>
               </Combobox.Option>
             )}
             {items.length === 0 && !offerCreate && (
-              <Combobox.Empty>{nothingFound && settled ? 'Не найдено' : 'Поиск…'}</Combobox.Empty>
+              <Combobox.Empty>
+                {nothingFound && settled ? t('common.notFoundShort') : t('common.searching')}
+              </Combobox.Empty>
             )}
           </Combobox.Options>
         </Combobox.Dropdown>

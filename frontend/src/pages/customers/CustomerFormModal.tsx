@@ -2,6 +2,7 @@ import { Alert, Button, Group, Modal, Stack, Textarea, TextInput } from '@mantin
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { serverFormErrors } from '../../lib/formErrors'
 import { type Customer, type CustomerCreate, useCreateCustomer, useUpdateCustomer } from './api'
@@ -34,6 +35,7 @@ function CustomerForm({ customer, initialName = '', onSaved, onCancel }: Custome
   const update = useUpdateCustomer(customer?.id ?? 0)
   const mutation = customer ? update : create
   const [formError, setFormError] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   const form = useForm<CustomerFormValues>({
     initialValues: {
@@ -42,7 +44,7 @@ function CustomerForm({ customer, initialName = '', onSaved, onCancel }: Custome
       note: customer?.note ?? '',
     },
     validate: {
-      name: (value) => (value.trim() ? null : 'Введите имя'),
+      name: (value) => (value.trim() ? null : t('customers.form.nameRequired')),
     },
   })
 
@@ -53,8 +55,8 @@ function CustomerForm({ customer, initialName = '', onSaved, onCancel }: Custome
         notifications.show({
           color: 'green',
           message: customer
-            ? `Покупатель ${saved.name} сохранён`
-            : `Покупатель ${saved.name} добавлен`,
+            ? t('customers.form.saved', { name: saved.name })
+            : t('customers.form.added', { name: saved.name }),
         })
         onSaved(saved)
       },
@@ -70,21 +72,26 @@ function CustomerForm({ customer, initialName = '', onSaved, onCancel }: Custome
     <form onSubmit={form.onSubmit(save)} noValidate>
       <Stack>
         <TextInput
-          label="Имя"
+          label={t('customers.form.name')}
           required
           autoComplete="off"
           data-autofocus
           {...form.getInputProps('name')}
         />
         <TextInput
-          label="Телефон"
+          label={t('customers.form.phone')}
           type="tel"
           inputMode="tel"
           autoComplete="off"
           placeholder="+7 701 123 45 67"
           {...form.getInputProps('phone')}
         />
-        <Textarea label="Заметка" autosize minRows={2} {...form.getInputProps('note')} />
+        <Textarea
+          label={t('customers.form.note')}
+          autosize
+          minRows={2}
+          {...form.getInputProps('note')}
+        />
 
         {formError && (
           <Alert color="red" role="alert">
@@ -94,10 +101,10 @@ function CustomerForm({ customer, initialName = '', onSaved, onCancel }: Custome
 
         <Group justify="flex-end">
           <Button variant="default" onClick={onCancel} disabled={mutation.isPending}>
-            Отмена
+            {t('common.cancel')}
           </Button>
           <Button type="submit" loading={mutation.isPending}>
-            Сохранить
+            {t('common.save')}
           </Button>
         </Group>
       </Stack>
@@ -122,11 +129,12 @@ export function CustomerFormModal({
   initialName,
   onSaved,
 }: CustomerFormModalProps) {
+  const { t } = useTranslation()
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={customer ? 'Изменить покупателя' : 'Новый покупатель'}
+      title={customer ? t('customers.form.editTitle') : t('customers.form.newTitle')}
     >
       {/* The form is mounted only while the modal is open, so it starts clean every time. */}
       {opened && (

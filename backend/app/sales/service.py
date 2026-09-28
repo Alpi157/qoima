@@ -14,7 +14,7 @@ from app.customers.models import Customer
 from app.db_utils import local_date_range
 from app.errors import (
     DocumentCustomerNotFoundError,
-    InvalidDocumentLinesError,
+    MissingPriceError,
     SaleAlreadyCancelledError,
     SaleNotFoundError,
     SaleRequestConflictError,
@@ -91,13 +91,15 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
     if data.customer_id is not None and db.get(Customer, data.customer_id) is None:
         raise DocumentCustomerNotFoundError()
 
-    products = load_line_products(db, [line.product_id for line in data.lines], "продаже")
+    products = load_line_products(db, [line.product_id for line in data.lines], "sale")
     prices = []
     for line in data.lines:
         product = products[line.product_id]
         price = _line_price(line, product.sale_price)
         if price is None:
-            raise InvalidDocumentLinesError(f"Укажите цену для товара {product.article}")
+            raise MissingPriceError(
+                f"Укажите цену для товара {product.article}", {"article": product.article}
+            )
         prices.append(price)
 
     sale_lines = [

@@ -1,3 +1,4 @@
+import type { FieldError } from '../api/errors'
 import type { Customer } from '../pages/customers/api'
 import type { Product } from '../pages/products/api'
 import type { Receipt } from '../pages/receipts/api'
@@ -88,4 +89,13 @@ export function makeBusinessSettings(overrides: Partial<BusinessSettings> = {}):
     updated_at: '2026-09-27T09:00:00Z',
     ...overrides,
   }
+}
+
+/** An item of the validation `errors` list, as the backend sends it. */
+export function fieldError(
+  message: string,
+  type = '',
+  params: Record<string, unknown> = {},
+): FieldError {
+  return { message, type, params }
 }
