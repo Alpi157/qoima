@@ -1,4 +1,4 @@
-.PHONY: db backend frontend migrate create-user test lint gen-api review
+.PHONY: db backend frontend migrate create-user test lint gen-api review demo screenshots
 
 db:
 	docker compose up -d db
@@ -31,3 +31,14 @@ gen-api:
 
 review:
 	bash scripts/make_review.sh $(STEP)
+
+# Demo database qoima_demo (the working database is not touched). DEMO_PASSWORD is the password
+# of the user "demo"; screenshots generate one for the run when it is not set.
+demo:
+	cd backend && uv run python -m app.demo seed
+
+screenshots:
+	rm -rf review/screenshots && mkdir -p review/screenshots
+	export DEMO_PASSWORD="$${DEMO_PASSWORD:-$$(openssl rand -hex 12)}" && \
+	cd backend && uv run python -m app.demo seed && \
+	cd ../frontend && npx playwright test

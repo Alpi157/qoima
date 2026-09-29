@@ -132,7 +132,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           clampBehavior="none"
           error={qtyTouched ? qtyProblem : null}
         />
-        <Stack gap={6}>
+        <Stack gap="xs">
           <TextInput
             label={t('products.adjust.reason')}
             required
@@ -150,7 +150,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
               return (
                 <Button
                   key={key}
-                  size="compact-sm"
+                  size="sm"
                   variant={reason === quick ? 'filled' : 'default'}
                   onClick={() => {
                     setReason(quick)
@@ -181,7 +181,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           </Alert>
         )}
 
-        <Group justify="flex-end">
+        <Group justify="flex-end" gap="sm" className="q-modal-actions">
           <Button variant="default" onClick={onDone} disabled={create.isPending}>
             {t('common.cancel')}
           </Button>

@@ -2,9 +2,7 @@ import {
   Alert,
   Button,
   Center,
-  Group,
   Loader,
-  Paper,
   PasswordInput,
   Stack,
   TextInput,
@@ -19,10 +17,12 @@ import { api, unwrap } from '../api/client'
 import { isApiError } from '../api/errors'
 import { ME_QUERY_KEY, useMe } from '../auth/useMe'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { Card } from '../components/ui'
 import { apiErrorText, fieldErrorText } from '../i18n/errorText'
 import { applyLanguage } from '../i18n/language'
 import { safeNext } from '../lib/nextPath'
 
+// Large fields for the login form: 60px high, 22px text.
 interface LoginValues {
   username: string
   password: string
@@ -79,16 +79,14 @@ export function LoginPage() {
   const errorText = login.isError ? apiErrorText(login.error, t) : null
 
   return (
-    <Center mih="100vh" p="md">
-      <Paper withBorder shadow="sm" p="xl" radius="md" w="100%" maw={400}>
+    <Stack mih="100vh" px="var(--q-gutter)" py="xl" gap="lg" align="center" justify="center">
+      <LanguageSwitcher onChange={(language) => void applyLanguage(language)} />
+      <Card w="100%" maw={480}>
         <form onSubmit={form.onSubmit((values) => login.mutate(values))} noValidate>
-          <Stack>
-            <Title order={2} ta="center">
+          <Stack gap="lg">
+            <Title order={1} ta="center">
               Qoima
             </Title>
-            <Group justify="center">
-              <LanguageSwitcher onChange={(language) => void applyLanguage(language)} />
-            </Group>
             <TextInput
               label={t('auth.login.username')}
               autoComplete="username"
@@ -107,12 +105,12 @@ export function LoginPage() {
                 {errorText}
               </Alert>
             )}
-            <Button type="submit" loading={login.isPending} fullWidth>
+            <Button type="submit" loading={login.isPending} fullWidth size="lg">
               {t('auth.login.submit')}
             </Button>
           </Stack>
         </form>
-      </Paper>
-    </Center>
+      </Card>
+    </Stack>
   )
 }

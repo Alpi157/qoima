@@ -1,19 +1,15 @@
 import {
   Alert,
-  Anchor,
   Button,
-  Card,
   CloseButton,
   Group,
   NumberInput,
-  Paper,
   SimpleGrid,
   Stack,
   Table,
   Text,
   Textarea,
   TextInput,
-  Title,
 } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import { useMediaQuery } from '@mantine/hooks'
@@ -22,11 +18,12 @@ import { useRef, useState } from 'react'
 import type { TFunction } from 'i18next'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { Link, useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom'
+import { useBeforeUnload, useBlocker, useLocation, useNavigate } from 'react-router-dom'
 
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { MoneyInput } from '../../components/MoneyInput'
 import { ProductPicker } from '../../components/ProductPicker'
+import { Card, PageContainer, PageHeader } from '../../components/ui'
 import { WIDE_SCREEN } from '../../lib/breakpoints'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { serverFormErrors } from '../../lib/formErrors'
@@ -42,6 +39,9 @@ import {
   receiptBody,
   receiptTotals,
 } from './receiptLines'
+
+// Until step 16.3 the simple «Тауар қабылдау» screen shows this form.
+const RECEIVE_PATH = '/receive'
 
 const HEADER_FIELD_MAP = { supplier: 'supplier', note: 'note', received_at: 'receivedAt' }
 
@@ -121,18 +121,16 @@ function LineTableRow(props: LineRowProps) {
   const { product } = props.line
   return (
     <Table.Tr>
-      <Table.Td fw={700} style={{ wordBreak: 'break-all' }}>
+      <Table.Td fw={600} style={{ wordBreak: 'break-all' }}>
         {product.article}
       </Table.Td>
       <Table.Td>{product.name}</Table.Td>
-      <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
+      <Table.Td data-numeric>
         {product.stock} {unitLabel(product.unit)}
       </Table.Td>
       <Table.Td>{qty}</Table.Td>
       <Table.Td>{cost}</Table.Td>
-      <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-        {sum}
-      </Table.Td>
+      <Table.Td data-numeric>{sum}</Table.Td>
       <Table.Td>{remove}</Table.Td>
     </Table.Tr>
   )
@@ -143,10 +141,10 @@ function LineCard(props: LineRowProps) {
   const { qty, cost, remove, sum } = lineInputs({ ...props, withLabels: true, t })
   const { product } = props.line
   return (
-    <Card withBorder padding="sm">
+    <Card>
       <Group justify="space-between" wrap="nowrap" align="flex-start">
         <Stack gap={0} style={{ minWidth: 0 }}>
-          <Text size="lg" fw={700} style={{ wordBreak: 'break-all' }}>
+          <Text fw={600} style={{ wordBreak: 'break-all' }}>
             {product.article}
           </Text>
           <Text>{product.name}</Text>
@@ -156,11 +154,11 @@ function LineCard(props: LineRowProps) {
         </Stack>
         {remove}
       </Group>
-      <SimpleGrid cols={2} mt="xs">
+      <SimpleGrid cols={2} mt="md" spacing="md">
         {qty}
         {cost}
       </SimpleGrid>
-      <Text ta="right" fw={500}>
+      <Text ta="right" fw={600} mt="md">
         {t('common.lineSum', { amount: sum })}
       </Text>
     </Card>
@@ -173,6 +171,8 @@ export function NewReceiptPage() {
   const wide = useMediaQuery(WIDE_SCREEN)
   const { t } = useTranslation()
   const initialStockSupplier = t('receipts.new.initialStock')
+  // «Тауар қабылдау» from the home screen is a simple screen: no way back to the history.
+  const isReceiveScreen = useLocation().pathname === RECEIVE_PATH
 
   const [supplier, setSupplier] = useState('')
   const [note, setNote] = useState('')
@@ -286,120 +286,130 @@ export function NewReceiptPage() {
   })
 
   return (
-    <Stack>
-      <Anchor component={Link} to="/receipts" size="sm">
-        {t('receipts.card.back')}
-      </Anchor>
-      <Title order={2}>{t('receipts.new.title')}</Title>
+    <PageContainer>
+      <PageHeader
+        back={isReceiveScreen ? undefined : { to: '/receipts', label: t('receipts.card.back') }}
+        title={t('receipts.new.title')}
+      />
 
-      <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        <Group align="flex-end" wrap="nowrap" gap="xs">
-          <TextInput
-            label={t('receipts.new.supplier')}
-            autoComplete="off"
-            style={{ flex: 1 }}
-            value={supplier}
+      <Card>
+        <Stack gap="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
+            <Group align="flex-end" gap="xs">
+              <TextInput
+                label={t('receipts.new.supplier')}
+                autoComplete="off"
+                style={{ flex: '1 1 200px' }}
+                value={supplier}
+                onChange={(event) => {
+                  setSupplier(event.currentTarget.value)
+                  clearError('supplier')
+                }}
+                error={fieldErrors.supplier}
+              />
+              <Button
+                variant="default"
+                onClick={() => {
+                  setSupplier(initialStockSupplier)
+                  clearError('supplier')
+                }}
+              >
+                {initialStockSupplier}
+              </Button>
+            </Group>
+            <DateTimePicker
+              label={t('receipts.new.date')}
+              valueFormat="DD.MM.YYYY HH:mm"
+              value={receivedAt ?? nowLocalInput()}
+              maxDate={nowLocalInput()}
+              onChange={(value) => {
+                setReceivedAt(value)
+                clearError('receivedAt')
+              }}
+              error={fieldErrors.receivedAt}
+            />
+          </SimpleGrid>
+          <Textarea
+            label={t('receipts.new.note')}
+            autosize
+            minRows={1}
+            value={note}
             onChange={(event) => {
-              setSupplier(event.currentTarget.value)
-              clearError('supplier')
+              setNote(event.currentTarget.value)
+              clearError('note')
             }}
-            error={fieldErrors.supplier}
+            error={fieldErrors.note}
           />
-          <Button
-            variant="light"
-            onClick={() => {
-              setSupplier(initialStockSupplier)
-              clearError('supplier')
-            }}
-          >
-            {initialStockSupplier}
-          </Button>
-        </Group>
-        <DateTimePicker
-          label={t('receipts.new.date')}
-          valueFormat="DD.MM.YYYY HH:mm"
-          value={receivedAt ?? nowLocalInput()}
-          maxDate={nowLocalInput()}
-          onChange={(value) => {
-            setReceivedAt(value)
-            clearError('receivedAt')
-          }}
-          error={fieldErrors.receivedAt}
-        />
-      </SimpleGrid>
-      <Textarea
-        label={t('receipts.new.note')}
-        autosize
-        minRows={1}
-        value={note}
-        onChange={(event) => {
-          setNote(event.currentTarget.value)
-          clearError('note')
-        }}
-        error={fieldErrors.note}
-      />
-
-      <ProductPicker
-        ref={pickerRef}
-        autoFocus
-        label={t('receipts.new.addProduct')}
-        onSelect={addProduct}
-      />
-
-      {lines.length === 0 ? (
-        <Paper withBorder p="lg" radius="md">
-          <Text c="dimmed" ta="center">
-            {t('receipts.new.emptyLines')}
-          </Text>
-        </Paper>
-      ) : wide ? (
-        <Table.ScrollContainer minWidth={800}>
-          <Table verticalSpacing="xs">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('receipts.lines.article')}</Table.Th>
-                <Table.Th>{t('receipts.lines.name')}</Table.Th>
-                <Table.Th ta="right">{t('receipts.new.stock')}</Table.Th>
-                <Table.Th>{t('receipts.new.qty')}</Table.Th>
-                <Table.Th>{t('receipts.new.cost')}</Table.Th>
-                <Table.Th ta="right">{t('receipts.lines.sum')}</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {lines.map((line) => (
-                <LineTableRow key={line.key} {...rowProps(line)} />
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      ) : (
-        <Stack gap="sm">
-          {lines.map((line) => (
-            <LineCard key={line.key} {...rowProps(line)} />
-          ))}
         </Stack>
-      )}
+      </Card>
 
-      <Paper withBorder p="md" radius="md">
-        <Group justify="space-between">
-          <Text>{t('receipts.card.positions', { count: totals.positions })}</Text>
-          <Text>{t('receipts.card.pieces', { count: totals.pieces })}</Text>
-          <Text fw={600}>{t('receipts.card.cost', { amount: formatMoney(totals.cost) })}</Text>
-        </Group>
-      </Paper>
+      <Stack gap="lg">
+        <ProductPicker
+          ref={pickerRef}
+          autoFocus
+          label={t('receipts.new.addProduct')}
+          onSelect={addProduct}
+        />
 
-      {formError && (
-        <Alert color="red" role="alert">
-          {formError}
-        </Alert>
-      )}
+        {lines.length === 0 ? (
+          <Card>
+            <Text c="dimmed" ta="center">
+              {t('receipts.new.emptyLines')}
+            </Text>
+          </Card>
+        ) : wide ? (
+          <Card padding={0}>
+            <Table.ScrollContainer minWidth={800} type="native">
+              <Table className="q-table">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>{t('receipts.lines.article')}</Table.Th>
+                    <Table.Th>{t('receipts.lines.name')}</Table.Th>
+                    <Table.Th data-numeric>{t('receipts.new.stock')}</Table.Th>
+                    <Table.Th>{t('receipts.new.qty')}</Table.Th>
+                    <Table.Th>{t('receipts.new.cost')}</Table.Th>
+                    <Table.Th data-numeric>{t('receipts.lines.sum')}</Table.Th>
+                    <Table.Th />
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {lines.map((line) => (
+                    <LineTableRow key={line.key} {...rowProps(line)} />
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+          </Card>
+        ) : (
+          <Stack gap="md">
+            {lines.map((line) => (
+              <LineCard key={line.key} {...rowProps(line)} />
+            ))}
+          </Stack>
+        )}
+      </Stack>
 
-      <Group justify="flex-end">
-        <Button size="md" onClick={submit} disabled={!canPost} loading={post.isPending}>
-          {t('receipts.new.submit')}
-        </Button>
-      </Group>
+      <Card>
+        <Stack gap="lg">
+          <Group justify="space-between" gap="md">
+            <Text>{t('receipts.card.positions', { count: totals.positions })}</Text>
+            <Text>{t('receipts.card.pieces', { count: totals.pieces })}</Text>
+            <Text fw={600}>{t('receipts.card.cost', { amount: formatMoney(totals.cost) })}</Text>
+          </Group>
+
+          {formError && (
+            <Alert color="red" role="alert">
+              {formError}
+            </Alert>
+          )}
+
+          <Group justify="flex-end">
+            <Button size="lg" onClick={submit} disabled={!canPost} loading={post.isPending}>
+              {t('receipts.new.submit')}
+            </Button>
+          </Group>
+        </Stack>
+      </Card>
 
       <ConfirmModal
         opened={blocker.state === 'blocked'}
@@ -411,6 +421,6 @@ export function NewReceiptPage() {
       >
         {t('receipts.new.leaveText')}
       </ConfirmModal>
-    </Stack>
+    </PageContainer>
   )
 }

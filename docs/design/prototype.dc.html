@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<title>Qoima: сату және тауар қабылдау</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#EEF1F4;color:#16202A;font-family:'Fira Sans',system-ui,sans-serif;font-size:20px;line-height:1.4}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+input{font-family:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid #1D5AA6;outline-offset:2px}
+.btn{border-radius:10px;border:2px solid transparent;font-weight:600;min-height:56px;padding:0 24px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-size:20px}
+.btn-green{background:#17703F;color:#FFFFFF}
+.btn-green:hover{background:#125A33}
+.btn-blue{background:#1D5AA6;color:#FFFFFF}
+.btn-blue:hover{background:#174A89}
+.btn-ghost{background:#FFFFFF;color:#16202A;border-color:#AEB8C4}
+.btn-ghost:hover{background:#F3F6F9}
+.btn-add{background:#E3F1E8;color:#0F5530;border-color:#9CCBAE}
+.btn-add:hover{background:#D2E9DA}
+.btn:disabled,.btn:disabled:hover{cursor:not-allowed;background:#D5DCE3;color:#3B4652;border-color:#D5DCE3}
+.step-btn{width:56px;height:56px;border-radius:10px;border:2px solid #AEB8C4;background:#FFFFFF;color:#16202A;font-size:28px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.step-btn:hover{background:#F3F6F9}
+.field{height:60px;border:2px solid #AEB8C4;border-radius:10px;padding:0 18px;font-size:22px;background:#FFFFFF;color:#16202A;box-sizing:border-box}
+.field:focus{border-color:#1D5AA6}
+.tile:hover{filter:brightness(0.94)}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 100vh; background: #EEF1F4; color: #16202A; padding-bottom: 80px">
+
+<header style="background: #FFFFFF; border-bottom: 2px solid #D5DCE3">
+<div style="max-width: 1200px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 20px">
+<button style="border: none; background: transparent; padding: 0; min-height: 48px; font-size: 30px; font-weight: 700; color: #16202A" onClick="{{goHome}}">Qoima</button>
+<sc-if value="{{notHome}}" hint-placeholder-val="{{ false }}">
+<button class="btn btn-ghost" style="min-height: 48px; font-size: 18px" onClick="{{goHome}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg>Басты бет</button>
+</sc-if>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; gap: 6px; align-items: center">
+<button class="btn" style="min-height: 44px; padding: 0 14px; font-size: 17px; background: #16202A; color: #FFFFFF" aria-pressed="true">Қазақша</button>
+<button class="btn btn-ghost" style="min-height: 44px; padding: 0 14px; font-size: 17px" onClick="{{langOther}}">Русский</button>
+<button class="btn btn-ghost" style="min-height: 44px; padding: 0 14px; font-size: 17px" onClick="{{langOther}}">中文</button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Арман</div>
+</div>
+<div style="background: #FFF4D6; color: #5C4200; font-size: 16px; text-align: center; padding: 6px 16px">Бұл үлгі: енгізілген деректер сақталмайды.</div>
+</header>
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<main style="max-width: 1200px; margin: 0 auto; padding: 48px 32px; box-sizing: border-box">
+<h1 style="font-size: 42px; margin: 0 0 6px 0; font-weight: 700">Сәлеметсіз бе, Арман!</h1>
+<p style="margin: 0 0 32px 0; color: #4A5663; font-size: 24px">Не істейміз?</p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+<button class="tile" style="background: #17703F; color: #FFFFFF; border: none; border-radius: 16px; min-height: 270px; padding: 32px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left" onClick="{{startSale}}">
+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"></circle><circle cx="18" cy="20" r="1.5"></circle><path d="M2 3h3l2.7 12.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.5L21 8H6"></path></svg>
+<span style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 46px; font-weight: 700">Сату</span><span style="font-size: 21px">Тауар сатып, жүкқұжат шығару</span></span>
+</button>
+<button class="tile" style="background: #1D5AA6; color: #FFFFFF; border: none; border-radius: 16px; min-height: 270px; padding: 32px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left" onClick="{{startRecv}}">
+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"></path><path d="M3 8l9 5 9-5"></path><path d="M12 13v8"></path></svg>
+<span style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 46px; font-weight: 700">Тауар қабылдау</span><span style="font-size: 21px">Келген тауарды қоймаға қосу</span></span>
+</button>
+<button class="tile" style="background: #FFFFFF; color: #16202A; border: 2px solid #AEB8C4; border-radius: 16px; min-height: 270px; padding: 32px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; text-align: left" onClick="{{openStock}}">
+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13"></path><path d="M7 21v-8h10v8"></path><path d="M7 17h10"></path></svg>
+<span style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 46px; font-weight: 700">Қоймада не бар?</span><span style="font-size: 21px; color: #4A5663">Тауарлар мен қалдықтар</span></span>
+</button>
+</div>
+<div style="margin-top: 28px; background: #FFFFFF; border-radius: 12px; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 2px solid #D5DCE3">
+<span style="font-size: 22px">Бүгін: <b>{{todayCount}} сатылым</b>, барлығы <b>{{todaySumStr}}</b></span>
+<button class="btn btn-ghost" onClick="{{showHistory}}">Сатылымдар тарихы</button>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{inSaleSteps}}" hint-placeholder-val="{{ false }}">
+<div style="max-width: 1200px; margin: 0 auto; padding: 28px 32px 0 32px; box-sizing: border-box; display: flex; gap: 12px">
+<sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 20px 10px 10px; border-radius: 999px; border: 2px solid; font-size: 20px; font-weight: 600; {{st.pillStyle}}"><span style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 18px">{{st.n}}</span>{{st.label}}</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isSale1}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 1200px; margin: 0 auto; padding: 24px 32px; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; align-items: start">
+<section style="display: flex; flex-direction: column; gap: 18px">
+<h1 style="margin: 0; font-size: 36px">Не сатамыз?</h1>
+<label style="display: flex; flex-direction: column; gap: 8px; font-size: 20px; font-weight: 600">Артикулды немесе атауын жазыңыз
+<input class="field" style="width: 100%; height: 68px; font-size: 26px" value="{{q}}" onChange="{{onQ}}" onKeyDown="{{onSearchKey}}" placeholder="Мысалы: IKH16TT" autoFocus="{{ true }}">
+</label>
+<sc-if value="{{showFrequent}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 18px; color: #4A5663">Жиі сатылатындар:</span>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<sc-for list="{{frequent}}" as="f" hint-placeholder-count="4">
+<button class="btn btn-add" style="min-height: 52px; font-size: 20px" onClick="{{f.add}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>{{f.article}}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-for list="{{results}}" as="r" hint-placeholder-count="0">
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 18px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 26px; font-weight: 700">{{r.article}}</span><span style="color: #4A5663">{{r.name}}</span></div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="font-weight: 600; font-variant-numeric: tabular-nums">{{r.priceStr}}</span><span style="font-size: 17px; {{r.stockStyle}}">{{r.stockStr}}</span></div>
+<button class="btn btn-add" onClick="{{r.add}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Қосу</button>
+</div>
+</sc-for>
+<sc-if value="{{notFound}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 2px dashed #AEB8C4; border-radius: 12px; padding: 18px; color: #4A5663">«{{q}}» табылмады. Артикулды тексеріп, қайта жазыңыз.</div>
+</sc-if>
+<h2 style="margin: 12px 0 0 0; font-size: 26px">Сатылатын тауарлар</h2>
+<sc-if value="{{cartEmpty}}" hint-placeholder-val="{{ true }}">
+<div style="background: #FFFFFF; border: 2px dashed #AEB8C4; border-radius: 12px; padding: 24px; color: #4A5663">Әзірге тауар жоқ. Жоғарыдан іздеп, «Қосу» батырмасын басыңыз.</div>
+</sc-if>
+<sc-for list="{{cartItems}}" as="c" hint-placeholder-count="0">
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; {{c.borderStyle}}">
+<div style="display: flex; align-items: flex-start; gap: 16px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 26px; font-weight: 700">{{c.article}}</span><span style="color: #4A5663">{{c.name}}</span></div>
+<button class="btn btn-ghost" style="min-height: 48px; font-size: 17px; padding: 0 16px" onClick="{{c.remove}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path></svg>Алып тастау</button>
+</div>
+<div style="display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 17px; color: #4A5663">Саны</span>
+<div style="display: flex; gap: 8px; align-items: center">
+<button class="step-btn" aria-label="Азайту" onClick="{{c.dec}}">−</button>
+<input class="field" style="width: 96px; text-align: center; font-size: 26px; font-weight: 600" inputMode="numeric" aria-label="Саны" value="{{c.qtyStr}}" onChange="{{c.onQty}}">
+<button class="step-btn" aria-label="Арттыру" onClick="{{c.inc}}">+</button>
+<span style="color: #4A5663">дана</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 17px; color: #4A5663">Бағасы, ₸</span><input class="field" style="width: 150px; text-align: right; font-variant-numeric: tabular-nums" inputMode="numeric" aria-label="Бағасы" value="{{c.priceStr}}" onChange="{{c.onPrice}}"></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 6px"><span style="font-size: 17px; color: #4A5663">Сомасы</span><span style="font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums">{{c.sumStr}}</span></div>
+</div>
+<sc-if value="{{c.hasWarn}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFF1E0; color: #7A3500; border-radius: 8px; padding: 12px 16px; font-weight: 500">{{c.warn}}</div>
+</sc-if>
+</div>
+</sc-for>
+</section>
+<aside style="background: #FFFFFF; border-radius: 14px; border: 2px solid #D5DCE3; padding: 24px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px">
+<div style="font-size: 20px; color: #4A5663">Тауар түрлері: <b style="color: #16202A">{{kinds}}</b></div>
+<div style="font-size: 20px; color: #4A5663">Барлығы: <b style="color: #16202A">{{qtyTotal}} дана</b></div>
+<div style="font-size: 18px; color: #4A5663; margin-top: 8px">Сомасы</div>
+<div style="font-size: 46px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1">{{sumStr}}</div>
+<button class="btn btn-green" style="min-height: 68px; font-size: 24px; margin-top: 8px" disabled="{{cannotNext}}" onClick="{{toStep2}}">Келесі: сатып алушы</button>
+<sc-if value="{{hasNextHint}}" hint-placeholder-val="{{ true }}">
+<div style="font-size: 18px; color: #7A3500">{{nextHint}}</div>
+</sc-if>
+<button class="btn btn-ghost" onClick="{{goHome}}">Бас тарту</button>
+</aside>
+</main>
+</sc-if>
+
+<sc-if value="{{isSale2}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 1200px; margin: 0 auto; padding: 24px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 36px">Кімге сатамыз?</h1>
+<label style="display: flex; flex-direction: column; gap: 8px; font-size: 20px; font-weight: 600; max-width: 720px">Аты немесе телефоны бойынша іздеу
+<input class="field" style="width: 100%; height: 68px; font-size: 26px" value="{{custQ}}" onChange="{{onCustQ}}" placeholder="Мысалы: Амангельды" autoFocus="{{ true }}">
+</label>
+<h2 style="margin: 8px 0 0 0; font-size: 24px">{{custHeading}}</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{custList}}" as="cu" hint-placeholder-count="4">
+<button class="btn btn-ghost" style="min-height: 88px; justify-content: flex-start; padding: 0 24px; text-align: left; gap: 16px" onClick="{{cu.pick}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg><span style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px"><span style="font-size: 25px">{{cu.name}}</span><span style="font-size: 17px; color: #4A5663; font-weight: 400">{{cu.phone}}</span></span></button>
+</sc-for>
+</div>
+<sc-if value="{{custNone}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 2px dashed #AEB8C4; border-radius: 12px; padding: 18px; color: #4A5663">Мұндай сатып алушы табылмады. Төменнен жаңа сатып алушы қосыңыз.</div>
+</sc-if>
+<div style="display: flex; gap: 16px; flex-wrap: wrap">
+<button class="btn btn-blue" onClick="{{openNewCust}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Жаңа сатып алушы</button>
+<button class="btn btn-ghost" onClick="{{pickRetail}}">Сатып алушысыз жалғастыру</button>
+</div>
+<sc-if value="{{showNewCust}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 2px solid #1D5AA6; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 16px; max-width: 720px">
+<label style="display: flex; flex-direction: column; gap: 8px; font-weight: 600">Жаңа сатып алушының аты
+<input class="field" style="width: 100%" value="{{newCustName}}" onChange="{{onNewCustName}}" autoFocus="{{ true }}">
+</label>
+<label style="display: flex; flex-direction: column; gap: 8px; font-weight: 600">Телефоны (міндетті емес)
+<input class="field" style="width: 100%" inputMode="tel" value="{{newCustPhone}}" onChange="{{onNewCustPhone}}">
+</label>
+<div style="display: flex; gap: 12px">
+<button class="btn btn-green" disabled="{{newCustEmpty}}" onClick="{{saveNewCust}}">Сақтау және таңдау</button>
+<button class="btn btn-ghost" onClick="{{closeNewCust}}">Бас тарту</button>
+</div>
+</div>
+</sc-if>
+<div style="margin-top: 12px"><button class="btn btn-ghost" onClick="{{back1}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>Артқа: тауарлар</button></div>
+</main>
+</sc-if>
+
+<sc-if value="{{isSale3}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 1000px; margin: 0 auto; padding: 24px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 36px">Тексеріңіз</h1>
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 14px; padding: 26px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 32px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; color: #4A5663">Сатып алушы</span><span style="font-size: 30px; font-weight: 700">{{buyerName}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; color: #4A5663">Сомасы</span><span style="font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums">{{sumStr}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; color: #4A5663">Тауар түрлері</span><span style="font-size: 26px; font-weight: 600">{{kinds}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; color: #4A5663">Барлығы</span><span style="font-size: 26px; font-weight: 600">{{qtyTotal}} дана</span></div>
+</div>
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 14px; overflow: hidden">
+<div style="display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr); gap: 12px; padding: 14px 22px; background: #F3F6F9; font-size: 17px; color: #4A5663; font-weight: 600"><span>Тауар</span><span style="text-align: right">Саны</span><span style="text-align: right">Бағасы</span><span style="text-align: right">Сомасы</span></div>
+<sc-for list="{{cartItems}}" as="l" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr); gap: 12px; padding: 14px 22px; border-top: 1px solid #D5DCE3; align-items: center; font-variant-numeric: tabular-nums">
+<span style="display: flex; flex-direction: column"><b>{{l.article}}</b><span style="font-size: 17px; color: #4A5663">{{l.name}}</span></span><span style="text-align: right">{{l.qtyStr}} дана</span><span style="text-align: right">{{l.priceMoney}}</span><span style="text-align: right; font-weight: 600">{{l.sumStr}}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; gap: 16px; align-items: center">
+<button class="btn btn-ghost" onClick="{{back2}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>Артқа: сатып алушы</button>
+<button class="btn btn-green" style="min-height: 72px; font-size: 26px; padding: 0 40px" onClick="{{saveSale}}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>Сатылымды сақтау</button>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{isSaleDone}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 780px; margin: 0 auto; padding: 56px 32px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+<div style="width: 104px; height: 104px; border-radius: 50%; background: #17703F; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></div>
+<h1 style="margin: 0; font-size: 40px">Сатылым сақталды</h1>
+<div style="font-size: 24px; display: flex; flex-direction: column; gap: 4px"><span>Жүкқұжат №{{doneNo}}</span><span>Сатып алушы: <b>{{doneBuyer}}</b></span><span>Сомасы: <b>{{doneSum}}</b></span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; margin-top: 12px">
+<button class="btn btn-blue" style="min-height: 76px; font-size: 24px" onClick="{{printIt}}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"></path><rect x="3" y="9" width="18" height="8" rx="2"></rect><path d="M6 14h12v7H6z"></path></svg>Басып шығару</button>
+<button class="btn btn-blue" style="min-height: 76px; font-size: 24px" onClick="{{pdfIt}}"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M4 21h16"></path></svg>PDF жүктеу</button>
+</div>
+<p style="margin: 0; color: #4A5663; font-size: 19px; max-width: 620px">WhatsApp-қа жіберу үшін: «PDF жүктеу» басыңыз, содан кейін файлды WhatsApp чатына сүйреп апарыңыз.</p>
+<div style="display: flex; gap: 16px; margin-top: 16px">
+<button class="btn btn-green" style="min-height: 64px; font-size: 22px" onClick="{{startSale}}">Жаңа сатылым</button>
+<button class="btn btn-ghost" style="min-height: 64px; font-size: 22px" onClick="{{goHome}}">Басты бет</button>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{isRecv1}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 1200px; margin: 0 auto; padding: 28px 32px; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; align-items: start">
+<section style="display: flex; flex-direction: column; gap: 18px">
+<h1 style="margin: 0; font-size: 36px">Қандай тауар келді?</h1>
+<label style="display: flex; flex-direction: column; gap: 8px; font-size: 20px; font-weight: 600">Артикулды немесе атауын жазыңыз
+<input class="field" style="width: 100%; height: 68px; font-size: 26px" value="{{rq}}" onChange="{{onRq}}" onKeyDown="{{onRecvKey}}" placeholder="Мысалы: 22401-ED815" autoFocus="{{ true }}">
+</label>
+<sc-for list="{{rResults}}" as="r" hint-placeholder-count="0">
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 18px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 26px; font-weight: 700">{{r.article}}</span><span style="color: #4A5663">{{r.name}}</span></div>
+<span style="font-size: 17px; color: #4A5663">{{r.stockStr}}</span>
+<button class="btn btn-add" onClick="{{r.add}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Қосу</button>
+</div>
+</sc-for>
+<sc-if value="{{rNotFound}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 2px dashed #AEB8C4; border-radius: 12px; padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<span style="color: #4A5663">«{{rq}}» қоймада әлі жоқ.</span>
+<button class="btn btn-blue" onClick="{{openNewProd}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>Жаңа тауар ретінде қосу</button>
+</div>
+</sc-if>
+<sc-if value="{{showNewProd}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFFFFF; border: 2px solid #1D5AA6; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-size: 24px">Жаңа тауар</h2>
+<label style="display: flex; flex-direction: column; gap: 8px; font-weight: 600">Артикул
+<input class="field" style="width: 100%" value="{{npArticle}}" onChange="{{onNpArticle}}">
+</label>
+<label style="display: flex; flex-direction: column; gap: 8px; font-weight: 600">Атауы
+<input class="field" style="width: 100%" value="{{npName}}" onChange="{{onNpName}}" placeholder="Мысалы: Свеча Denso" autoFocus="{{ true }}">
+</label>
+<label style="display: flex; flex-direction: column; gap: 8px; font-weight: 600">Сату бағасы, ₸
+<input class="field" style="width: 220px" inputMode="numeric" value="{{npPrice}}" onChange="{{onNpPrice}}" placeholder="Мысалы: 1200">
+</label>
+<div style="display: flex; gap: 12px">
+<button class="btn btn-green" disabled="{{npInvalid}}" onClick="{{saveNewProd}}">Сақтау және қосу</button>
+<button class="btn btn-ghost" onClick="{{closeNewProd}}">Бас тарту</button>
+</div>
+</div>
+</sc-if>
+<h2 style="margin: 12px 0 0 0; font-size: 26px">Келген тауарлар</h2>
+<sc-if value="{{rEmpty}}" hint-placeholder-val="{{ true }}">
+<div style="background: #FFFFFF; border: 2px dashed #AEB8C4; border-radius: 12px; padding: 24px; color: #4A5663">Әзірге тауар жоқ. Жоғарыдан іздеп, «Қосу» батырмасын басыңыз.</div>
+</sc-if>
+<sc-for list="{{rItems}}" as="c" hint-placeholder-count="0">
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-start; gap: 16px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 26px; font-weight: 700">{{c.article}}</span><span style="color: #4A5663">{{c.name}}</span></div>
+<button class="btn btn-ghost" style="min-height: 48px; font-size: 17px; padding: 0 16px" onClick="{{c.remove}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path></svg>Алып тастау</button>
+</div>
+<div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
+<div style="display: flex; gap: 8px; align-items: center">
+<button class="step-btn" aria-label="Азайту" onClick="{{c.dec}}">−</button>
+<input class="field" style="width: 110px; text-align: center; font-size: 26px; font-weight: 600" inputMode="numeric" aria-label="Саны" value="{{c.qtyStr}}" onChange="{{c.onQty}}">
+<button class="step-btn" aria-label="Арттыру" onClick="{{c.inc}}">+</button>
+<span style="color: #4A5663">дана</span>
+</div>
+<span style="font-size: 18px; color: #4A5663">{{c.stockLine}}</span>
+</div>
+<sc-if value="{{c.hasWarn}}" hint-placeholder-val="{{ false }}">
+<div style="background: #FFF1E0; color: #7A3500; border-radius: 8px; padding: 12px 16px; font-weight: 500">{{c.warn}}</div>
+</sc-if>
+</div>
+</sc-for>
+</section>
+<aside style="background: #FFFFFF; border-radius: 14px; border: 2px solid #D5DCE3; padding: 24px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px">
+<div style="font-size: 20px; color: #4A5663">Тауар түрлері: <b style="color: #16202A">{{rKinds}}</b></div>
+<div style="font-size: 20px; color: #4A5663">Барлығы: <b style="color: #16202A; font-size: 34px">{{rQty}} дана</b></div>
+<button class="btn btn-blue" style="min-height: 68px; font-size: 24px; margin-top: 8px" disabled="{{cannotRecv}}" onClick="{{saveRecv}}">Қоймаға қосу</button>
+<sc-if value="{{hasRecvHint}}" hint-placeholder-val="{{ true }}">
+<div style="font-size: 18px; color: #7A3500">{{recvHint}}</div>
+</sc-if>
+<button class="btn btn-ghost" onClick="{{goHome}}">Бас тарту</button>
+</aside>
+</main>
+</sc-if>
+
+<sc-if value="{{isRecvDone}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 780px; margin: 0 auto; padding: 56px 32px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+<div style="width: 104px; height: 104px; border-radius: 50%; background: #1D5AA6; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></div>
+<h1 style="margin: 0; font-size: 40px">Тауар қоймаға қосылды</h1>
+<p style="margin: 0; font-size: 24px">{{recvKindsDone}} түрлі тауар, барлығы {{recvQtyDone}} дана.</p>
+<div style="display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; justify-content: center">
+<button class="btn btn-blue" style="min-height: 64px; font-size: 22px" onClick="{{startRecv}}">Тағы тауар қабылдау</button>
+<button class="btn btn-ghost" style="min-height: 64px; font-size: 22px" onClick="{{openStock}}">Қоймада не бар?</button>
+<button class="btn btn-ghost" style="min-height: 64px; font-size: 22px" onClick="{{goHome}}">Басты бет</button>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{isStock}}" hint-placeholder-val="{{ false }}">
+<main style="max-width: 1200px; margin: 0 auto; padding: 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 16px">
+<h1 style="margin: 0; font-size: 36px">Қоймада не бар?</h1>
+<button class="btn btn-blue" onClick="{{startRecv}}">Тауар қабылдау</button>
+</div>
+<label style="display: flex; flex-direction: column; gap: 8px; font-size: 20px; font-weight: 600; max-width: 720px">Артикул немесе атауы бойынша іздеу
+<input class="field" style="width: 100%; height: 64px" value="{{sq}}" onChange="{{onSq}}" placeholder="Мысалы: L3Y2">
+</label>
+<div style="background: #FFFFFF; border: 2px solid #D5DCE3; border-radius: 14px; overflow: hidden">
+<div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 14px 22px; background: #F3F6F9; font-size: 17px; color: #4A5663; font-weight: 600"><span>Артикул</span><span>Атауы</span><span style="text-align: right">Бағасы</span><span style="text-align: right">Қалдық</span></div>
+<sc-for list="{{stockRows}}" as="p" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 16px 22px; border-top: 1px solid #D5DCE3; align-items: center; font-variant-numeric: tabular-nums">
+<b style="font-size: 22px">{{p.article}}</b><span>{{p.name}}</span><span style="text-align: right">{{p.priceStr}}</span><span style="text-align: right; font-size: 22px; {{p.stockStyle}}">{{p.stockStr}}</span>
+</div>
+</sc-for>
+</div>
+</main>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #16202A; color: #FFFFFF; padding: 16px 26px; border-radius: 12px; font-size: 20px; max-width: 80%; text-align: center">{{toast}}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1366,"height":900}}'>
+var LOOKALIKE = { 'А': 'A', 'В': 'B', 'Е': 'E', 'Ё': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X', 'У': 'Y' };
+
+function normArticle(value) {
+  var s = String(value || '').toUpperCase();
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    var ch = LOOKALIKE[s[i]] || s[i];
+    if (/[A-Z0-9А-ЯӘҒҚҢӨҰҮҺІ]/.test(ch)) out += ch;
+  }
+  return out;
+}
+
+function money(n) {
+  return Math.round(n).toLocaleString('ru-RU').replace(/\s/g, '\u00a0') + '\u00a0₸';
+}
+
+function onlyDigits(v, maxLen) {
+  return String(v || '').replace(/\D/g, '').slice(0, maxLen);
+}
+
+function findProducts(q, products) {
+  var text = String(q || '').trim();
+  if (!text) return [];
+  var qn = normArticle(text);
+  var ql = text.toLowerCase();
+  return products.filter(function (p) {
+    return (qn && normArticle(p.article).indexOf(qn) >= 0) || p.name.toLowerCase().indexOf(ql) >= 0;
+  }).slice(0, 6);
+}
+
+var STEP_LABELS = ['Тауарлар', 'Сатып алушы', 'Тексеру'];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      screen: 'home',
+      q: '', cart: [],
+      custQ: '', customerId: null, retail: false,
+      showNewCust: false, newCustName: '', newCustPhone: '',
+      rq: '', rcart: [], showNewProd: false, npArticle: '', npName: '', npPrice: '',
+      sq: '', toast: '',
+      saleNo: 12, todayCount: 2, todaySum: 38400,
+      lastSale: null, lastRecv: null,
+      products: [
+        { id: 1, article: '12686362 41-157', name: 'Свеча ACDelco', price: 1800, stock: 60 },
+        { id: 2, article: 'IKH16TT', name: 'Свеча Denso Iridium', price: 1200, stock: 40 },
+        { id: 3, article: 'IKH20TT', name: 'Свеча Denso Iridium', price: 1200, stock: 35 },
+        { id: 4, article: 'IXEH22TT', name: 'Свеча Denso Iridium TT', price: 1200, stock: 25 },
+        { id: 5, article: 'L3Y2-18-110', name: 'Свеча Mazda', price: 1200, stock: 20 },
+        { id: 6, article: 'PE5R-18-110', name: 'Свеча Mazda', price: 1200, stock: 2 },
+        { id: 7, article: '22401-ED815', name: 'Свеча Nissan', price: 1300, stock: 30 },
+        { id: 8, article: '22401-8H515', name: 'Свеча Nissan', price: 1200, stock: 18 },
+        { id: 9, article: 'L3Y4-18-110', name: 'Свеча Mazda', price: 1200, stock: 0 }
+      ],
+      customers: [
+        { id: 1, name: 'Амангельды', phone: '+7 701 555 12 34' },
+        { id: 2, name: 'Нұрлан СТО', phone: '+7 777 210 44 08' },
+        { id: 3, name: 'Жол автосервис', phone: '+7 705 318 90 11' },
+        { id: 4, name: 'Бауыржан', phone: '+7 747 602 73 55' },
+        { id: 5, name: 'Ерлан', phone: '+7 702 944 16 20' },
+        { id: 6, name: 'Марат', phone: '+7 708 133 58 47' }
+      ]
+    };
+    this.toastTimer = null;
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.toastTimer);
+  }
+
+  say(message) {
+    clearTimeout(this.toastTimer);
+    this.setState({ toast: message });
+    this.toastTimer = setTimeout(() => this.setState({ toast: '' }), 3200);
+  }
+
+  productById(id) {
+    return this.state.products.find(function (p) { return p.id === id; });
+  }
+
+  addToList(listKey, id, extra) {
+    var list = this.state[listKey].slice();
+    var i = list.findIndex(function (c) { return c.id === id; });
+    if (i >= 0) list[i] = Object.assign({}, list[i], { qty: list[i].qty + 1 });
+    else list.push(Object.assign({ id: id, qty: 1 }, extra || {}));
+    var patch = {};
+    patch[listKey] = list;
+    return patch;
+  }
+
+  updateItem(listKey, id, fn) {
+    var patch = {};
+    patch[listKey] = this.state[listKey].map(function (c) { return c.id === id ? fn(c) : c; });
+    this.setState(patch);
+  }
+
+  removeItem(listKey, id) {
+    var patch = {};
+    patch[listKey] = this.state[listKey].filter(function (c) { return c.id !== id; });
+    this.setState(patch);
+  }
+
+  renderVals() {
+    var s = this.state;
+    var self = this;
+    var P = function (id) { return self.productById(id); };
+
+    var goHome = function () { self.setState({ screen: 'home', toast: '' }); };
+    var startSale = function () {
+      self.setState({ screen: 'sale1', q: '', cart: [], custQ: '', customerId: null, retail: false, showNewCust: false, newCustName: '', newCustPhone: '', toast: '' });
+    };
+    var startRecv = function () {
+      self.setState({ screen: 'recv1', rq: '', rcart: [], showNewProd: false, toast: '' });
+    };
+    var openStock = function () { self.setState({ screen: 'stock', sq: '', toast: '' }); };
+
+    var addSale = function (id) {
+      var patch = self.addToList('cart', id, { price: P(id).price });
+      patch.q = '';
+      self.setState(patch);
+    };
+    var addRecv = function (id) {
+      var patch = self.addToList('rcart', id);
+      patch.rq = '';
+      self.setState(patch);
+    };
+
+    // Sale, step 1
+    var results = findProducts(s.q, s.products).map(function (p) {
+      return {
+        article: p.article, name: p.name, priceStr: money(p.price),
+        stockStr: p.stock > 0 ? 'Қоймада: ' + p.stock + ' дана' : 'Қоймада жоқ',
+        stockStyle: p.stock > 0 ? 'color: #4A5663' : 'color: #A32020; font-weight: 600',
+        add: function () { addSale(p.id); }
+      };
+    });
+    var anyWarn = false;
+    var cartItems = s.cart.map(function (c) {
+      var p = P(c.id);
+      var warn = '';
+      if (c.qty < 1) warn = 'Санын жазыңыз.';
+      else if (c.qty > p.stock) warn = p.stock === 0 ? 'Бұл тауар қоймада жоқ. Алдымен тауар қабылдаңыз.' : 'Қоймада тек ' + p.stock + ' дана бар. Санын азайтыңыз.';
+      if (warn) anyWarn = true;
+      return {
+        article: p.article, name: p.name,
+        qtyStr: c.qty === 0 ? '' : String(c.qty),
+        priceStr: String(c.price),
+        priceMoney: money(c.price),
+        sumStr: money(c.qty * c.price),
+        warn: warn, hasWarn: !!warn,
+        borderStyle: warn ? 'border-color: #E08A3C' : '',
+        inc: function () { self.updateItem('cart', c.id, function (x) { return Object.assign({}, x, { qty: x.qty + 1 }); }); },
+        dec: function () { self.updateItem('cart', c.id, function (x) { return Object.assign({}, x, { qty: Math.max(1, x.qty - 1) }); }); },
+        remove: function () { self.removeItem('cart', c.id); },
+        onQty: function (e) { var d = onlyDigits(e.target.value, 5); self.updateItem('cart', c.id, function (x) { return Object.assign({}, x, { qty: d === '' ? 0 : parseInt(d, 10) }); }); },
+        onPrice: function (e) { var d = onlyDigits(e.target.value, 9); self.updateItem('cart', c.id, function (x) { return Object.assign({}, x, { price: d === '' ? 0 : parseInt(d, 10) }); }); }
+      };
+    });
+    var qtyTotal = s.cart.reduce(function (a, c) { return a + c.qty; }, 0);
+    var sum = s.cart.reduce(function (a, c) { return a + c.qty * c.price; }, 0);
+    var cannotNext = s.cart.length === 0 || anyWarn;
+    var nextHint = s.cart.length === 0 ? 'Алдымен тауар қосыңыз.' : (anyWarn ? 'Сарғыш белгіленген тауарды түзетіңіз.' : '');
+
+    var stepIndex = { sale1: 1, sale2: 2, sale3: 3 }[s.screen] || 0;
+    var steps = STEP_LABELS.map(function (label, i) {
+      var n = i + 1;
+      var style = n === stepIndex ? 'background: #16202A; color: #FFFFFF; border-color: #16202A'
+        : n < stepIndex ? 'background: #E3F1E8; color: #0F5530; border-color: #9CCBAE'
+        : 'background: #FFFFFF; color: #4A5663; border-color: #CBD3DC';
+      return { n: n, label: label, pillStyle: style };
+    });
+
+    // Sale, step 2
+    var cq = s.custQ.trim().toLowerCase();
+    var cqDigits = cq.replace(/\D/g, '');
+    var custSource = cq ? s.customers.filter(function (c) {
+      return c.name.toLowerCase().indexOf(cq) >= 0 || (cqDigits.length > 0 && c.phone.replace(/\D/g, '').indexOf(cqDigits) >= 0);
+    }) : s.customers.slice(0, 4);
+    var custList = custSource.map(function (c) {
+      return { name: c.name, phone: c.phone, pick: function () { self.setState({ customerId: c.id, retail: false, screen: 'sale3' }); } };
+    });
+
+    // Sale, step 3
+    var customer = s.customers.find(function (c) { return c.id === s.customerId; });
+    var buyerName = customer && !s.retail ? customer.name : 'Бөлшек сатып алушы';
+
+    // Receiving
+    var rResults = findProducts(s.rq, s.products).map(function (p) {
+      return { article: p.article, name: p.name, stockStr: 'Қазір қоймада: ' + p.stock + ' дана', add: function () { addRecv(p.id); } };
+    });
+    var rAnyWarn = false;
+    var rItems = s.rcart.map(function (c) {
+      var p = P(c.id);
+      var warn = c.qty < 1 ? 'Санын жазыңыз.' : '';
+      if (warn) rAnyWarn = true;
+      return {
+        article: p.article, name: p.name,
+        qtyStr: c.qty === 0 ? '' : String(c.qty),
+        stockLine: 'Қазір: ' + p.stock + ' дана. Қабылдағаннан кейін: ' + (p.stock + c.qty) + ' дана.',
+        warn: warn, hasWarn: !!warn,
+        inc: function () { self.updateItem('rcart', c.id, function (x) { return Object.assign({}, x, { qty: x.qty + 1 }); }); },
+        dec: function () { self.updateItem('rcart', c.id, function (x) { return Object.assign({}, x, { qty: Math.max(1, x.qty - 1) }); }); },
+        remove: function () { self.removeItem('rcart', c.id); },
+        onQty: function (e) { var d = onlyDigits(e.target.value, 5); self.updateItem('rcart', c.id, function (x) { return Object.assign({}, x, { qty: d === '' ? 0 : parseInt(d, 10) }); }); }
+      };
+    });
+    var rQty = s.rcart.reduce(function (a, c) { return a + c.qty; }, 0);
+    var cannotRecv = s.rcart.length === 0 || rAnyWarn;
+    var recvHint = s.rcart.length === 0 ? 'Алдымен тауар қосыңыз.' : (rAnyWarn ? 'Сарғыш белгіленген тауарды түзетіңіз.' : '');
+
+    // Stock
+    var sqText = s.sq.trim();
+    var stockSource = s.products;
+    if (sqText) {
+      var qn = normArticle(sqText), ql = sqText.toLowerCase();
+      stockSource = s.products.filter(function (p) { return (qn && normArticle(p.article).indexOf(qn) >= 0) || p.name.toLowerCase().indexOf(ql) >= 0; });
+    }
+    var stockRows = stockSource.slice().sort(function (a, b) { return a.article.localeCompare(b.article); }).map(function (p) {
+      return {
+        article: p.article, name: p.name, priceStr: money(p.price),
+        stockStr: p.stock > 0 ? p.stock + ' дана' : 'Жоқ',
+        stockStyle: p.stock > 0 ? 'font-weight: 600' : 'color: #A32020; font-weight: 700'
+      };
+    });
+
+    return {
+      isHome: s.screen === 'home', notHome: s.screen !== 'home',
+      isSale1: s.screen === 'sale1', isSale2: s.screen === 'sale2', isSale3: s.screen === 'sale3',
+      isSaleDone: s.screen === 'saleDone', isRecv1: s.screen === 'recv1', isRecvDone: s.screen === 'recvDone',
+      isStock: s.screen === 'stock', inSaleSteps: stepIndex > 0, steps: steps,
+
+      goHome: goHome, startSale: startSale, startRecv: startRecv, openStock: openStock,
+      langOther: function () { self.say('Үлгіде тек қазақ тілі бар.'); },
+      showHistory: function () { self.say('Бұл бөлім үлгіде көрсетілмеген.'); },
+      todayCount: s.todayCount, todaySumStr: money(s.todaySum),
+
+      q: s.q,
+      onQ: function (e) { self.setState({ q: e.target.value }); },
+      onSearchKey: function (e) {
+        if (e.key !== 'Enter') return;
+        var found = findProducts(self.state.q, self.state.products);
+        if (found.length) { e.preventDefault(); addSale(found[0].id); }
+      },
+      showFrequent: !s.q.trim(),
+      frequent: [2, 3, 7, 1].map(function (id) { var p = P(id); return { article: p.article, add: function () { addSale(id); } }; }),
+      results: results,
+      notFound: !!s.q.trim() && results.length === 0,
+      cartItems: cartItems, cartEmpty: s.cart.length === 0,
+      kinds: s.cart.length, qtyTotal: qtyTotal, sumStr: money(sum),
+      cannotNext: cannotNext, nextHint: nextHint, hasNextHint: !!nextHint,
+      toStep2: function () { self.setState({ screen: 'sale2', custQ: '', showNewCust: false }); },
+
+      custQ: s.custQ,
+      onCustQ: function (e) { self.setState({ custQ: e.target.value }); },
+      custHeading: cq ? 'Іздеу нәтижесі' : 'Соңғы сатып алушылар',
+      custList: custList, custNone: !!cq && custList.length === 0,
+      openNewCust: function () { self.setState({ showNewCust: true, newCustName: self.state.custQ.trim(), newCustPhone: '' }); },
+      closeNewCust: function () { self.setState({ showNewCust: false }); },
+      newCustName: s.newCustName, newCustPhone: s.newCustPhone,
+      onNewCustName: function (e) { self.setState({ newCustName: e.target.value }); },
+      onNewCustPhone: function (e) { self.setState({ newCustPhone: e.target.value }); },
+      newCustEmpty: !s.newCustName.trim(),
+      saveNewCust: function () {
+        var name = self.state.newCustName.trim();
+        if (!name) return;
+        var id = Date.now();
+        self.setState({
+          customers: [{ id: id, name: name, phone: self.state.newCustPhone.trim() }].concat(self.state.customers),
+          customerId: id, retail: false, showNewCust: false, screen: 'sale3'
+        });
+      },
+      pickRetail: function () { self.setState({ retail: true, customerId: null, screen: 'sale3' }); },
+      back1: function () { self.setState({ screen: 'sale1' }); },
+
+      buyerName: buyerName,
+      back2: function () { self.setState({ screen: 'sale2' }); },
+      saveSale: function () {
+        var st = self.state;
+        var total = st.cart.reduce(function (a, c) { return a + c.qty * c.price; }, 0);
+        var products = st.products.map(function (p) {
+          var c = st.cart.find(function (x) { return x.id === p.id; });
+          return c ? Object.assign({}, p, { stock: p.stock - c.qty }) : p;
+        });
+        var no = st.saleNo + 1;
+        self.setState({
+          products: products, saleNo: no, todayCount: st.todayCount + 1, todaySum: st.todaySum + total,
+          lastSale: { no: no, sum: total, buyer: buyerName }, screen: 'saleDone'
+        });
+      },
+      doneNo: s.lastSale ? s.lastSale.no : '',
+      doneBuyer: s.lastSale ? s.lastSale.buyer : '',
+      doneSum: s.lastSale ? money(s.lastSale.sum) : '',
+      printIt: function () { self.say('Нақты жүйеде осы жерде басып шығару терезесі ашылады.'); },
+      pdfIt: function () { self.say('Нақты жүйеде жүкқұжаттың PDF файлы жүктеледі.'); },
+
+      rq: s.rq,
+      onRq: function (e) { self.setState({ rq: e.target.value }); },
+      onRecvKey: function (e) {
+        if (e.key !== 'Enter') return;
+        var found = findProducts(self.state.rq, self.state.products);
+        if (found.length) { e.preventDefault(); addRecv(found[0].id); }
+      },
+      rResults: rResults,
+      rNotFound: !!s.rq.trim() && rResults.length === 0 && !s.showNewProd,
+      openNewProd: function () { self.setState({ showNewProd: true, npArticle: self.state.rq.trim(), npName: '', npPrice: '' }); },
+      closeNewProd: function () { self.setState({ showNewProd: false }); },
+      showNewProd: s.showNewProd,
+      npArticle: s.npArticle, npName: s.npName, npPrice: s.npPrice,
+      onNpArticle: function (e) { self.setState({ npArticle: e.target.value }); },
+      onNpName: function (e) { self.setState({ npName: e.target.value }); },
+      onNpPrice: function (e) { self.setState({ npPrice: onlyDigits(e.target.value, 9) }); },
+      npInvalid: !s.npArticle.trim() || !s.npName.trim() || !s.npPrice,
+      saveNewProd: function () {
+        var st = self.state;
+        var article = st.npArticle.trim();
+        var taken = st.products.some(function (p) { return normArticle(p.article) === normArticle(article); });
+        if (taken) { self.say('Мұндай артикул қоймада бар. Оны іздеу арқылы қосыңыз.'); return; }
+        var id = Date.now();
+        var product = { id: id, article: article, name: st.npName.trim(), price: parseInt(st.npPrice, 10) || 0, stock: 0 };
+        self.setState({ products: st.products.concat([product]), rcart: st.rcart.concat([{ id: id, qty: 1 }]), showNewProd: false, rq: '' });
+      },
+      rItems: rItems, rEmpty: s.rcart.length === 0,
+      rKinds: s.rcart.length, rQty: rQty,
+      cannotRecv: cannotRecv, recvHint: recvHint, hasRecvHint: !!recvHint,
+      saveRecv: function () {
+        var st = self.state;
+        var products = st.products.map(function (p) {
+          var c = st.rcart.find(function (x) { return x.id === p.id; });
+          return c ? Object.assign({}, p, { stock: p.stock + c.qty }) : p;
+        });
+        var qty = st.rcart.reduce(function (a, c) { return a + c.qty; }, 0);
+        self.setState({ products: products, lastRecv: { kinds: st.rcart.length, qty: qty }, screen: 'recvDone' });
+      },
+      recvKindsDone: s.lastRecv ? s.lastRecv.kinds : 0,
+      recvQtyDone: s.lastRecv ? s.lastRecv.qty : 0,
+
+      sq: s.sq,
+      onSq: function (e) { self.setState({ sq: e.target.value }); },
+      stockRows: stockRows,
+
+      toast: s.toast, hasToast: !!s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

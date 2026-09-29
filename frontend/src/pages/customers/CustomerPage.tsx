@@ -1,12 +1,22 @@
-import { Anchor, Button, Card, Group, Loader, Stack, Table, Text, Title } from '@mantine/core'
+import { Anchor, Button, Group, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
 import { ListPagination } from '../../components/ListPagination'
 import { NotFoundState } from '../../components/NotFoundState'
+import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
+import {
+  Card,
+  DataTable,
+  type DataTableColumn,
+  PageContainer,
+  PageHeader,
+  RowLink,
+  SectionTitle,
+} from '../../components/ui'
 import { formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
@@ -19,53 +29,50 @@ import { CustomerFormModal } from './CustomerFormModal'
 function SaleLink({ sale }: { sale: SaleListItem }) {
   const { t } = useTranslation()
   return (
-    <Anchor component={Link} to={`/sales/${sale.id}`} fw={600}>
+    <RowLink to={`/sales/${sale.id}`}>
       {t('common.documentNumber', { number: sale.number })}
-    </Anchor>
+    </RowLink>
   )
 }
 
 function SaleTable({ items }: { items: SaleListItem[] }) {
   const { t } = useTranslation()
+  const columns: DataTableColumn<SaleListItem>[] = [
+    {
+      key: 'number',
+      header: t('customers.purchases.number'),
+      nowrap: true,
+      cell: (sale) => <SaleLink sale={sale} />,
+    },
+    {
+      key: 'date',
+      header: t('customers.purchases.date'),
+      nowrap: true,
+      cell: (sale) => formatDateTime(sale.sold_at),
+    },
+    {
+      key: 'total',
+      header: t('customers.purchases.total'),
+      numeric: true,
+      cell: (sale) => formatMoney(sale.total),
+    },
+    {
+      key: 'status',
+      header: t('customers.purchases.status'),
+      cell: (sale) => <SaleStatusBadge status={sale.status} />,
+    },
+  ]
   return (
-    <Table.ScrollContainer minWidth={500} visibleFrom="sm">
-      <Table verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('customers.purchases.number')}</Table.Th>
-            <Table.Th>{t('customers.purchases.date')}</Table.Th>
-            <Table.Th ta="right">{t('customers.purchases.total')}</Table.Th>
-            <Table.Th>{t('customers.purchases.status')}</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {items.map((sale) => (
-            <Table.Tr key={sale.id}>
-              <Table.Td>
-                <SaleLink sale={sale} />
-              </Table.Td>
-              <Table.Td>{formatDateTime(sale.sold_at)}</Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {formatMoney(sale.total)}
-              </Table.Td>
-              <Table.Td>
-                <SaleStatusBadge status={sale.status} />
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
-  )
-}
-
-function SaleCards({ items }: { items: SaleListItem[] }) {
-  return (
-    <Stack gap="sm" hiddenFrom="sm">
-      {items.map((sale) => (
-        <Card key={sale.id} withBorder padding="sm">
-          <Group justify="space-between">
-            <SaleLink sale={sale} />
+    <DataTable
+      rows={items}
+      rowKey={(sale) => sale.id}
+      columns={columns}
+      rowHref={(sale) => `/sales/${sale.id}`}
+      dimmed={(sale) => sale.status === 'cancelled'}
+      mobileCard={(sale) => (
+        <Stack gap="xs">
+          <Group justify="space-between" wrap="nowrap">
+            <Text fw={600}>{t('common.documentNumber', { number: sale.number })}</Text>
             <SaleStatusBadge status={sale.status} />
           </Group>
           <Group justify="space-between">
@@ -74,9 +81,9 @@ function SaleCards({ items }: { items: SaleListItem[] }) {
             </Text>
             <Text fw={600}>{formatMoney(sale.total)}</Text>
           </Group>
-        </Card>
-      ))}
-    </Stack>
+        </Stack>
+      )}
+    />
   )
 }
 
@@ -85,16 +92,15 @@ function PurchaseHistory({ customerId }: { customerId: number }) {
   const sales = useSales({ customerId, page })
   const { t } = useTranslation()
 
-  if (sales.isPending) return <Loader />
+  if (sales.isPending) return <PageLoader />
   if (sales.isError) return <QueryError error={sales.error} onRetry={() => sales.refetch()} />
   if (sales.data.total === 0) return <Text c="dimmed">{t('customers.purchases.empty')}</Text>
   return (
-    <Stack>
+    <Stack gap="md">
       <Text fw={600}>
         {t('customers.purchases.sum', { amount: formatMoney(sales.data.sum_posted) })}
       </Text>
       <SaleTable items={sales.data.items} />
-      <SaleCards items={sales.data.items} />
       <ListPagination total={sales.data.total} page={page} onChange={setPage} />
     </Stack>
   )
@@ -105,34 +111,36 @@ function CustomerDetails({ customer }: { customer: Customer }) {
   const { t } = useTranslation()
 
   return (
-    <Stack>
-      <Anchor component={Link} to="/customers" size="sm">
-        {t('customers.card.back')}
-      </Anchor>
-
-      <Group justify="space-between" align="flex-start">
-        <Stack gap={4}>
-          <Title order={2}>{customer.name}</Title>
-          {customer.phone && (
-            <Group gap="xs">
-              <Text size="lg">{customer.phone}</Text>
-              <Anchor href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} size="sm">
+    <PageContainer>
+      <PageHeader
+        back={{ to: '/customers', label: t('customers.card.back') }}
+        title={customer.name}
+        subtitle={
+          customer.phone && (
+            <Group gap="sm" component="span">
+              <span>{customer.phone}</span>
+              <Anchor href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} fw={600}>
                 {t('customers.card.call')}
               </Anchor>
             </Group>
-          )}
-          {customer.note && <Text style={{ whiteSpace: 'pre-wrap' }}>{customer.note}</Text>}
-        </Stack>
-        <Button onClick={edit.open}>{t('customers.card.edit')}</Button>
-      </Group>
+          )
+        }
+        actions={<Button onClick={edit.open}>{t('customers.card.edit')}</Button>}
+      />
 
-      <Title order={3} mt="md">
-        {t('customers.purchases.title')}
-      </Title>
-      <PurchaseHistory customerId={customer.id} />
+      {customer.note && (
+        <Card>
+          <Text style={{ whiteSpace: 'pre-wrap' }}>{customer.note}</Text>
+        </Card>
+      )}
+
+      <Stack gap="md">
+        <SectionTitle>{t('customers.purchases.title')}</SectionTitle>
+        <PurchaseHistory customerId={customer.id} />
+      </Stack>
 
       <CustomerFormModal opened={editOpened} onClose={edit.close} customer={customer} />
-    </Stack>
+    </PageContainer>
   )
 }
 
@@ -141,8 +149,7 @@ function CustomerNotFound() {
   return (
     <NotFoundState
       title={t('customers.notFound')}
-      backTo="/customers"
-      backLabel={t('customers.backToList')}
+      back={{ to: '/customers', label: t('customers.card.back') }}
     />
   )
 }
@@ -150,10 +157,14 @@ function CustomerNotFound() {
 function CustomerLoader({ id }: { id: number }) {
   const customer = useCustomer(id)
 
-  if (customer.isPending) return <Loader />
+  if (customer.isPending) return <PageLoader />
   if (customer.isError) {
     if (isApiError(customer.error) && customer.error.status === 404) return <CustomerNotFound />
-    return <QueryError error={customer.error} onRetry={() => customer.refetch()} />
+    return (
+      <PageContainer>
+        <QueryError error={customer.error} onRetry={() => customer.refetch()} />
+      </PageContainer>
+    )
   }
   return <CustomerDetails customer={customer.data} />
 }

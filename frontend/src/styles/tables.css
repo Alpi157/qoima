@@ -1,0 +1,39 @@
+/* Tables of design-system.md, «Поверхности». */
+.q-table {
+  --table-border-color: var(--q-color-divider);
+  --table-hover-color: var(--q-color-table-head);
+}
+
+.q-table thead th {
+  background-color: var(--q-color-table-head);
+  color: var(--q-color-text-secondary);
+  font-size: var(--q-fz-caption);
+  line-height: var(--q-lh-caption);
+  font-weight: 600;
+  padding: var(--q-space-12) var(--q-space-16);
+  white-space: nowrap;
+}
+
+.q-table tbody td {
+  height: 56px;
+  padding: var(--q-space-8) var(--q-space-16);
+  font-size: var(--q-fz-body);
+  line-height: var(--q-lh-body);
+}
+
+.q-table [data-numeric] {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.q-table [data-nowrap] {
+  white-space: nowrap;
+}
+
+.q-table tr[data-clickable] {
+  cursor: pointer;
+}
+
+.q-table tr[data-dimmed] td {
+  color: var(--q-color-text-secondary);
+}

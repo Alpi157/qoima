@@ -59,7 +59,11 @@ describe('SalesPage', () => {
     mockSales()
     renderPage()
 
-    expect(await screen.findByText('Итого за период: 37 500 ₸')).toBeTruthy()
+    expect(await screen.findByText('Итого за период')).toBeTruthy()
+    // Stat: the caption and the number with its unit under it.
+    expect(screen.getByText('Итого за период').parentElement!.textContent).toBe(
+      'Итого за период37\u00a0500\u00a0₸',
+    )
     expect(screen.getByText('Продаж: 2')).toBeTruthy()
     expect(screen.getAllByText('Ержан').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Отменена').length).toBeGreaterThan(0)

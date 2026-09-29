@@ -1,0 +1,63 @@
+/* Main screen tiles (docs/design/simple-ui.md, «Главный»; sizes from design-system.md). */
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--q-space-24);
+  min-height: 270px;
+  padding: var(--q-space-32);
+  border-radius: var(--q-radius-tile);
+  text-decoration: none;
+  transition: filter var(--q-motion-press);
+}
+
+.home-tile:hover {
+  filter: brightness(0.94);
+}
+
+.home-tile[data-kind='sell'] {
+  background: var(--q-color-sale);
+  color: var(--q-color-surface);
+}
+
+.home-tile[data-kind='receive'] {
+  background: var(--q-color-receive);
+  color: var(--q-color-surface);
+}
+
+.home-tile[data-kind='stock'] {
+  background: var(--q-color-surface);
+  color: var(--q-color-text);
+  border: 1px solid var(--q-color-field-border);
+}
+
+.home-tile-title {
+  font-size: var(--q-fz-display);
+  line-height: var(--q-lh-display);
+  font-weight: 700;
+}
+
+.home-tile-hint {
+  font-size: var(--q-fz-lead);
+  line-height: var(--q-lh-lead);
+}
+
+.home-tile[data-kind='stock'] .home-tile-hint {
+  color: var(--q-color-text-secondary);
+}
+
+/* On a phone the tiles stand one under another: smaller, the title as h2. */
+@media (max-width: 48em) {
+  .home-tile {
+    min-height: 0;
+    padding: var(--q-space-24);
+    gap: var(--q-space-12);
+  }
+
+  .home-tile-title {
+    font-size: var(--q-fz-h2);
+    line-height: var(--q-lh-h2);
+  }
+}

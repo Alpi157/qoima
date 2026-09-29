@@ -28,7 +28,7 @@ function ProductOption({ product }: { product: Product }) {
   return (
     <Group justify="space-between" wrap="nowrap" align="flex-start">
       <Stack gap={0} style={{ minWidth: 0 }}>
-        <Text size="lg" fw={700} style={{ wordBreak: 'break-all' }}>
+        <Text fw={600} style={{ wordBreak: 'break-all' }}>
           {product.article}
         </Text>
         <Text size="sm">{product.name}</Text>
@@ -37,7 +37,7 @@ function ProductOption({ product }: { product: Product }) {
         <Text size="sm" c={product.stock <= 0 ? 'red' : 'dimmed'}>
           {t('products.picker.stock', { stock: `${product.stock} ${unitLabel(product.unit)}` })}
         </Text>
-        <Text size="sm" fw={500}>
+        <Text size="sm" fw={600}>
           {formatMoney(product.sale_price)}
         </Text>
       </Stack>
@@ -108,6 +108,7 @@ export function ProductPicker({
             type="search"
             autoComplete="off"
             autoFocus={autoFocus}
+            size="lg"
             label={label}
             aria-label={label ? undefined : t('products.list.searchLabel')}
             placeholder={placeholder ?? t('products.list.searchPlaceholder')}
@@ -135,7 +136,7 @@ export function ProductPicker({
             ))}
             {nothingFound && settled && (
               <Combobox.Option value={CREATE_OPTION}>
-                <Text fw={500} c="blue">
+                <Text fw={600} c="blue">
                   {t('products.picker.create', { article: query })}
                 </Text>
               </Combobox.Option>

@@ -1,13 +1,15 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
 
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './layout/AppLayout'
-import { DEFAULT_PATH, LOGIN_PATH } from './lib/nextPath'
+import { LOGIN_PATH } from './lib/nextPath'
 import {
   CustomerPage,
   CustomersPage,
+  HomePage,
   InvoicePrintPage,
   LoginPage,
+  MorePage,
   NewReceiptPage,
   NewSalePage,
   NotFoundPage,
@@ -20,7 +22,7 @@ import {
   SettingsPage,
 } from './pages/lazyPages'
 
-export const router = createBrowserRouter([
+export const routes: RouteObject[] = [
   { path: LOGIN_PATH, element: <LoginPage /> },
   {
     element: <ProtectedRoute />,
@@ -30,8 +32,14 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { index: true, element: <Navigate to={DEFAULT_PATH} replace /> },
-          { path: 'sale', element: <NewSalePage /> },
+          { index: true, element: <HomePage /> },
+          { path: 'more', element: <MorePage /> },
+          // Until steps 16.2 and 16.3 the simple screens show the existing ones.
+          { path: 'sell', element: <NewSalePage /> },
+          { path: 'receive', element: <NewReceiptPage /> },
+          { path: 'stock', element: <ProductsPage /> },
+          { path: 'sale', element: <Navigate to="/sell" replace /> },
+          // Detailed sections opened from «Тағы»: their lists lead back with «← Тағы».
           { path: 'products', element: <ProductsPage /> },
           { path: 'products/:id', element: <ProductPage /> },
           { path: 'customers', element: <CustomersPage /> },
@@ -47,4 +55,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-])
+]
+
+export const router = createBrowserRouter(routes)

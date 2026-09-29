@@ -7,6 +7,7 @@ from app.customers.models import Customer
 from app.customers.schemas import CustomerCreate, CustomerPage, CustomerUpdate
 from app.db_utils import LIKE_ESCAPE, contains_pattern
 from app.errors import CustomerNotFoundError
+from app.sales.models import Sale
 
 
 def get_customer(db: Session, customer_id: int) -> Customer:
@@ -78,3 +79,30 @@ def search_customers(db: Session, q: str | None, limit: int, offset: int) -> Cus
         .offset(offset)
     ).scalars()
     return CustomerPage.model_validate({"items": list(customers), "total": total})
+
+
+def recent_customers(db: Session, limit: int) -> list[Customer]:
+    """Customers by their last posted sale; if there are fewer than limit, the newest customers
+    without posted sales follow."""
+    last_sale = (
+        select(Sale.customer_id, func.max(Sale.sold_at).label("last_sold_at"))
+        .where(Sale.status == "posted", Sale.customer_id.is_not(None))
+        .group_by(Sale.customer_id)
+        .subquery()
+    )
+    customers = list(
+        db.execute(
+            select(Customer)
+            .join(last_sale, last_sale.c.customer_id == Customer.id)
+            .order_by(last_sale.c.last_sold_at.desc(), Customer.id.desc())
+            .limit(limit)
+        ).scalars()
+    )
+    if len(customers) < limit:
+        customers += db.execute(
+            select(Customer)
+            .where(Customer.id.not_in(select(last_sale.c.customer_id)))
+            .order_by(Customer.created_at.desc(), Customer.id.desc())
+            .limit(limit - len(customers))
+        ).scalars()
+    return customers

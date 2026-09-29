@@ -3,18 +3,15 @@ import {
   Anchor,
   Box,
   Button,
-  Card,
   CloseButton,
   Grid,
   Group,
   NumberInput,
-  Paper,
   SimpleGrid,
   Stack,
   Table,
   Text,
   Textarea,
-  Title,
 } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import { useMediaQuery } from '@mantine/hooks'
@@ -30,11 +27,12 @@ import { ConfirmModal } from '../../components/ConfirmModal'
 import { type PickedCustomer, CustomerPicker } from '../../components/CustomerPicker'
 import { MoneyInput } from '../../components/MoneyInput'
 import { ProductPicker } from '../../components/ProductPicker'
+import { Card, PageContainer, PageHeader, Stat } from '../../components/ui'
 import { WIDE_SCREEN } from '../../lib/breakpoints'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { serverFormErrors } from '../../lib/formErrors'
 import { unitLabel } from '../../lib/labels'
-import { formatMoney, tiynToInput } from '../../lib/money'
+import { formatAmount, formatMoney, tiynToInput } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import type { Product } from '../products/api'
 import { SALE_REQUEST_CONFLICT, usePostSale } from './api'
@@ -91,7 +89,7 @@ function lineInputs({
     }
   }
   const qty = (
-    <Stack gap={2}>
+    <Stack gap="xs">
       <NumberInput
         ref={qtyRef}
         label={withLabels ? t('sales.new.qty') : undefined}
@@ -108,7 +106,7 @@ function lineInputs({
         w={withLabels ? undefined : 100}
       />
       {exceedsStock(line) && (
-        <Text size="sm" c="orange" fw={500}>
+        <Text size="sm" c="orange.9" fw={600}>
           {t('sales.new.inStock', { stock })}
         </Text>
       )}
@@ -143,18 +141,16 @@ function LineTableRow(props: LineRowProps) {
   const { product } = props.line
   return (
     <Table.Tr>
-      <Table.Td fw={700} style={{ wordBreak: 'break-all' }}>
+      <Table.Td fw={600} style={{ wordBreak: 'break-all' }}>
         {product.article}
       </Table.Td>
       <Table.Td>{product.name}</Table.Td>
-      <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
+      <Table.Td data-numeric>
         {product.stock} {unitLabel(product.unit)}
       </Table.Td>
       <Table.Td>{qty}</Table.Td>
       <Table.Td>{price}</Table.Td>
-      <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-        {sum}
-      </Table.Td>
+      <Table.Td data-numeric>{sum}</Table.Td>
       <Table.Td>{remove}</Table.Td>
     </Table.Tr>
   )
@@ -165,10 +161,10 @@ function LineCard(props: LineRowProps) {
   const { qty, price, remove, sum } = lineInputs({ ...props, withLabels: true, t })
   const { product } = props.line
   return (
-    <Card withBorder padding="sm">
+    <Card>
       <Group justify="space-between" wrap="nowrap" align="flex-start">
         <Stack gap={0} style={{ minWidth: 0 }}>
-          <Text size="lg" fw={700} style={{ wordBreak: 'break-all' }}>
+          <Text fw={600} style={{ wordBreak: 'break-all' }}>
             {product.article}
           </Text>
           <Text>{product.name}</Text>
@@ -178,11 +174,11 @@ function LineCard(props: LineRowProps) {
         </Stack>
         {remove}
       </Group>
-      <SimpleGrid cols={2} mt="xs">
+      <SimpleGrid cols={2} mt="md" spacing="md">
         {qty}
         {price}
       </SimpleGrid>
-      <Text ta="right" fw={500}>
+      <Text ta="right" fw={600} mt="md">
         {t('common.lineSum', { amount: sum })}
       </Text>
     </Card>
@@ -335,108 +331,117 @@ export function NewSalePage() {
         }
       }}
     >
-      <Title order={2} mb="md">
-        {t('sales.new.title')}
-      </Title>
-      <Grid gap="lg">
-        <Grid.Col span={{ base: 12, lg: 8 }}>
-          <Stack>
-            <ProductPicker
-              ref={pickerRef}
-              autoFocus
-              label={t('sales.new.addProduct')}
-              onSelect={addProduct}
-            />
-
-            {lines.length === 0 ? (
-              <Paper withBorder p="lg" radius="md">
-                <Text c="dimmed" ta="center">
-                  {t('sales.new.emptyLines')}
-                </Text>
-              </Paper>
-            ) : wide ? (
-              <Table.ScrollContainer minWidth={720}>
-                <Table verticalSpacing="xs">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>{t('sales.lines.article')}</Table.Th>
-                      <Table.Th>{t('sales.lines.name')}</Table.Th>
-                      <Table.Th ta="right">{t('sales.new.stock')}</Table.Th>
-                      <Table.Th>{t('sales.new.qty')}</Table.Th>
-                      <Table.Th>{t('sales.new.price')}</Table.Th>
-                      <Table.Th ta="right">{t('sales.lines.sum')}</Table.Th>
-                      <Table.Th />
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {lines.map((line) => (
-                      <LineTableRow key={line.key} {...rowProps(line)} />
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </Table.ScrollContainer>
-            ) : (
-              <Stack gap="sm">
-                {lines.map((line) => (
-                  <LineCard key={line.key} {...rowProps(line)} />
-                ))}
-              </Stack>
-            )}
-          </Stack>
-        </Grid.Col>
-
-        <Grid.Col span={{ base: 12, lg: 4 }}>
-          <Paper withBorder p="md" radius="md">
-            <Stack>
-              <CustomerPicker value={customer} onChange={setCustomer} />
-              <DateTimePicker
-                label={t('sales.new.date')}
-                valueFormat="DD.MM.YYYY HH:mm"
-                value={soldAt ?? nowLocalInput()}
-                maxDate={nowLocalInput()}
-                onChange={(value) => {
-                  setSoldAt(value)
-                  clearError('soldAt')
-                }}
-                error={fieldErrors.soldAt}
-              />
-              <Textarea
-                label={t('sales.new.note')}
-                autosize
-                minRows={1}
-                value={note}
-                onChange={(event) => {
-                  setNote(event.currentTarget.value)
-                  clearError('note')
-                }}
-                error={fieldErrors.note}
+      <PageContainer>
+        <PageHeader title={t('sales.new.title')} />
+        <Grid gap="lg">
+          <Grid.Col span={{ base: 12, lg: 8 }}>
+            <Stack gap="lg">
+              <ProductPicker
+                ref={pickerRef}
+                autoFocus
+                label={t('sales.new.addProduct')}
+                onSelect={addProduct}
               />
 
-              <Group justify="space-between" align="baseline">
-                <Text size="xl" fw={700}>
-                  {t('sales.new.total')}
-                </Text>
-                <Text fz={32} fw={700} data-testid="sale-total">
-                  {formatMoney(total)}
-                </Text>
-              </Group>
-
-              {formError && (
-                <Alert color="red" role="alert">
-                  {formError}
-                </Alert>
+              {lines.length === 0 ? (
+                <Card>
+                  <Text c="dimmed" ta="center">
+                    {t('sales.new.emptyLines')}
+                  </Text>
+                </Card>
+              ) : wide ? (
+                <Card padding={0}>
+                  <Table.ScrollContainer minWidth={720} type="native">
+                    <Table className="q-table">
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>{t('sales.lines.article')}</Table.Th>
+                          <Table.Th>{t('sales.lines.name')}</Table.Th>
+                          <Table.Th data-numeric>{t('sales.new.stock')}</Table.Th>
+                          <Table.Th>{t('sales.new.qty')}</Table.Th>
+                          <Table.Th>{t('sales.new.price')}</Table.Th>
+                          <Table.Th data-numeric>{t('sales.lines.sum')}</Table.Th>
+                          <Table.Th />
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {lines.map((line) => (
+                          <LineTableRow key={line.key} {...rowProps(line)} />
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Table.ScrollContainer>
+                </Card>
+              ) : (
+                <Stack gap="md">
+                  {lines.map((line) => (
+                    <LineCard key={line.key} {...rowProps(line)} />
+                  ))}
+                </Stack>
               )}
-
-              <Button size="lg" onClick={submit} disabled={!canPost} loading={post.isPending}>
-                {t('sales.new.submit')}
-              </Button>
-              <Text size="xs" c="dimmed" ta="center">
-                {t('sales.new.submitHint')}
-              </Text>
             </Stack>
-          </Paper>
-        </Grid.Col>
-      </Grid>
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, lg: 4 }}>
+            <Card>
+              <Stack gap="lg">
+                <CustomerPicker value={customer} onChange={setCustomer} />
+                <DateTimePicker
+                  label={t('sales.new.date')}
+                  valueFormat="DD.MM.YYYY HH:mm"
+                  value={soldAt ?? nowLocalInput()}
+                  maxDate={nowLocalInput()}
+                  onChange={(value) => {
+                    setSoldAt(value)
+                    clearError('soldAt')
+                  }}
+                  error={fieldErrors.soldAt}
+                />
+                <Textarea
+                  label={t('sales.new.note')}
+                  autosize
+                  minRows={1}
+                  value={note}
+                  onChange={(event) => {
+                    setNote(event.currentTarget.value)
+                    clearError('note')
+                  }}
+                  error={fieldErrors.note}
+                />
+
+                <Stat
+                  size="display"
+                  label={t('sales.new.total')}
+                  value={formatAmount(total)}
+                  unit="₸"
+                  testId="sale-total"
+                />
+
+                {formError && (
+                  <Alert color="red" role="alert">
+                    {formError}
+                  </Alert>
+                )}
+
+                <Stack gap="xs">
+                  <Button
+                    size="lg"
+                    color="green"
+                    onClick={submit}
+                    disabled={!canPost}
+                    loading={post.isPending}
+                  >
+                    {t('sales.new.submit')}
+                  </Button>
+                  <Text size="sm" c="dimmed" ta="center">
+                    {t('sales.new.submitHint')}
+                  </Text>
+                </Stack>
+              </Stack>
+            </Card>
+          </Grid.Col>
+        </Grid>
+      </PageContainer>
 
       <ConfirmModal
         opened={blocker.state === 'blocked'}

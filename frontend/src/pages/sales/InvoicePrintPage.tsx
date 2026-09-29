@@ -343,8 +343,7 @@ function SaleNotFound() {
     <Box p="md">
       <NotFoundState
         title={t('sales.notFound')}
-        backTo="/sales"
-        backLabel={t('sales.backToList')}
+        back={{ to: '/sales', label: t('sales.card.back') }}
       />
     </Box>
   )

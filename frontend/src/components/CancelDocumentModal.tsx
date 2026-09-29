@@ -78,7 +78,7 @@ export function CancelDocumentModal<T>({
         noValidate
       >
         <Stack>
-          <Text size="sm">{description}</Text>
+          <Text>{description}</Text>
           <Textarea
             label={t('common.cancelDocument.reason')}
             required
@@ -97,7 +97,7 @@ export function CancelDocumentModal<T>({
               {formError}
             </Alert>
           )}
-          <Group justify="flex-end">
+          <Group justify="flex-end" gap="sm" className="q-modal-actions">
             <Button variant="default" onClick={close} disabled={cancel.isPending}>
               {t('common.cancelDocument.keep')}
             </Button>

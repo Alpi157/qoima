@@ -1,6 +1,13 @@
 import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
 import '@mantine/notifications/styles.css'
+import '@fontsource/fira-sans/400.css'
+import '@fontsource/fira-sans/500.css'
+import '@fontsource/fira-sans/600.css'
+import '@fontsource/fira-sans/700.css'
+import './styles/fonts.css'
+import './styles/global.css'
+import './styles/tables.css'
 import './i18n'
 
 import { MantineProvider } from '@mantine/core'
@@ -16,7 +23,7 @@ import { LocalizedDates } from './components/LocalizedDates'
 import { PageLoader } from './components/PageLoader'
 import { LOGIN_PATH, loginPathFor } from './lib/nextPath'
 import { router } from './router'
-import { theme } from './theme'
+import { cssVariablesResolver, theme } from './theme'
 
 setUnauthorizedHandler(() => {
   const { pathname, search } = router.state.location
@@ -28,7 +35,11 @@ setUnauthorizedHandler(() => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="light">
+    <MantineProvider
+      theme={theme}
+      cssVariablesResolver={cssVariablesResolver}
+      defaultColorScheme="light"
+    >
       <Notifications position="top-right" />
       <LocalizedDates>
         <QueryClientProvider client={queryClient}>

@@ -1,17 +1,21 @@
-import { Button, Stack, Title } from '@mantine/core'
+import { Button } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
-import { DEFAULT_PATH } from '../lib/nextPath'
+import { HomeIcon } from '../components/icons'
+import { PageContainer, PageHeader } from '../components/ui'
+import { HOME_PATH } from '../lib/nextPath'
 
 export function NotFoundPage() {
   const { t } = useTranslation()
   return (
-    <Stack align="flex-start">
-      <Title order={2}>{t('common.notFound.title')}</Title>
-      <Button component={Link} to={DEFAULT_PATH}>
-        {t('common.notFound.toSale')}
-      </Button>
-    </Stack>
+    <PageContainer>
+      <PageHeader title={t('common.notFound.title')} />
+      <div>
+        <Button component={Link} to={HOME_PATH} size="lg" leftSection={<HomeIcon size={24} />}>
+          {t('common.notFound.toHome')}
+        </Button>
+      </div>
+    </PageContainer>
   )
 }

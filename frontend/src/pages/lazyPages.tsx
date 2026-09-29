@@ -42,3 +42,5 @@ export const SalesPage = lazy(() =>
 export const SettingsPage = lazy(() =>
   import('./settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
+export const HomePage = lazy(() => import('./home/HomePage').then((m) => ({ default: m.HomePage })))
+export const MorePage = lazy(() => import('./more/MorePage').then((m) => ({ default: m.MorePage })))

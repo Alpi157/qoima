@@ -1,25 +1,21 @@
-import {
-  Anchor,
-  Badge,
-  Box,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Stack,
-  Switch,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Box, Button, Group, Loader, Stack, Switch, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
 import { EmptyState } from '../../components/EmptyState'
 import { ListPagination } from '../../components/ListPagination'
 import { QueryError } from '../../components/QueryError'
 import { SearchInput } from '../../components/SearchInput'
+import {
+  DataTable,
+  type DataTableColumn,
+  PageContainer,
+  PageHeader,
+  RowLink,
+  StatusBadge,
+  useBackToMore,
+} from '../../components/ui'
 import { unitLabel } from '../../lib/labels'
 import { formatMoney } from '../../lib/money'
 import { useListParams } from '../../lib/useListParams'
@@ -27,12 +23,16 @@ import { type Product, useProducts } from './api'
 import { ProductFormModal } from './ProductFormModal'
 
 const ARCHIVED_PARAM = 'archived'
+// Until step 16.3 the simple «Қоймада не бар?» screen shows this list without the way back.
+const STOCK_PATH = '/stock'
 
-function StockText({ product, size }: { product: Product; size?: string }) {
+const productPath = (product: Product) => `/products/${product.id}`
+
+function StockText({ product }: { product: Product }) {
   return (
     <Text
       span
-      size={size}
+      inherit
       c={product.stock <= 0 ? 'red' : undefined}
       fw={product.stock <= 0 ? 600 : undefined}
     >
@@ -43,91 +43,63 @@ function StockText({ product, size }: { product: Product; size?: string }) {
 
 function ArchivedBadge() {
   const { t } = useTranslation()
+  return <StatusBadge tone="archived">{t('products.archivedBadge')}</StatusBadge>
+}
+
+function ProductCard({ product }: { product: Product }) {
   return (
-    <Badge color="gray" variant="light">
-      {t('products.archivedBadge')}
-    </Badge>
+    <Stack gap="xs">
+      <Group justify="space-between" wrap="nowrap" align="flex-start">
+        <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
+          {product.article}
+        </Text>
+        {product.is_archived && <ArchivedBadge />}
+      </Group>
+      <Text>{product.name}</Text>
+      <Group justify="space-between">
+        <Text>{formatMoney(product.sale_price)}</Text>
+        <StockText product={product} />
+      </Group>
+    </Stack>
   )
 }
 
 function ProductTable({ items }: { items: Product[] }) {
-  const navigate = useNavigate()
   const { t } = useTranslation()
+  const columns: DataTableColumn<Product>[] = [
+    {
+      key: 'article',
+      header: t('products.list.article'),
+      cell: (product) => (
+        <Group gap="xs" wrap="nowrap">
+          <RowLink to={productPath(product)}>{product.article}</RowLink>
+          {product.is_archived && <ArchivedBadge />}
+        </Group>
+      ),
+    },
+    { key: 'name', header: t('products.list.name'), cell: (product) => product.name },
+    {
+      key: 'price',
+      header: t('products.list.price'),
+      numeric: true,
+      cell: (product) => formatMoney(product.sale_price),
+    },
+    {
+      key: 'stock',
+      header: t('products.list.stock'),
+      numeric: true,
+      cell: (product) => <StockText product={product} />,
+    },
+  ]
   return (
-    <Table.ScrollContainer minWidth={600} visibleFrom="sm">
-      <Table highlightOnHover verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('products.list.article')}</Table.Th>
-            <Table.Th>{t('products.list.name')}</Table.Th>
-            <Table.Th ta="right">{t('products.list.price')}</Table.Th>
-            <Table.Th ta="right">{t('products.list.stock')}</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {items.map((product) => (
-            <Table.Tr
-              key={product.id}
-              onClick={() => navigate(`/products/${product.id}`)}
-              style={{ cursor: 'pointer' }}
-              c={product.is_archived ? 'dimmed' : undefined}
-            >
-              <Table.Td>
-                <Group gap="xs" wrap="nowrap">
-                  {/* A real link, so the card opens from the keyboard and in a new tab. */}
-                  <Anchor
-                    component={Link}
-                    to={`/products/${product.id}`}
-                    fw={600}
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {product.article}
-                  </Anchor>
-                  {product.is_archived && <ArchivedBadge />}
-                </Group>
-              </Table.Td>
-              <Table.Td>{product.name}</Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {formatMoney(product.sale_price)}
-              </Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                <StockText product={product} />
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
-  )
-}
-
-function ProductCards({ items }: { items: Product[] }) {
-  return (
-    <Stack gap="sm" hiddenFrom="sm">
-      {items.map((product) => (
-        <Card
-          key={product.id}
-          component={Link}
-          to={`/products/${product.id}`}
-          withBorder
-          padding="sm"
-          c={product.is_archived ? 'dimmed' : undefined}
-          style={{ textDecoration: 'none' }}
-        >
-          <Group justify="space-between" wrap="nowrap" align="flex-start">
-            <Text size="xl" fw={700} style={{ wordBreak: 'break-all' }}>
-              {product.article}
-            </Text>
-            {product.is_archived && <ArchivedBadge />}
-          </Group>
-          <Text>{product.name}</Text>
-          <Group justify="space-between" mt={4}>
-            <Text fw={500}>{formatMoney(product.sale_price)}</Text>
-            <StockText product={product} />
-          </Group>
-        </Card>
-      ))}
-    </Stack>
+    <DataTable
+      rows={items}
+      rowKey={(product) => product.id}
+      columns={columns}
+      rowHref={productPath}
+      dimmed={(product) => product.is_archived}
+      mobileCard={(product) => <ProductCard product={product} />}
+    />
   )
 }
 
@@ -137,27 +109,32 @@ export function ProductsPage() {
   const [formOpened, form] = useDisclosure()
   const products = useProducts({ q, includeArchived, page })
   const { t } = useTranslation()
+  const backToMore = useBackToMore()
+  const isStockScreen = useLocation().pathname === STOCK_PATH
 
   const isFiltered = Boolean(q) || includeArchived
 
   return (
-    <Stack>
-      <Group justify="space-between">
-        <Title order={2}>{t('products.list.title')}</Title>
-        <Button onClick={form.open}>{t('products.list.add')}</Button>
-      </Group>
+    <PageContainer>
+      <PageHeader
+        back={isStockScreen ? undefined : backToMore}
+        title={t('products.list.title')}
+        actions={<Button onClick={form.open}>{t('products.list.add')}</Button>}
+      />
 
-      <Group align="center">
-        <Box style={{ flex: 1, minWidth: 220 }}>
+      <Group align="center" gap="lg">
+        <Box style={{ flex: '1 1 280px' }}>
           <SearchInput
             value={q}
             onSearch={setQ}
             autoFocus
+            size="lg"
             placeholder={t('products.list.searchPlaceholder')}
             aria-label={t('products.list.searchLabel')}
           />
         </Box>
         <Switch
+          size="md"
           label={t('products.list.showArchived')}
           checked={includeArchived}
           onChange={(event) => setParam(ARCHIVED_PARAM, event.currentTarget.checked ? '1' : null)}
@@ -181,17 +158,16 @@ export function ProductsPage() {
           />
         )
       ) : (
-        <>
+        <Stack gap="md">
           <Text c="dimmed" size="sm">
             {t('common.found', { count: products.data.total })}
           </Text>
           <ProductTable items={products.data.items} />
-          <ProductCards items={products.data.items} />
           <ListPagination total={products.data.total} page={page} onChange={setPage} />
-        </>
+        </Stack>
       )}
 
       <ProductFormModal opened={formOpened} onClose={form.close} />
-    </Stack>
+    </PageContainer>
   )
 }

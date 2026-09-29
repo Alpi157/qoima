@@ -1,15 +1,4 @@
-import {
-  Anchor,
-  Button,
-  Card,
-  Group,
-  Loader,
-  SegmentedControl,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Button, Group, Loader, Stack, Text } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -17,6 +6,15 @@ import { EmptyState } from '../../components/EmptyState'
 import { ListPagination } from '../../components/ListPagination'
 import { PeriodInput } from '../../components/PeriodInput'
 import { QueryError } from '../../components/QueryError'
+import { StatusFilter } from '../../components/StatusFilter'
+import {
+  DataTable,
+  type DataTableColumn,
+  PageContainer,
+  PageHeader,
+  RowLink,
+  useBackToMore,
+} from '../../components/ui'
 import { dateParam, formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { useListParams } from '../../lib/useListParams'
@@ -33,93 +31,86 @@ function costText(receipt: ReceiptListItem): string {
   return receipt.total_cost !== null ? formatMoney(receipt.total_cost) : '—'
 }
 
-function ReceiptTable({ items }: { items: ReceiptListItem[] }) {
-  const navigate = useNavigate()
+const receiptPath = (receipt: ReceiptListItem) => `/receipts/${receipt.id}`
+
+function ReceiptCard({ receipt }: { receipt: ReceiptListItem }) {
   const { t } = useTranslation()
   return (
-    <Table.ScrollContainer minWidth={800} visibleFrom="sm">
-      <Table highlightOnHover verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('receipts.list.number')}</Table.Th>
-            <Table.Th>{t('receipts.list.date')}</Table.Th>
-            <Table.Th>{t('receipts.list.supplier')}</Table.Th>
-            <Table.Th ta="right">{t('receipts.list.positions')}</Table.Th>
-            <Table.Th ta="right">{t('receipts.list.pieces')}</Table.Th>
-            <Table.Th ta="right">{t('receipts.list.cost')}</Table.Th>
-            <Table.Th>{t('receipts.list.status')}</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {items.map((receipt) => (
-            <Table.Tr
-              key={receipt.id}
-              onClick={() => navigate(`/receipts/${receipt.id}`)}
-              style={{ cursor: 'pointer' }}
-            >
-              <Table.Td>
-                <Anchor
-                  component={Link}
-                  to={`/receipts/${receipt.id}`}
-                  fw={600}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {receipt.number}
-                </Anchor>
-              </Table.Td>
-              <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                {formatDateTime(receipt.received_at)}
-              </Table.Td>
-              <Table.Td>{receipt.supplier ?? '—'}</Table.Td>
-              <Table.Td ta="right">{receipt.lines_count}</Table.Td>
-              <Table.Td ta="right">{receipt.total_qty}</Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {costText(receipt)}
-              </Table.Td>
-              <Table.Td>
-                <ReceiptStatusBadge status={receipt.status} />
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="xs">
+      <Group justify="space-between" wrap="nowrap">
+        <Text fw={600} inherit>
+          {t('common.documentNumber', { number: receipt.number })}
+        </Text>
+        <ReceiptStatusBadge status={receipt.status} />
+      </Group>
+      <Text size="sm" c="dimmed">
+        {formatDateTime(receipt.received_at)}
+      </Text>
+      {receipt.supplier && <Text inherit>{receipt.supplier}</Text>}
+      <Group justify="space-between">
+        <Text size="sm" inherit>
+          {t('receipts.list.cardCounts', {
+            positions: receipt.lines_count,
+            pieces: receipt.total_qty,
+          })}
+        </Text>
+        <Text fw={600} inherit>
+          {costText(receipt)}
+        </Text>
+      </Group>
+    </Stack>
   )
 }
 
-function ReceiptCards({ items }: { items: ReceiptListItem[] }) {
+function ReceiptTable({ items }: { items: ReceiptListItem[] }) {
   const { t } = useTranslation()
+  const columns: DataTableColumn<ReceiptListItem>[] = [
+    {
+      key: 'number',
+      header: t('receipts.list.number'),
+      nowrap: true,
+      cell: (receipt) => <RowLink to={receiptPath(receipt)}>{receipt.number}</RowLink>,
+    },
+    {
+      key: 'date',
+      header: t('receipts.list.date'),
+      nowrap: true,
+      cell: (receipt) => formatDateTime(receipt.received_at),
+    },
+    {
+      key: 'supplier',
+      header: t('receipts.list.supplier'),
+      cell: (receipt) => receipt.supplier ?? '—',
+    },
+    {
+      key: 'positions',
+      header: t('receipts.list.positions'),
+      numeric: true,
+      cell: (receipt) => receipt.lines_count,
+    },
+    {
+      key: 'pieces',
+      header: t('receipts.list.pieces'),
+      numeric: true,
+      cell: (receipt) => receipt.total_qty,
+    },
+    { key: 'cost', header: t('receipts.list.cost'), numeric: true, cell: costText },
+    {
+      key: 'status',
+      header: t('receipts.list.status'),
+      cell: (receipt) => <ReceiptStatusBadge status={receipt.status} />,
+    },
+  ]
   return (
-    <Stack gap="sm" hiddenFrom="sm">
-      {items.map((receipt) => (
-        <Card
-          key={receipt.id}
-          component={Link}
-          to={`/receipts/${receipt.id}`}
-          withBorder
-          padding="sm"
-          style={{ textDecoration: 'none' }}
-        >
-          <Group justify="space-between" wrap="nowrap">
-            <Text fw={700}>{t('common.documentNumber', { number: receipt.number })}</Text>
-            <ReceiptStatusBadge status={receipt.status} />
-          </Group>
-          <Text size="sm" c="dimmed">
-            {formatDateTime(receipt.received_at)}
-          </Text>
-          {receipt.supplier && <Text>{receipt.supplier}</Text>}
-          <Group justify="space-between" mt={4}>
-            <Text size="sm">
-              {t('receipts.list.cardCounts', {
-                positions: receipt.lines_count,
-                pieces: receipt.total_qty,
-              })}
-            </Text>
-            <Text fw={500}>{costText(receipt)}</Text>
-          </Group>
-        </Card>
-      ))}
-    </Stack>
+    <DataTable
+      rows={items}
+      rowKey={(receipt) => receipt.id}
+      columns={columns}
+      rowHref={receiptPath}
+      dimmed={(receipt) => receipt.status === 'cancelled'}
+      minWidth={900}
+      mobileCard={(receipt) => <ReceiptCard receipt={receipt} />}
+    />
   )
 }
 
@@ -132,23 +123,27 @@ export function ReceiptsPage() {
   const receipts = useReceipts({ from, to, status, page })
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const backToMore = useBackToMore()
 
   const isFiltered = Boolean(from || to || status)
 
   return (
-    <Stack>
-      <Group justify="space-between">
-        <Title order={2}>{t('receipts.list.title')}</Title>
-        <Button component={Link} to="/receipts/new">
-          {t('receipts.list.new')}
-        </Button>
-      </Group>
+    <PageContainer>
+      <PageHeader
+        back={backToMore}
+        title={t('receipts.list.title')}
+        actions={
+          <Button component={Link} to="/receipts/new">
+            {t('receipts.list.new')}
+          </Button>
+        }
+      />
 
-      <Group align="flex-end">
+      <Group align="flex-end" gap="md">
         <PeriodInput from={from} to={to} onChange={(from, to) => setParams({ from, to })} />
-        <SegmentedControl
-          aria-label={t('receipts.list.status')}
-          data={STATUS_OPTIONS.map(({ value, label }) => ({ value, label: t(label) }))}
+        <StatusFilter
+          label={t('receipts.list.status')}
+          options={STATUS_OPTIONS.map(({ value, label }) => ({ value, label: t(label) }))}
           value={status || 'all'}
           onChange={(value) => setParam('status', value === 'all' ? null : value)}
         />
@@ -171,15 +166,14 @@ export function ReceiptsPage() {
           />
         )
       ) : (
-        <>
+        <Stack gap="md">
           <Text c="dimmed" size="sm">
             {t('common.found', { count: receipts.data.total })}
           </Text>
           <ReceiptTable items={receipts.data.items} />
-          <ReceiptCards items={receipts.data.items} />
           <ListPagination total={receipts.data.total} page={page} onChange={setPage} />
-        </>
+        </Stack>
       )}
-    </Stack>
+    </PageContainer>
   )
 }

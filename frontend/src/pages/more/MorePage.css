@@ -1,0 +1,23 @@
+/* Rows of «Тағы»: a card each, an icon with its label, the lead font. */
+.q-more-row {
+  display: flex;
+  align-items: center;
+  gap: var(--q-space-16);
+  min-height: var(--q-control-lg);
+  padding: var(--q-space-12) var(--q-space-24);
+  background-color: var(--q-color-surface);
+  border: 1px solid var(--q-color-border);
+  border-radius: var(--q-radius-card);
+  font-size: var(--q-fz-lead);
+  line-height: var(--q-lh-lead);
+  font-weight: 600;
+  transition: background-color var(--q-motion-press);
+}
+
+.q-more-row:hover {
+  background-color: var(--q-color-table-head);
+}
+
+.q-more-row-label {
+  flex-grow: 1;
+}

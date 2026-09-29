@@ -20,7 +20,7 @@ export function LanguageSwitcher({ onChange, disabled = false }: LanguageSwitche
       {LANGUAGES.map(({ code, label }) => (
         <Button
           key={code}
-          size="xs"
+          size="sm"
           lang={code}
           variant={code === active ? 'filled' : 'default'}
           aria-pressed={code === active}

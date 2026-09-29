@@ -1,24 +1,21 @@
-import {
-  Alert,
-  Anchor,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Paper,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Anchor, Button, Group, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
 import { CancelDocumentModal } from '../../components/CancelDocumentModal'
+import { CancelledNotice } from '../../components/CancelledNotice'
 import { NotFoundState } from '../../components/NotFoundState'
+import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
+import {
+  Card,
+  DataTable,
+  type DataTableColumn,
+  PageContainer,
+  PageHeader,
+} from '../../components/ui'
 import { formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
@@ -43,58 +40,52 @@ function ProductLink({ line }: { line: ReceiptLineOut }) {
   )
 }
 
-function LinesTable({ lines }: { lines: ReceiptLineOut[] }) {
-  const { t } = useTranslation()
+function LineCard({ line }: { line: ReceiptLineOut }) {
   return (
-    <Table.ScrollContainer minWidth={600} visibleFrom="sm">
-      <Table verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('receipts.lines.article')}</Table.Th>
-            <Table.Th>{t('receipts.lines.name')}</Table.Th>
-            <Table.Th ta="right">{t('receipts.lines.qty')}</Table.Th>
-            <Table.Th ta="right">{t('receipts.lines.cost')}</Table.Th>
-            <Table.Th ta="right">{t('receipts.lines.sum')}</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {lines.map((line) => (
-            <Table.Tr key={line.product_id}>
-              <Table.Td>
-                <ProductLink line={line} />
-              </Table.Td>
-              <Table.Td>{line.name}</Table.Td>
-              <Table.Td ta="right">{line.qty}</Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {money(line.unit_cost)}
-              </Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {money(lineSum(line))}
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="xs">
+      <ProductLink line={line} />
+      <Text>{line.name}</Text>
+      <Group justify="space-between">
+        <Text size="sm">
+          {line.qty} × {money(line.unit_cost)}
+        </Text>
+        <Text fw={600}>{money(lineSum(line))}</Text>
+      </Group>
+    </Stack>
   )
 }
 
-function LinesCards({ lines }: { lines: ReceiptLineOut[] }) {
+function LinesTable({ lines }: { lines: ReceiptLineOut[] }) {
+  const { t } = useTranslation()
+  const columns: DataTableColumn<ReceiptLineOut>[] = [
+    {
+      key: 'article',
+      header: t('receipts.lines.article'),
+      nowrap: true,
+      cell: (line) => <ProductLink line={line} />,
+    },
+    { key: 'name', header: t('receipts.lines.name'), cell: (line) => line.name },
+    { key: 'qty', header: t('receipts.lines.qty'), numeric: true, cell: (line) => line.qty },
+    {
+      key: 'cost',
+      header: t('receipts.lines.cost'),
+      numeric: true,
+      cell: (line) => money(line.unit_cost),
+    },
+    {
+      key: 'sum',
+      header: t('receipts.lines.sum'),
+      numeric: true,
+      cell: (line) => money(lineSum(line)),
+    },
+  ]
   return (
-    <Stack gap="sm" hiddenFrom="sm">
-      {lines.map((line) => (
-        <Card key={line.product_id} withBorder padding="sm">
-          <ProductLink line={line} />
-          <Text>{line.name}</Text>
-          <Group justify="space-between">
-            <Text size="sm">
-              {line.qty} × {money(line.unit_cost)}
-            </Text>
-            <Text fw={500}>{money(lineSum(line))}</Text>
-          </Group>
-        </Card>
-      ))}
-    </Stack>
+    <DataTable
+      rows={lines}
+      rowKey={(line) => line.product_id}
+      columns={columns}
+      mobileCard={(line) => <LineCard line={line} />}
+    />
   )
 }
 
@@ -104,69 +95,52 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
   const { t } = useTranslation()
 
   return (
-    <Stack>
-      <Anchor component={Link} to="/receipts" size="sm">
-        {t('receipts.card.back')}
-      </Anchor>
-
-      <Group justify="space-between" align="flex-start">
-        <Group gap="sm">
-          <Title order={2}>
-            {t('receipts.card.title', {
-              number: receipt.number,
-              date: formatDateTime(receipt.received_at),
-            })}
-          </Title>
-          <ReceiptStatusBadge status={receipt.status} />
-        </Group>
-        {receipt.status === 'posted' && (
-          <Button color="red" variant="light" onClick={cancelModal.open}>
-            {t('receipts.cancel.confirm')}
-          </Button>
-        )}
-      </Group>
+    <PageContainer>
+      <PageHeader
+        back={{ to: '/receipts', label: t('receipts.card.back') }}
+        title={t('receipts.card.title', {
+          number: receipt.number,
+          date: formatDateTime(receipt.received_at),
+        })}
+        titleAside={<ReceiptStatusBadge status={receipt.status} />}
+        subtitle={t('common.postedBy', {
+          name: receipt.created_by_name,
+          date: formatDateTime(receipt.created_at),
+        })}
+        actions={
+          receipt.status === 'posted' && (
+            <Button variant="default" c="red" onClick={cancelModal.open}>
+              {t('receipts.cancel.confirm')}
+            </Button>
+          )
+        }
+      />
 
       {receipt.status === 'cancelled' && (
-        <Alert color="red" title={t('receipts.card.cancelled')}>
-          {receipt.cancelled_at && (
-            <Text size="sm">
-              {t('common.cancelled.when', { date: formatDateTime(receipt.cancelled_at) })}
-            </Text>
-          )}
-          {receipt.cancelled_by_name && (
-            <Text size="sm">{t('common.cancelled.who', { name: receipt.cancelled_by_name })}</Text>
-          )}
-          {receipt.cancel_reason && (
-            <Text size="sm">{t('common.cancelled.reason', { reason: receipt.cancel_reason })}</Text>
-          )}
-        </Alert>
+        <CancelledNotice title={t('receipts.card.cancelled')} document={receipt} />
       )}
 
-      <Stack gap={4}>
-        <Text>{t('receipts.card.supplier', { supplier: receipt.supplier ?? '—' })}</Text>
-        {receipt.note && (
-          <Text style={{ whiteSpace: 'pre-wrap' }}>
-            {t('receipts.card.note', { note: receipt.note })}
-          </Text>
-        )}
-        <Text c="dimmed" size="sm">
-          {t('common.postedBy', {
-            name: receipt.created_by_name,
-            date: formatDateTime(receipt.created_at),
-          })}
-        </Text>
+      <Card>
+        <Stack gap="xs">
+          <Text>{t('receipts.card.supplier', { supplier: receipt.supplier ?? '—' })}</Text>
+          {receipt.note && (
+            <Text style={{ whiteSpace: 'pre-wrap' }}>
+              {t('receipts.card.note', { note: receipt.note })}
+            </Text>
+          )}
+        </Stack>
+      </Card>
+
+      <Stack gap="md">
+        <LinesTable lines={receipt.lines} />
+        <Card>
+          <Group justify="space-between" gap="md">
+            <Text>{t('receipts.card.positions', { count: receipt.lines.length })}</Text>
+            <Text>{t('receipts.card.pieces', { count: receipt.total_qty })}</Text>
+            <Text fw={600}>{t('receipts.card.cost', { amount: money(receipt.total_cost) })}</Text>
+          </Group>
+        </Card>
       </Stack>
-
-      <LinesTable lines={receipt.lines} />
-      <LinesCards lines={receipt.lines} />
-
-      <Paper withBorder p="md" radius="md">
-        <Group justify="space-between">
-          <Text>{t('receipts.card.positions', { count: receipt.lines.length })}</Text>
-          <Text>{t('receipts.card.pieces', { count: receipt.total_qty })}</Text>
-          <Text fw={600}>{t('receipts.card.cost', { amount: money(receipt.total_cost) })}</Text>
-        </Group>
-      </Paper>
 
       <CancelDocumentModal
         opened={cancelOpened}
@@ -177,7 +151,7 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
         cancel={cancel}
         successMessage={(saved) => t('receipts.cancel.done', { number: saved.number })}
       />
-    </Stack>
+    </PageContainer>
   )
 }
 
@@ -186,8 +160,7 @@ function ReceiptNotFound() {
   return (
     <NotFoundState
       title={t('receipts.notFound')}
-      backTo="/receipts"
-      backLabel={t('receipts.backToList')}
+      back={{ to: '/receipts', label: t('receipts.card.back') }}
     />
   )
 }
@@ -195,10 +168,14 @@ function ReceiptNotFound() {
 function ReceiptLoader({ id }: { id: number }) {
   const receipt = useReceipt(id)
 
-  if (receipt.isPending) return <Loader />
+  if (receipt.isPending) return <PageLoader />
   if (receipt.isError) {
     if (isApiError(receipt.error) && receipt.error.status === 404) return <ReceiptNotFound />
-    return <QueryError error={receipt.error} onRetry={() => receipt.refetch()} />
+    return (
+      <PageContainer>
+        <QueryError error={receipt.error} onRetry={() => receipt.refetch()} />
+      </PageContainer>
+    )
   }
   return <ReceiptDetails receipt={receipt.data} />
 }

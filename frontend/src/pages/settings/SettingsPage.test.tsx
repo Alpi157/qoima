@@ -32,6 +32,23 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
+  it('«Нет бухгалтера» writes the phrase for the invoice', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'GET').mockReturnValue(ok(makeBusinessSettings({ chief_accountant: 'Иванова' })))
+    const put = vi.spyOn(api, 'PUT').mockReturnValue(ok(makeBusinessSettings()))
+    renderWithProviders(<SettingsPage />)
+
+    const accountant = 'Главный бухгалтер (расшифровка подписи)'
+    await screen.findByLabelText(accountant)
+    await user.click(screen.getByRole('button', { name: 'Нет бухгалтера' }))
+    expect(field(accountant).value).toBe('Қамтамасыз етілмейді')
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1))
+    const [, init] = put.mock.calls[0] as unknown as [string, { body: BusinessSettingsUpdate }]
+    expect(init.body.chief_accountant).toBe('Қамтамасыз етілмейді')
+  })
+
   it('saves trimmed values and confirms', async () => {
     const user = userEvent.setup()
     vi.spyOn(api, 'GET').mockReturnValue(ok(EMPTY))

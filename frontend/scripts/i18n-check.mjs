@@ -20,6 +20,8 @@ const RUSSIAN_ONLY = ['invoice.']
 const SECTIONS = [
   'common',
   'nav',
+  'home',
+  'more',
   'auth',
   'products',
   'customers',

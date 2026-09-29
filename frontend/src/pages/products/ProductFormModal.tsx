@@ -169,7 +169,7 @@ function ProductForm({
           autoComplete="off"
           {...form.getInputProps('name')}
         />
-        <SimpleGrid cols={2}>
+        <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="lg">
           <MoneyInput
             label={t('products.form.price')}
             required
@@ -210,13 +210,13 @@ function ProductForm({
           </Alert>
         )}
 
-        <Group justify="flex-end">
+        <Group justify="flex-end" gap="sm" className="q-modal-actions">
           <Button variant="default" onClick={onCancel} disabled={mutation.isPending}>
             {t('common.cancel')}
           </Button>
           {withAddMore && !product && (
             <Button
-              variant="light"
+              variant="default"
               onClick={() => form.onSubmit((values) => save(values, true))()}
               loading={mutation.isPending && addingMore}
               disabled={mutation.isPending && !addingMore}

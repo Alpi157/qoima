@@ -1,4 +1,4 @@
-import { currentLanguage, intlLocale, type Language } from '../i18n/language'
+import { currentLanguage, type Language } from '../i18n/language'
 
 const TIME_ZONE = 'Asia/Almaty'
 
@@ -35,28 +35,16 @@ function localParts(value: string | Date): LocalParts {
   }
 }
 
-const dateFormatters = new Map<Language, Intl.DateTimeFormat>()
-
-function dateFormatter(language: Language): Intl.DateTimeFormat {
-  let result = dateFormatters.get(language)
-  if (!result) {
-    result = new Intl.DateTimeFormat(intlLocale(language), {
-      timeZone: TIME_ZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    dateFormatters.set(language, result)
-  }
-  return result
-}
-
 /**
  * The date in Asia/Almaty in the language's own format: "27.09.2026" in Russian and Kazakh,
  * "2026/09/27" in Chinese. Accepts an ISO string from the API or a Date.
+ *
+ * Built from the calendar parts, not from the locale's pattern: browsers disagree on Kazakh
+ * (Chromium's ICU gives "2026-09-27" for kk-KZ, Node gives "27.09.2026").
  */
 export function formatDate(value: string | Date, language: Language = currentLanguage()): string {
-  return dateFormatter(language).format(new Date(value))
+  const p = localParts(value)
+  return language === 'zh' ? `${p.year}/${p.month}/${p.day}` : `${p.day}.${p.month}.${p.year}`
 }
 
 /** formatDate plus the time: "27.09.2026 14:30". */

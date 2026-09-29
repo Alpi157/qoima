@@ -20,6 +20,14 @@ def search_products(
     return service.search_products(db, q, include_archived, limit, offset)
 
 
+# Declared before /{product_id}, which would otherwise take "frequent" for an id.
+@router.get("/frequent", response_model=list[ProductOut])
+def frequent_products(
+    limit: int = Query(6, ge=1, le=20), db: Session = Depends(get_db)
+) -> list[ProductOut]:
+    return service.frequent_products(db, limit)
+
+
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(product_id: DbId, db: Session = Depends(get_db)) -> ProductOut:
     return service.get_product(db, product_id)

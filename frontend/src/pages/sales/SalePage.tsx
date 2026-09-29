@@ -1,27 +1,25 @@
-import {
-  Alert,
-  Anchor,
-  Button,
-  Card,
-  Group,
-  Loader,
-  Paper,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core'
+import { Anchor, Button, Group, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { isApiError } from '../../api/errors'
 import { CancelDocumentModal } from '../../components/CancelDocumentModal'
+import { CancelledNotice } from '../../components/CancelledNotice'
 import { NotFoundState } from '../../components/NotFoundState'
+import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
+import {
+  Card,
+  DataTable,
+  type DataTableColumn,
+  PageContainer,
+  PageHeader,
+  Stat,
+} from '../../components/ui'
 import { formatDateTime } from '../../lib/dates'
 import { unitLabel } from '../../lib/labels'
-import { formatMoney } from '../../lib/money'
+import { formatAmount, formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { type Sale, useCancelSale, useSale } from './api'
 import { SaleStatusBadge } from './SaleStatusBadge'
@@ -36,60 +34,57 @@ function ProductLink({ line }: { line: SaleLineOut }) {
   )
 }
 
-function LinesTable({ lines }: { lines: SaleLineOut[] }) {
-  const { t } = useTranslation()
+function LineCard({ line }: { line: SaleLineOut }) {
   return (
-    <Table.ScrollContainer minWidth={600} visibleFrom="sm">
-      <Table verticalSpacing="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('sales.lines.article')}</Table.Th>
-            <Table.Th>{t('sales.lines.name')}</Table.Th>
-            <Table.Th ta="right">{t('sales.lines.qty')}</Table.Th>
-            <Table.Th ta="right">{t('sales.lines.price')}</Table.Th>
-            <Table.Th ta="right">{t('sales.lines.sum')}</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {lines.map((line) => (
-            <Table.Tr key={line.product_id}>
-              <Table.Td>
-                <ProductLink line={line} />
-              </Table.Td>
-              <Table.Td>{line.name}</Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {line.qty} {unitLabel(line.unit)}
-              </Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {formatMoney(line.unit_price)}
-              </Table.Td>
-              <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
-                {formatMoney(line.line_total)}
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="xs">
+      <ProductLink line={line} />
+      <Text>{line.name}</Text>
+      <Group justify="space-between">
+        <Text size="sm">
+          {line.qty} {unitLabel(line.unit)} × {formatMoney(line.unit_price)}
+        </Text>
+        <Text fw={600}>{formatMoney(line.line_total)}</Text>
+      </Group>
+    </Stack>
   )
 }
 
-function LinesCards({ lines }: { lines: SaleLineOut[] }) {
+function LinesTable({ lines }: { lines: SaleLineOut[] }) {
+  const { t } = useTranslation()
+  const columns: DataTableColumn<SaleLineOut>[] = [
+    {
+      key: 'article',
+      header: t('sales.lines.article'),
+      nowrap: true,
+      cell: (line) => <ProductLink line={line} />,
+    },
+    { key: 'name', header: t('sales.lines.name'), cell: (line) => line.name },
+    {
+      key: 'qty',
+      header: t('sales.lines.qty'),
+      numeric: true,
+      cell: (line) => `${line.qty} ${unitLabel(line.unit)}`,
+    },
+    {
+      key: 'price',
+      header: t('sales.lines.price'),
+      numeric: true,
+      cell: (line) => formatMoney(line.unit_price),
+    },
+    {
+      key: 'sum',
+      header: t('sales.lines.sum'),
+      numeric: true,
+      cell: (line) => formatMoney(line.line_total),
+    },
+  ]
   return (
-    <Stack gap="sm" hiddenFrom="sm">
-      {lines.map((line) => (
-        <Card key={line.product_id} withBorder padding="sm">
-          <ProductLink line={line} />
-          <Text>{line.name}</Text>
-          <Group justify="space-between">
-            <Text size="sm">
-              {line.qty} {unitLabel(line.unit)} × {formatMoney(line.unit_price)}
-            </Text>
-            <Text fw={500}>{formatMoney(line.line_total)}</Text>
-          </Group>
-        </Card>
-      ))}
-    </Stack>
+    <DataTable
+      rows={lines}
+      rowKey={(line) => line.product_id}
+      columns={columns}
+      mobileCard={(line) => <LineCard line={line} />}
+    />
   )
 }
 
@@ -99,89 +94,75 @@ function SaleDetails({ sale }: { sale: Sale }) {
   const { t } = useTranslation()
 
   return (
-    <Stack>
-      <Anchor component={Link} to="/sales" size="sm">
-        {t('sales.card.back')}
-      </Anchor>
-
-      <Group justify="space-between" align="flex-start">
-        <Group gap="sm">
-          <Title order={2}>
-            {t('sales.card.title', { number: sale.number, date: formatDateTime(sale.sold_at) })}
-          </Title>
-          <SaleStatusBadge status={sale.status} />
-        </Group>
-        <Group gap="sm">
-          <Button component={Link} to={`/sales/${sale.id}/print`} variant="default">
-            {t('sales.card.print')}
-          </Button>
-          {sale.status === 'posted' && (
-            <Button color="red" variant="light" onClick={cancelModal.open}>
-              {t('sales.cancel.confirm')}
+    <PageContainer>
+      <PageHeader
+        back={{ to: '/sales', label: t('sales.card.back') }}
+        title={t('sales.card.title', { number: sale.number, date: formatDateTime(sale.sold_at) })}
+        titleAside={<SaleStatusBadge status={sale.status} />}
+        subtitle={t('common.postedBy', {
+          name: sale.created_by_name,
+          date: formatDateTime(sale.created_at),
+        })}
+        actions={
+          <>
+            <Button component={Link} to={`/sales/${sale.id}/print`}>
+              {t('sales.card.print')}
             </Button>
-          )}
-        </Group>
-      </Group>
+            {sale.status === 'posted' && (
+              <Button variant="default" c="red" onClick={cancelModal.open}>
+                {t('sales.cancel.confirm')}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {sale.status === 'cancelled' && (
-        <Alert color="red" title={t('sales.card.cancelled')}>
-          {sale.cancelled_at && (
-            <Text size="sm">
-              {t('common.cancelled.when', { date: formatDateTime(sale.cancelled_at) })}
-            </Text>
-          )}
-          {sale.cancelled_by_name && (
-            <Text size="sm">{t('common.cancelled.who', { name: sale.cancelled_by_name })}</Text>
-          )}
-          {sale.cancel_reason && (
-            <Text size="sm">{t('common.cancelled.reason', { reason: sale.cancel_reason })}</Text>
-          )}
-        </Alert>
+        <CancelledNotice title={t('sales.card.cancelled')} document={sale} />
       )}
 
-      <Stack gap={4}>
-        <Text>
-          {t('sales.card.customer')}{' '}
-          {sale.customer ? (
-            <>
-              <Anchor component={Link} to={`/customers/${sale.customer.id}`} fw={600}>
-                {sale.customer.name}
-              </Anchor>
-              {sale.customer.phone && `, ${sale.customer.phone}`}
-            </>
-          ) : (
-            '—'
-          )}
-        </Text>
-        {sale.note && (
-          <Text style={{ whiteSpace: 'pre-wrap' }}>
-            {t('sales.card.note', { note: sale.note })}
-          </Text>
-        )}
-        <Text c="dimmed" size="sm">
-          {t('common.postedBy', {
-            name: sale.created_by_name,
-            date: formatDateTime(sale.created_at),
-          })}
-        </Text>
-      </Stack>
-
-      <LinesTable lines={sale.lines} />
-      <LinesCards lines={sale.lines} />
-
-      <Paper withBorder p="md" radius="md">
-        <Group justify="space-between" align="baseline">
+      <Card>
+        <Stack gap="xs">
           <Text>
-            {t('sales.list.cardCounts', {
-              positions: sale.lines.length,
-              pieces: sale.lines.reduce((sum, line) => sum + line.qty, 0),
-            })}
+            {t('sales.card.customer')}{' '}
+            {sale.customer ? (
+              <>
+                <Anchor component={Link} to={`/customers/${sale.customer.id}`} fw={600}>
+                  {sale.customer.name}
+                </Anchor>
+                {sale.customer.phone && `, ${sale.customer.phone}`}
+              </>
+            ) : (
+              '—'
+            )}
           </Text>
-          <Text fz={28} fw={700}>
-            {t('sales.card.total', { amount: formatMoney(sale.total) })}
-          </Text>
-        </Group>
-      </Paper>
+          {sale.note && (
+            <Text style={{ whiteSpace: 'pre-wrap' }}>
+              {t('sales.card.note', { note: sale.note })}
+            </Text>
+          )}
+        </Stack>
+      </Card>
+
+      <Stack gap="md">
+        <LinesTable lines={sale.lines} />
+        <Card>
+          <Group justify="space-between" align="flex-end" gap="md">
+            <Text c="dimmed">
+              {t('sales.list.cardCounts', {
+                positions: sale.lines.length,
+                pieces: sale.lines.reduce((sum, line) => sum + line.qty, 0),
+              })}
+            </Text>
+            <Stat
+              size="display"
+              label={t('sales.card.total')}
+              value={formatAmount(sale.total)}
+              unit="₸"
+            />
+          </Group>
+        </Card>
+      </Stack>
 
       <CancelDocumentModal
         opened={cancelOpened}
@@ -192,24 +173,31 @@ function SaleDetails({ sale }: { sale: Sale }) {
         cancel={cancel}
         successMessage={(saved) => t('sales.cancel.done', { number: saved.number })}
       />
-    </Stack>
+    </PageContainer>
   )
 }
 
 function SaleNotFound() {
   const { t } = useTranslation()
   return (
-    <NotFoundState title={t('sales.notFound')} backTo="/sales" backLabel={t('sales.backToList')} />
+    <NotFoundState
+      title={t('sales.notFound')}
+      back={{ to: '/sales', label: t('sales.card.back') }}
+    />
   )
 }
 
 function SaleLoader({ id }: { id: number }) {
   const sale = useSale(id)
 
-  if (sale.isPending) return <Loader />
+  if (sale.isPending) return <PageLoader />
   if (sale.isError) {
     if (isApiError(sale.error) && sale.error.status === 404) return <SaleNotFound />
-    return <QueryError error={sale.error} onRetry={() => sale.refetch()} />
+    return (
+      <PageContainer>
+        <QueryError error={sale.error} onRetry={() => sale.refetch()} />
+      </PageContainer>
+    )
   }
   return <SaleDetails sale={sale.data} />
 }

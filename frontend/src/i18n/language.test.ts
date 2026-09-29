@@ -49,6 +49,6 @@ describe('applyLanguage', () => {
   it('falls back to Russian texts for an empty language', async () => {
     await onlyKazakh()
     await applyLanguage('kk')
-    expect(i18n.t('nav.sales')).toBe('Продажи')
+    expect(i18n.t('more.sales')).toBe('История продаж')
   })
 })

@@ -99,7 +99,7 @@ function CustomerForm({ customer, initialName = '', onSaved, onCancel }: Custome
           </Alert>
         )}
 
-        <Group justify="flex-end">
+        <Group justify="flex-end" gap="sm" className="q-modal-actions">
           <Button variant="default" onClick={onCancel} disabled={mutation.isPending}>
             {t('common.cancel')}
           </Button>

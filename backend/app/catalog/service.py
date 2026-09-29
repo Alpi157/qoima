@@ -1,4 +1,5 @@
 from collections import Counter
+from datetime import timedelta
 from typing import Literal
 
 from sqlalchemy import ColumnElement, Select, case, false, func, literal, or_, select
@@ -18,8 +19,12 @@ from app.errors import (
     ProductNotFoundError,
 )
 from app.inventory.models import StockBalance
+from app.sales.models import Sale, SaleLine
 
 ARTICLE_NORM_CONSTRAINT = "uq_products_article_norm"
+
+# Sales older than this do not make a product "frequent".
+FREQUENT_PERIOD = timedelta(days=30)
 
 # Search ranks: exact article, article prefix, article substring, name match.
 RANK_NAME = 3
@@ -206,3 +211,22 @@ def search_products(
     )
     items = [_to_out(product, stock) for product, stock in db.execute(query).all()]
     return ProductPage(items=items, total=total)
+
+
+def frequent_products(db: Session, limit: int) -> list[ProductOut]:
+    """Products by the number of posted sales over the last FREQUENT_PERIOD, then by article."""
+    sale_count = func.count(Sale.id.distinct())
+    query = (
+        select(Product, _stock_expr())
+        .join(SaleLine, SaleLine.product_id == Product.id)
+        .join(Sale, Sale.id == SaleLine.sale_id)
+        .where(
+            Product.is_archived.is_(false()),
+            Sale.status == "posted",
+            Sale.sold_at >= func.now() - FREQUENT_PERIOD,
+        )
+        .group_by(Product.id)
+        .order_by(sale_count.desc(), Product.article_norm, Product.id)
+        .limit(limit)
+    )
+    return [_to_out(product, stock) for product, stock in db.execute(query).all()]

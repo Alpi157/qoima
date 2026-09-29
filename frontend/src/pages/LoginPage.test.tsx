@@ -16,7 +16,7 @@ function renderLogin(route: string) {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/products" element={<p>Страница товаров</p>} />
-      <Route path="/sale" element={<p>Страница продажи</p>} />
+      <Route path="/" element={<p>Главный экран</p>} />
     </Routes>,
     { route },
   )
@@ -44,10 +44,29 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Страница товаров')).toBeTruthy()
   })
 
-  it('sends a logged-in user to the sale page when "next" is unsafe', async () => {
+  it('sends a logged-in user to the main screen when "next" is unsafe', async () => {
     mockLoggedIn()
     renderLogin('/login?next=%2F%2Fevil.example')
-    expect(await screen.findByText('Страница продажи')).toBeTruthy()
+    expect(await screen.findByText('Главный экран')).toBeTruthy()
+  })
+
+  it('opens the main screen after login', async () => {
+    const user = userEvent.setup()
+    mockLoggedOut()
+    const post = vi.spyOn(api, 'POST').mockResolvedValue({
+      data: { id: 1, username: 'owner', full_name: 'Владелец', role: 'owner', locale: 'ru' },
+      response: new Response(),
+    } as never)
+    renderLogin('/login')
+
+    await user.type(await screen.findByLabelText('Логин'), 'owner')
+    await user.type(screen.getByLabelText('Пароль'), 'secret')
+    await user.click(screen.getByRole('button', { name: 'Войти' }))
+
+    expect(await screen.findByText('Главный экран')).toBeTruthy()
+    expect(post).toHaveBeenCalledWith('/api/auth/login', {
+      body: { username: 'owner', password: 'secret' },
+    })
   })
 
   it('shows the texts of the current language', async () => {

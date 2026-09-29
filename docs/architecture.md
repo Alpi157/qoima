@@ -229,12 +229,16 @@ GET    /api/auth/me                     текущий пользователь,
 PATCH  /api/auth/me                     {locale}: сменить язык интерфейса (Шаг 14)
 
 GET    /api/products?q=&include_archived=
+GET    /api/products/frequent?limit=6    по числу проведённых продаж за 30 дней, без архивных,
+                                    при равенстве по артикулу; limit 1..20 (Шаг 16.1)
 POST   /api/products
 GET    /api/products/{id}
 PATCH  /api/products/{id}               артикул, название, бренд, цена, заметка, архив (не остаток)
 GET    /api/products/{id}/movements     история движений, новые сверху, с balance_after
 
 GET    /api/customers?q=                имя или телефон; цифры телефона сравниваются без 7/8 в начале
+GET    /api/customers/recent?limit=6    по дате последней проведённой продажи, затем новые без
+                                    проведённых продаж; limit 1..20 (Шаг 16.1)
 POST   /api/customers
 GET    /api/customers/{id}
 PATCH  /api/customers/{id}

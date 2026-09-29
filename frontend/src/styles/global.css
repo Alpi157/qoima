@@ -1,0 +1,186 @@
+/*
+ * Tokens of docs/design/design-system.md. Loaded after Mantine's styles, so these rules win over
+ * its single-class ones. Any size, gap or color on a page comes from here or from theme.ts.
+ */
+
+:root {
+  /* Font scale: size / line height. */
+  --q-fz-caption: 16px;
+  --q-lh-caption: 1.45;
+  --q-fz-body: 18px;
+  --q-lh-body: 1.5;
+  --q-fz-lead: 20px;
+  --q-lh-lead: 1.45;
+  --q-fz-h3: 22px;
+  --q-lh-h3: 1.3;
+  --q-fz-h2: 28px;
+  --q-lh-h2: 1.25;
+  --q-fz-h1: 34px;
+  --q-lh-h1: 1.2;
+  --q-fz-display: 44px;
+  --q-lh-display: 1.1;
+
+  /* Spacing scale. */
+  --q-space-4: 4px;
+  --q-space-8: 8px;
+  --q-space-12: 12px;
+  --q-space-16: 16px;
+  --q-space-24: 24px;
+  --q-space-32: 32px;
+  --q-space-48: 48px;
+  --q-space-64: 64px;
+
+  /* Controls: sm, md, lg. */
+  --q-control-sm: 44px;
+  --q-control-md: 56px;
+  --q-control-lg: 64px;
+
+  /* Colors (simple-ui.md, «Тема»). */
+  --q-color-page: #eef1f4;
+  --q-color-surface: #ffffff;
+  --q-color-text: #16202a;
+  --q-color-text-secondary: #4a5663;
+  --q-color-border: #d5dce3;
+  --q-color-field-border: #aeb8c4;
+  --q-color-table-head: #f3f6f9;
+  --q-color-divider: #e3e8ed;
+  --q-color-sale: #17703f;
+  --q-color-receive: #1d5aa6;
+  --q-color-danger: #a32020;
+
+  /* Surfaces. */
+  --q-radius-control: 10px;
+  --q-radius-card: 12px;
+  --q-radius-tile: 16px;
+  --q-radius-badge: 8px;
+
+  /* Layout. */
+  --q-container: 1200px;
+  --q-gutter: 32px;
+  --q-header-height: 72px;
+
+  /* Motion. */
+  --q-motion-press: 120ms;
+  --q-motion-modal: 180ms;
+}
+
+@media (max-width: 48em) {
+  :root {
+    --q-gutter: 16px;
+  }
+}
+
+body {
+  background-color: var(--q-color-page);
+  color: var(--q-color-text);
+  font-size: var(--q-fz-body);
+  line-height: var(--q-lh-body);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Controls: three sizes. The font sizes come from the theme (sm 16, md 18, lg 20). */
+.mantine-Button-root {
+  --button-height-sm: var(--q-control-sm);
+  --button-height-md: var(--q-control-md);
+  --button-height-lg: var(--q-control-lg);
+  --button-padding-x-sm: var(--q-space-16);
+  --button-padding-x-md: var(--q-space-24);
+  --button-padding-x-lg: var(--q-space-32);
+  transition:
+    background-color var(--q-motion-press),
+    border-color var(--q-motion-press),
+    color var(--q-motion-press);
+}
+
+/* A long Kazakh label wraps instead of being cut; the button grows from its size's height. */
+.mantine-Button-root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: var(--button-height);
+  padding-block: var(--q-space-8);
+}
+
+.mantine-Button-root[data-block] {
+  display: flex;
+}
+
+.mantine-Button-inner {
+  flex: 1;
+  height: auto;
+}
+
+.mantine-Button-label {
+  white-space: normal;
+  text-align: center;
+  overflow: visible;
+}
+
+/* Icon and text are centred vertically (the 8 between them is the theme's spacing xs). */
+.mantine-Button-inner {
+  align-items: center;
+}
+
+.mantine-Input-wrapper {
+  --input-height-sm: var(--q-control-sm);
+  --input-height-md: var(--q-control-md);
+  --input-height-lg: var(--q-control-lg);
+}
+
+/* Field label (body-strong) above the field, the hint (caption) under the label, 8 between. */
+.mantine-InputWrapper-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--q-space-8);
+}
+
+.mantine-InputWrapper-label {
+  font-size: var(--q-fz-body);
+  line-height: var(--q-lh-body);
+  font-weight: 600;
+  margin: 0;
+}
+
+.mantine-InputWrapper-description,
+.mantine-InputWrapper-error {
+  font-size: var(--q-fz-caption);
+  line-height: var(--q-lh-caption);
+  margin: 0;
+}
+
+.mantine-InputWrapper-description {
+  color: var(--q-color-text-secondary);
+}
+
+/* Dialog buttons: in a row on the right; on a phone one under another, full width,
+   the main action (the last one in the code) on top. */
+@media (max-width: 48em) {
+  .q-modal-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
+
+/* Big numbers: the total, the stock on a product card. */
+.q-display {
+  font-size: var(--q-fz-display);
+  line-height: var(--q-lh-display);
+  font-weight: 700;
+}
+
+/* Keyboard focus: a thick blue outline with a gap. */
+:focus-visible,
+.mantine-focus-auto:focus-visible {
+  outline: 3px solid var(--q-color-receive);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

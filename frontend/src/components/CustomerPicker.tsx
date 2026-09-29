@@ -119,7 +119,7 @@ export function CustomerPicker({
     return (
       <>
         <Input.Wrapper label={fieldLabel}>
-          <Paper withBorder px="sm" py={6} radius="sm">
+          <Paper withBorder px="md" py="xs" radius="md" mih="var(--q-control-md)">
             <Group justify="space-between" wrap="nowrap">
               <Stack gap={0} style={{ minWidth: 0 }}>
                 <Text fw={600}>{value.name}</Text>
@@ -172,7 +172,7 @@ export function CustomerPicker({
             ))}
             {offerCreate && (
               <Combobox.Option value={CREATE_OPTION}>
-                <Text fw={500} c="blue">
+                <Text fw={600} c="blue">
                   {t('customers.picker.create', { name: query })}
                 </Text>
               </Combobox.Option>

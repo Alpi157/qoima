@@ -1,10 +1,12 @@
-import { Alert, Button, Group, Loader, Paper, Stack, TextInput, Title } from '@mantine/core'
+import { Alert, Button, Group, Stack, TextInput } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
+import { Card, PageContainer, PageHeader, useBackToMore } from '../../components/ui'
 import { serverFormErrors } from '../../lib/formErrors'
 import {
   type BusinessSettings,
@@ -15,6 +17,9 @@ import {
 
 // Same rule as the backend (app/settings/schemas.py); the text is its error type's.
 const IIN_BIN_PATTERN = /^\d{12}$/
+
+// Written on the invoice when there is no chief accountant; always in Kazakh, like the form.
+const NO_ACCOUNTANT = 'Қамтамасыз етілмейді'
 
 type SettingsFormValues = BusinessSettingsUpdate
 
@@ -79,7 +84,7 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
 
   return (
     <form onSubmit={form.onSubmit(submit)} noValidate>
-      <Stack>
+      <Stack gap="lg">
         <TextInput
           label={t('settings.sellerName')}
           placeholder={t('settings.sellerNamePlaceholder')}
@@ -104,12 +109,21 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
           autoComplete="off"
           {...form.getInputProps('released_by_name')}
         />
-        <TextInput
-          label={t('settings.chiefAccountant')}
-          description={t('settings.chiefAccountantHint')}
-          autoComplete="off"
-          {...form.getInputProps('chief_accountant')}
-        />
+        <Group align="flex-end" gap="md">
+          <TextInput
+            label={t('settings.chiefAccountant')}
+            description={t('settings.chiefAccountantHint')}
+            autoComplete="off"
+            style={{ flex: '1 1 260px' }}
+            {...form.getInputProps('chief_accountant')}
+          />
+          <Button
+            variant="default"
+            onClick={() => form.setFieldValue('chief_accountant', NO_ACCOUNTANT)}
+          >
+            {t('settings.noAccountant')}
+          </Button>
+        </Group>
 
         {formError && (
           <Alert color="red" role="alert">
@@ -118,7 +132,7 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
         )}
 
         <Group>
-          <Button type="submit" loading={save.isPending}>
+          <Button type="submit" size="lg" loading={save.isPending}>
             {t('common.save')}
           </Button>
         </Group>
@@ -130,22 +144,20 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
 export function SettingsPage() {
   const settings = useBusinessSettings()
   const { t } = useTranslation()
+  const backToMore = useBackToMore()
 
   return (
-    <Stack maw={640}>
-      <Title order={2}>{t('settings.title')}</Title>
-      <Paper withBorder p="md" radius="md">
-        <Title order={4} mb="sm">
-          {t('settings.invoiceDetails')}
-        </Title>
+    <PageContainer>
+      <PageHeader back={backToMore} title={t('settings.title')} />
+      <Card title={t('settings.invoiceDetails')} maw={720}>
         {settings.isPending ? (
-          <Loader />
+          <PageLoader />
         ) : settings.isError ? (
           <QueryError error={settings.error} onRetry={() => settings.refetch()} />
         ) : (
           <SettingsForm settings={settings.data} />
         )}
-      </Paper>
-    </Stack>
+      </Card>
+    </PageContainer>
   )
 }

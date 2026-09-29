@@ -29,7 +29,7 @@ export function ConfirmModal({
     <Modal opened={opened} onClose={onClose} title={title}>
       <Stack>
         <Text>{children}</Text>
-        <Group justify="flex-end">
+        <Group justify="flex-end" gap="sm" className="q-modal-actions">
           <Button variant="default" onClick={onClose} disabled={loading}>
             {t('common.cancel')}
           </Button>

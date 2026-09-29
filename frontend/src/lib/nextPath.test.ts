@@ -6,14 +6,14 @@ describe('safeNext', () => {
   it.each([
     ['/products', '/products'],
     ['/products?q=oc', '/products?q=oc'],
-    [null, '/sale'],
-    ['', '/sale'],
-    ['products', '/sale'],
-    ['//evil.example', '/sale'],
-    ['/\\evil.example', '/sale'],
-    ['https://evil.example', '/sale'],
-    ['/login', '/sale'],
-    ['/login?next=%2Fsale', '/sale'],
+    [null, '/'],
+    ['', '/'],
+    ['products', '/'],
+    ['//evil.example', '/'],
+    ['/\\evil.example', '/'],
+    ['https://evil.example', '/'],
+    ['/login', '/'],
+    ['/login?next=%2Fsell', '/'],
   ])('%j -> %j', (value, expected) => {
     expect(safeNext(value)).toBe(expected)
   })

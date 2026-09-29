@@ -90,6 +90,10 @@ rm -f "$ZIP"
   for f in "$OUT/REVIEW.md" "$LOG" "$SUMMARY" "$OUT/diffstat.txt" "$OUT/changes.diff"; do
     [ -f "$f" ] && echo "$f"
   done
+  # Screenshots of `make screenshots` (review/ is not in git).
+  for f in "$OUT"/screenshots/*.png; do
+    [ -f "$f" ] && echo "$f"
+  done
 } | sort -u | zip -q "$ZIP" -@
 
 SIZE_KB=$(( $(stat -c %s "$ZIP") / 1024 ))

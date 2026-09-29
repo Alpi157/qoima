@@ -21,7 +21,7 @@
     "clearSearch": "清除搜索",
     "notFound": {
       "title": "页面不存在",
-      "toSale": "去销售"
+      "toHome": "回首页"
     },
     "input": {
       "qtyRange": "1 到 100 000 之间的整数",
@@ -125,7 +125,6 @@
     },
     "archivedBadge": "已隐藏",
     "notFound": "没有找到这个商品",
-    "backToList": "返回商品列表",
     "movements": {
       "date": "日期",
       "kind": "操作",
@@ -233,7 +232,6 @@
       "addFirst": "第一次入库"
     },
     "notFound": "没有找到这张入库单",
-    "backToList": "返回入库记录",
     "lines": {
       "article": "零件号",
       "name": "名称",
@@ -323,11 +321,10 @@
       "new": "新建销售",
       "empty": "还没有销售记录",
       "addFirst": "开始第一笔销售",
-      "periodTotal": "这段时间合计：{{amount}}",
+      "periodTotal": "这段时间合计",
       "count_other": "销售笔数：{{count}}"
     },
     "notFound": "没有找到这张销售单",
-    "backToList": "返回销售记录",
     "card": {
       "back": "← 销售记录",
       "title": "销售单 {{number}} 号，{{date}}",
@@ -335,7 +332,7 @@
       "cancelled": "销售单已作废",
       "customer": "客户：",
       "note": "备注：{{note}}",
-      "total": "合计：{{amount}}"
+      "total": "合计"
     },
     "cancel": {
       "confirm": "作废销售单",
@@ -350,14 +347,37 @@
     }
   },
   "nav": {
-    "sale": "销售",
+    "menu": "菜单",
+    "logout": "退出",
+    "home": "首页",
+    "backToMore": "← 更多"
+  },
+  "home": {
+    "greeting": "您好，{{name}}！",
+    "question": "要做什么？",
+    "sell": {
+      "title": "卖货",
+      "hint": "卖出商品，开发货单"
+    },
+    "receive": {
+      "title": "收货",
+      "hint": "把到货的商品加入仓库"
+    },
+    "stock": {
+      "title": "仓库里有什么？",
+      "hint": "商品和库存"
+    },
+    "today_other": "今天：<b>{{count}} 笔销售</b>，共 <b>{{amount}}</b>",
+    "salesHistory": "销售记录",
+    "more": "更多"
+  },
+  "more": {
+    "title": "更多",
     "products": "商品",
     "customers": "客户",
-    "receipts": "入库",
     "sales": "销售记录",
-    "settings": "设置",
-    "menu": "菜单",
-    "logout": "退出"
+    "receipts": "收货记录",
+    "settings": "设置"
   },
   "auth": {
     "login": {
@@ -391,7 +411,6 @@
       "newTitle": "新客户"
     },
     "notFound": "没有找到这个客户",
-    "backToList": "返回客户列表",
     "purchases": {
       "number": "单号",
       "date": "日期",
@@ -422,8 +441,9 @@
     "releasedBy": "发货人（姓名）",
     "releasedByHint": "不填的话，发货单上写保存销售单的人的名字",
     "chiefAccountant": "总会计（姓名）",
-    "chiefAccountantHint": "例如：Қамтамасыз етілмейді",
+    "chiefAccountantHint": "没有会计的话，点「没有会计」：发货单上会写 «Қамтамасыз етілмейді»",
     "title": "设置",
-    "invoiceDetails": "发货单信息（З-2 表格）"
+    "invoiceDetails": "发货单信息（З-2 表格）",
+    "noAccountant": "没有会计"
   }
 }

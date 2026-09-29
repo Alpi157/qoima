@@ -52,7 +52,9 @@ describe('SalePage', () => {
     expect(screen.getAllByRole('link', { name: 'OC-90' })[0].getAttribute('href')).toBe(
       '/products/1',
     )
-    expect(screen.getByText('ИТОГО: 37 500 ₸')).toBeTruthy()
+    expect(screen.getByText('Итого')).toBeTruthy()
+    // Stat: the caption and the number with its unit under it.
+    expect(screen.getByText('Итого').parentElement!.textContent).toBe('Итого37\u00a0500\u00a0₸')
   })
 
   it('links to the invoice without auto printing', async () => {

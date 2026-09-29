@@ -1,0 +1,41 @@
+/*
+ * Fira Sans has no tenge sign. This family covers only U+20B8 with Noto Sans (the latin-ext
+ * subset of @fontsource/noto-sans is the one that has it) and stands first in the font stack,
+ * so ₸ comes in the same weight as the digits next to it. The browser downloads a file only
+ * for a page that shows ₸.
+ */
+@font-face {
+  font-family: 'Qoima Tenge';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/noto-sans/files/noto-sans-latin-ext-400-normal.woff2') format('woff2');
+  unicode-range: U+20B8;
+}
+
+@font-face {
+  font-family: 'Qoima Tenge';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('@fontsource/noto-sans/files/noto-sans-latin-ext-500-normal.woff2') format('woff2');
+  unicode-range: U+20B8;
+}
+
+@font-face {
+  font-family: 'Qoima Tenge';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('@fontsource/noto-sans/files/noto-sans-latin-ext-600-normal.woff2') format('woff2');
+  unicode-range: U+20B8;
+}
+
+@font-face {
+  font-family: 'Qoima Tenge';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/noto-sans/files/noto-sans-latin-ext-700-normal.woff2') format('woff2');
+  unicode-range: U+20B8;
+}

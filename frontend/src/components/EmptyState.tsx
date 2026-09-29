@@ -1,4 +1,6 @@
-import { Button, Paper, Stack, Text } from '@mantine/core'
+import { Button, Stack, Text } from '@mantine/core'
+
+import { Card } from './ui'
 
 export interface EmptyStateProps {
   text: string
@@ -8,13 +10,13 @@ export interface EmptyStateProps {
 
 export function EmptyState({ text, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <Paper withBorder p="xl" radius="md">
+    <Card>
       <Stack align="center" gap="md">
         <Text c="dimmed" ta="center">
           {text}
         </Text>
         {actionLabel && onAction && <Button onClick={onAction}>{actionLabel}</Button>}
       </Stack>
-    </Paper>
+    </Card>
   )
 }

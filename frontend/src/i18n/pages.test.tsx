@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../api/client'
 import { ApiError } from '../api/errors'
+import { HomePage } from '../pages/home/HomePage'
 import { LoginPage } from '../pages/LoginPage'
+import { MorePage } from '../pages/more/MorePage'
 import { ProductsPage } from '../pages/products/ProductsPage'
 import { NewSalePage } from '../pages/sales/NewSalePage'
 import { SalePage } from '../pages/sales/SalePage'
@@ -33,7 +35,7 @@ const SALE = makeSale({
 })
 
 const KEY =
-  /\b(common|nav|auth|products|customers|receipts|sales|settings|errors|validation|invoice)\.[A-Za-z]/
+  /\b(common|nav|home|more|auth|products|customers|receipts|sales|settings|errors|validation|invoice)\.[A-Za-z]/
 const ATTRIBUTES = ['aria-label', 'placeholder', 'title', 'alt']
 
 /**
@@ -86,7 +88,7 @@ describe.each<Language>(['kk', 'zh'])('pages in %s', (language) => {
     const texts = i18n.getResourceBundle(language, 'translation')
     i18n.removeResourceBundle(language, 'translation')
     try {
-      expect(i18n.t('nav.sales')).toBe('nav.sales')
+      expect(i18n.t('more.sales')).toBe('more.sales')
     } finally {
       i18n.addResourceBundle(language, 'translation', texts)
     }
@@ -101,6 +103,21 @@ describe.each<Language>(['kk', 'zh'])('pages in %s', (language) => {
       { route: '/login' },
     )
     await screen.findByRole('button', { name: i18n.t('auth.login.submit') })
+    expectTranslated(language)
+  })
+
+  it('main screen', async () => {
+    const owner = { id: 1, username: 'owner', full_name: 'Arman', role: 'owner', locale: language }
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(path === '/api/auth/me' ? owner : { items: [], total: 2, sum_posted: 3840000 })) as never)
+    renderWithDataRouter([{ path: '/', element: <HomePage /> }], { route: '/' })
+    await screen.findByTestId('today-sales')
+    expectTranslated(language)
+  })
+
+  it('more', async () => {
+    renderWithProviders(<MorePage />)
+    await screen.findByRole('navigation')
     expectTranslated(language)
   })
 
