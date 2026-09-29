@@ -1,5 +1,4 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { notifications } from '@mantine/notifications'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +6,7 @@ import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { renderWithProviders } from '../../test/render'
 import { fieldError as apiFieldError, makeProduct, ok } from '../../test/fixtures'
+import { fill, setupUser } from '../../test/user'
 import type { Product } from './api'
 import { ProductFormModal } from './ProductFormModal'
 
@@ -52,7 +52,7 @@ afterEach(() => {
 
 describe('ProductFormModal', () => {
   it('does not send the form with empty required fields', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = mockPost()
     renderForm()
 
@@ -64,12 +64,12 @@ describe('ProductFormModal', () => {
   })
 
   it('sends the price in tiyn and submits on Enter', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = mockPost().mockReturnValue(ok(product()))
     const { onClose } = renderForm()
 
-    await user.type(field('Артикул'), ' OC-90 ')
-    await user.type(field('Наименование'), 'Фильтр масляный')
+    await fill(user, field('Артикул'), ' OC-90 ')
+    await fill(user, field('Наименование'), 'Фильтр масляный')
     await user.type(field('Цена'), '12 500{Enter}')
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
@@ -86,7 +86,7 @@ describe('ProductFormModal', () => {
   })
 
   it('shows server field errors under their fields', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockPost().mockRejectedValue(
       new ApiError(422, 'Проверьте введённые данные', {
         name: apiFieldError('Максимальная длина: 255', 'string_too_long', { max_length: 255 }),
@@ -94,8 +94,8 @@ describe('ProductFormModal', () => {
     )
     renderForm()
 
-    await user.type(field('Артикул'), 'OC-90')
-    await user.type(field('Наименование'), 'Фильтр')
+    await fill(user, field('Артикул'), 'OC-90')
+    await fill(user, field('Наименование'), 'Фильтр')
     await user.type(field('Цена'), '100')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
@@ -104,13 +104,13 @@ describe('ProductFormModal', () => {
   })
 
   it('shows a duplicate article (409) under the article field', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const message = 'Товар с артикулом «OC-90» уже есть: Фильтр масляный'
     mockPost().mockRejectedValue(new ApiError(409, message))
     const { onClose } = renderForm()
 
-    await user.type(field('Артикул'), 'ос-90')
-    await user.type(field('Наименование'), 'Фильтр')
+    await fill(user, field('Артикул'), 'ос-90')
+    await fill(user, field('Наименование'), 'Фильтр')
     await user.type(field('Цена'), '100')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
@@ -119,14 +119,14 @@ describe('ProductFormModal', () => {
   })
 
   it('"Сохранить и добавить ещё" clears the form and focuses the article', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = mockPost().mockReturnValue(ok(product({ article: 'OC-90' })))
     const notify = vi.spyOn(notifications, 'show')
     const { onClose } = renderForm()
 
-    await user.type(field('Артикул'), 'OC-90')
-    await user.type(field('Наименование'), 'Фильтр масляный')
-    await user.type(field('Цена'), '12500')
+    await fill(user, field('Артикул'), 'OC-90')
+    await fill(user, field('Наименование'), 'Фильтр масляный')
+    await fill(user, field('Цена'), '12500')
     await user.click(screen.getByRole('button', { name: 'Сохранить и добавить ещё' }))
 
     await waitFor(() => expect(field('Артикул').value).toBe(''))
@@ -142,12 +142,12 @@ describe('ProductFormModal', () => {
   })
 
   it('does not send an empty price', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = mockPost()
     renderForm()
 
-    await user.type(field('Артикул'), 'OC-90')
-    await user.type(field('Наименование'), 'Фильтр')
+    await fill(user, field('Артикул'), 'OC-90')
+    await fill(user, field('Наименование'), 'Фильтр')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     expect(post).not.toHaveBeenCalled()
@@ -155,12 +155,12 @@ describe('ProductFormModal', () => {
   })
 
   it('sends an explicit zero price', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = mockPost().mockReturnValue(ok(product({ sale_price: 0 })))
     const { onClose } = renderForm()
 
-    await user.type(field('Артикул'), 'OC-90')
-    await user.type(field('Наименование'), 'Фильтр')
+    await fill(user, field('Артикул'), 'OC-90')
+    await fill(user, field('Наименование'), 'Фильтр')
     await user.type(field('Цена'), '0')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
@@ -172,14 +172,14 @@ describe('ProductFormModal', () => {
   })
 
   it('keeps a unit that is not in the list when editing', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const saved = product({ unit: 'бухта' })
     const patch = mockPatch().mockReturnValue(ok(saved))
     const { onClose } = renderForm({ product: saved })
 
     expect(unitField().value).toBe('бухта')
     await user.clear(field('Наименование'))
-    await user.type(field('Наименование'), 'Провод')
+    await fill(user, field('Наименование'), 'Провод')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())

@@ -9,8 +9,10 @@ import { HomePage } from '../pages/home/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MorePage } from '../pages/more/MorePage'
 import { ProductsPage } from '../pages/products/ProductsPage'
-import { NewSalePage } from '../pages/sales/NewSalePage'
 import { SalePage } from '../pages/sales/SalePage'
+import { SellPage } from '../pages/sell/SellPage'
+import { StockPage } from '../pages/stock/StockPage'
+import { ReceivePage } from '../pages/receive/ReceivePage'
 import { makeProduct, makeSale, ok } from '../test/fixtures'
 import { renderWithDataRouter, renderWithProviders } from '../test/render'
 import type { Language } from './language'
@@ -121,10 +123,30 @@ describe.each<Language>(['kk', 'zh'])('pages in %s', (language) => {
     expectTranslated(language)
   })
 
-  it('new sale', async () => {
-    vi.spyOn(api, 'GET').mockReturnValue(ok({ items: [], total: 0 }))
-    renderWithDataRouter([{ path: '/sale', element: <NewSalePage /> }], { route: '/sale' })
-    await screen.findByRole('heading', { name: i18n.t('sales.new.title') })
+  it('sale, step 1', async () => {
+    const owner = { id: 1, username: 'owner', full_name: 'Arman', role: 'owner', locale: language }
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(path === '/api/auth/me' ? owner : [PRODUCT])) as never)
+    renderWithDataRouter([{ path: '/sell', element: <SellPage /> }], { route: '/sell' })
+    await screen.findByRole('heading', { name: i18n.t('sell.products.title') })
+    await screen.findByRole('button', { name: i18n.t('flow.addOf', { article: PRODUCT.article }) })
+    expectTranslated(language)
+  })
+
+  it('receiving', async () => {
+    const owner = { id: 1, username: 'owner', full_name: 'Arman', role: 'owner', locale: language }
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(path === '/api/auth/me' ? owner : { items: [], total: 0 })) as never)
+    renderWithDataRouter([{ path: '/receive', element: <ReceivePage /> }], { route: '/receive' })
+    await screen.findByRole('heading', { name: i18n.t('receive.title') })
+    expectTranslated(language)
+  })
+
+  it('stock, with the unit in the interface language', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(ok({ items: [PRODUCT], total: 1 }))
+    renderWithProviders(<StockPage />, { route: '/stock' })
+    expect((await screen.findAllByText('Oil filter')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(`4 ${i18n.t('common.units.pcs')}`).length).toBeGreaterThan(0)
     expectTranslated(language)
   })
 

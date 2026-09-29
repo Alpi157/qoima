@@ -8,6 +8,13 @@ import { isApiError, isClientError } from '../api/errors'
 import { apiErrorText, fieldErrorText } from '../i18n/errorText'
 import { reasonError as validateReason } from '../lib/validation'
 
+// Quick reasons of docs/design/simple-ui.md, «Отмена документа»: one press fills the field.
+const QUICK_REASONS = [
+  'common.cancelDocument.quick.mistake',
+  'common.cancelDocument.quick.customerRefused',
+  'common.cancelDocument.quick.returned',
+] as const
+
 export interface CancelDocumentModalProps<T> {
   opened: boolean
   onClose: () => void
@@ -79,6 +86,27 @@ export function CancelDocumentModal<T>({
       >
         <Stack>
           <Text>{description}</Text>
+          <Group
+            gap="xs"
+            wrap="wrap"
+            role="group"
+            aria-label={t('common.cancelDocument.quickLabel')}
+          >
+            {QUICK_REASONS.map((key) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={reason === t(key) ? 'light' : 'default'}
+                aria-pressed={reason === t(key)}
+                onClick={() => {
+                  setReason(t(key))
+                  setReasonError(null)
+                }}
+              >
+                {t(key)}
+              </Button>
+            ))}
+          </Group>
           <Textarea
             label={t('common.cancelDocument.reason')}
             required

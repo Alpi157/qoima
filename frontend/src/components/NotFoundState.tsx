@@ -2,7 +2,7 @@ import { type ReturnLinkProps, PageContainer, PageHeader } from './ui'
 
 export interface NotFoundStateProps {
   title: string
-  /** The way back to the list: «← Тауарлар». */
+  /** The way back to the list: «Тауарлар». */
   back: ReturnLinkProps
 }
 

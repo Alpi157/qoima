@@ -8,10 +8,20 @@ import { routes } from './router'
 
 const OWNER = { id: 1, username: 'owner', full_name: 'Владелец', role: 'owner', locale: 'ru' }
 
+const SHORT_LISTS = new Set(['/api/products/frequent', '/api/customers/recent'])
+
 // Every list is empty; /api/auth/me answers with the owner.
 function mockApi() {
-  vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
-    ok(path === '/api/auth/me' ? OWNER : { items: [], total: 0, sum_posted: 0 })) as never)
+  vi.spyOn(api, 'GET').mockImplementation(((path: string) => {
+    if (path === '/api/auth/me') return ok(OWNER)
+    if (SHORT_LISTS.has(path)) return ok([])
+    return ok({ items: [], total: 0, sum_posted: 0 })
+  }) as never)
+}
+
+/** The page's way back (ReturnLink), if it has one. */
+function returnLink(): HTMLAnchorElement | null {
+  return document.querySelector('a.q-return-link')
 }
 
 // Detail pages: a product, customer, sale or receipt with the same id; lists are empty.
@@ -31,11 +41,14 @@ afterEach(() => {
 })
 
 describe('routes', () => {
-  it('the old /sale address opens /sell', async () => {
+  it.each([
+    ['/sale', '/sell'],
+    ['/receipts/new', '/receive'],
+  ])('the old address %s opens %s', async (path, target) => {
     mockApi()
-    const { router } = renderWithDataRouter(routes, { route: '/sale' })
+    const { router } = renderWithDataRouter(routes, { route: path })
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/sell'))
+    await waitFor(() => expect(router.state.location.pathname).toBe(target))
   })
 
   it('/ is the main screen', async () => {
@@ -46,30 +59,29 @@ describe('routes', () => {
   })
 
   it.each(['/products', '/customers', '/sales', '/receipts', '/settings'])(
-    '%s has «← Ещё» on top',
+    '%s has «Ещё» on top',
     async (path) => {
       mockApi()
       renderWithDataRouter(routes, { route: path })
 
-      const back = await screen.findByRole('link', { name: '← Ещё' })
+      const back = await screen.findByRole('link', { name: 'Ещё' })
       expect(back.getAttribute('href')).toBe('/more')
     },
   )
 
   // design-system.md, «Анатомия страницы»: one way back, a card leads to its own list.
   it.each([
-    ['/products/1', '← Товары', '/products'],
-    ['/customers/1', '← Покупатели', '/customers'],
-    ['/sales/1', '← Продажи', '/sales'],
-    ['/receipts/1', '← Приходы', '/receipts'],
-    ['/receipts/new', '← Приходы', '/receipts'],
+    ['/products/1', 'Товары', '/products'],
+    ['/customers/1', 'Покупатели', '/customers'],
+    ['/sales/1', 'Продажи', '/sales'],
+    ['/receipts/1', 'Приходы', '/receipts'],
   ])('%s has only «%s» as the way back', async (path, label, href) => {
     mockCards()
     renderWithDataRouter(routes, { route: path })
 
     const back = await screen.findByRole('link', { name: label })
     expect(back.getAttribute('href')).toBe(href)
-    expect(screen.queryByRole('link', { name: '← Ещё' })).toBeNull()
+    expect(document.querySelectorAll('a.q-return-link')).toHaveLength(1)
   })
 
   it.each(['/sell', '/receive', '/stock', '/more', '/'])(
@@ -79,7 +91,7 @@ describe('routes', () => {
       renderWithDataRouter(routes, { route: path })
 
       expect(await screen.findByRole('heading', { level: 1 })).toBeTruthy()
-      expect(screen.queryByRole('link', { name: /^←/ })).toBeNull()
+      expect(returnLink()).toBeNull()
     },
   )
 

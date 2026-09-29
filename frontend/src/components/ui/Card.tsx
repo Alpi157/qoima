@@ -1,9 +1,12 @@
 import { Card as MantineCard, type CardProps as MantineCardProps, Stack } from '@mantine/core'
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 import { SectionTitle } from './SectionTitle'
 
-export interface CardProps extends MantineCardProps {
+export interface CardProps
+  extends
+    MantineCardProps,
+    Omit<ComponentPropsWithoutRef<'div'>, keyof MantineCardProps | 'title'> {
   /** Block title, h3 style (h2 in the document outline: the page has its h1). */
   title?: ReactNode
   children?: ReactNode

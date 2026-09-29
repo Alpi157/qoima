@@ -1,9 +1,9 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { renderWithProviders } from '../test/render'
+import { setupUser } from '../test/user'
 import { MoneyInput } from './MoneyInput'
 
 const NBSP = ' '
@@ -26,7 +26,7 @@ const MONEY_INPUT_ERROR = 'Введите сумму, например 12500'
 
 describe('MoneyInput', () => {
   it('turns "12 500" into 1250000 tiyn and shows it formatted', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     let lastTiyn: number | null = null
     renderWithProviders(<Harness onTiyn={(tiyn) => (lastTiyn = tiyn)} />)
 
@@ -41,7 +41,7 @@ describe('MoneyInput', () => {
   })
 
   it('shows an error for "abc"', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     let lastTiyn: number | null = 1
     renderWithProviders(<Harness onTiyn={(tiyn) => (lastTiyn = tiyn)} />)
 

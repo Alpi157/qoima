@@ -154,3 +154,67 @@ export function ChevronRightIcon(props: IconProps) {
     </Icon>
   )
 }
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M19 12H5" />
+      <path d="M11 6l-6 6 6 6" />
+    </Icon>
+  )
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </Icon>
+  )
+}
+
+export function MinusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12h14" />
+    </Icon>
+  )
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </Icon>
+  )
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M6 7l1 13h10l1-13" />
+      <path d="M9 7V4h6v3" />
+    </Icon>
+  )
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-4-4" />
+    </Icon>
+  )
+}
+
+export function PrintIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6 9V3h12v6" />
+      <path d="M6 18H4v-7h16v7h-2" />
+      <path d="M6 14h12v7H6z" />
+    </Icon>
+  )
+}

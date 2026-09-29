@@ -133,7 +133,7 @@ export function ReceiptsPage() {
         back={backToMore}
         title={t('receipts.list.title')}
         actions={
-          <Button component={Link} to="/receipts/new">
+          <Button component={Link} to="/receive">
             {t('receipts.list.new')}
           </Button>
         }
@@ -162,7 +162,7 @@ export function ReceiptsPage() {
           <EmptyState
             text={t('receipts.list.empty')}
             actionLabel={t('receipts.list.addFirst')}
-            onAction={() => navigate('/receipts/new')}
+            onAction={() => navigate('/receive')}
           />
         )
       ) : (

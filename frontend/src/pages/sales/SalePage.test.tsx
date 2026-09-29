@@ -1,11 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { makeSale, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
+import { setupUser, type TestUser } from '../../test/user'
 import { SalePage } from './SalePage'
 
 const POSTED = makeSale({
@@ -30,7 +30,7 @@ function renderPage() {
   })
 }
 
-async function openCancel(user: ReturnType<typeof userEvent.setup>) {
+async function openCancel(user: TestUser) {
   await user.click(await screen.findByRole('button', { name: 'Отменить продажу' }))
   return screen.getByRole('dialog', { name: 'Отменить продажу №21?' })
 }
@@ -66,7 +66,7 @@ describe('SalePage', () => {
   })
 
   it('does not cancel without a reason', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
     const post = vi.spyOn(api, 'POST')
     renderPage()
@@ -79,7 +79,7 @@ describe('SalePage', () => {
   })
 
   it('cancels with a reason', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
     const post = vi
       .spyOn(api, 'POST')

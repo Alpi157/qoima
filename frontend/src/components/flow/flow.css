@@ -1,0 +1,236 @@
+/* Sale and receiving flows (docs/design/simple-ui.md; sizes from design-system.md). */
+
+/* Lines on the left, the totals panel on the right. */
+.flow-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--q-space-24);
+  align-items: start;
+}
+
+.flow-side {
+  position: sticky;
+  top: calc(var(--q-header-height) + var(--q-space-24));
+  display: flex;
+  flex-direction: column;
+  gap: var(--q-space-16);
+}
+
+.flow-aside-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--q-space-12);
+}
+
+/* On a phone the panel goes under the lines and sticks to the bottom of the screen: only the
+   main number and the button, so it covers little of the lines. */
+@media (max-width: 48em) {
+  .flow-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The panel and «Бас тарту» become items of the grid: the button under the lines, the
+     panel after it, sticky. */
+  .flow-side {
+    display: contents;
+  }
+
+  .flow-cancel {
+    order: 1;
+  }
+
+  .flow-aside {
+    order: 2;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-inline: calc(-1 * var(--q-gutter));
+    padding: var(--q-space-16);
+    border-radius: 0;
+    border-width: 1px 0 0;
+  }
+
+  .flow-aside-details {
+    display: none;
+  }
+
+  .flow-aside .q-display {
+    font-size: var(--q-fz-h2);
+    line-height: var(--q-lh-h2);
+  }
+}
+
+/* Step indicator: three pills with a number. */
+.flow-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--q-space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--q-space-12);
+  min-height: var(--q-control-sm);
+  padding: var(--q-space-4) var(--q-space-16) var(--q-space-4) var(--q-space-4);
+  border: 1px solid var(--q-color-field-border);
+  border-radius: 999px;
+  background: var(--q-color-surface);
+  color: var(--q-color-text-secondary);
+  font-weight: 600;
+}
+
+.flow-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--q-color-table-head);
+}
+
+.flow-step[data-state='current'] {
+  background: var(--q-color-text);
+  border-color: var(--q-color-text);
+  color: var(--q-color-surface);
+}
+
+.flow-step[data-state='current'] .flow-step-number {
+  background: var(--q-color-surface);
+  color: var(--q-color-text);
+}
+
+.flow-step[data-state='done'] {
+  background: var(--q-color-sale-light);
+  border-color: var(--q-color-sale-light-border);
+  color: var(--q-color-sale-text);
+}
+
+.flow-step[data-state='done'] .flow-step-number {
+  background: var(--q-color-surface);
+}
+
+/* On a phone only the numbers and the current step's name. */
+@media (max-width: 48em) {
+  .flow-step:not([data-state='current']) {
+    padding-right: var(--q-space-4);
+  }
+
+  .flow-step:not([data-state='current']) .flow-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* A line with something to fix: orange border and a strip at the bottom. */
+.flow-line[data-warning] {
+  border-color: var(--q-color-warning-border);
+  border-width: 2px;
+}
+
+.flow-warning {
+  margin: var(--q-space-16) calc(-1 * var(--q-space-24)) calc(-1 * var(--q-space-24));
+  padding: var(--q-space-12) var(--q-space-24);
+  border-radius: 0 0 var(--q-radius-card) var(--q-radius-card);
+  background: var(--q-color-warning-bg);
+  color: var(--q-color-warning-text);
+  font-weight: 600;
+}
+
+.flow-hint-warning {
+  color: var(--q-color-warning-text);
+}
+
+/* Square «−» and «+», 56x56. */
+.flow-qty-button {
+  width: var(--q-control-md);
+  min-width: var(--q-control-md);
+  padding: 0;
+}
+
+.flow-article {
+  font-size: var(--q-fz-h3);
+  line-height: var(--q-lh-h3);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Empty list and «not found»: a dashed box. */
+.flow-empty {
+  padding: var(--q-space-24);
+  border: 1.5px dashed var(--q-color-field-border);
+  border-radius: var(--q-radius-card);
+  color: var(--q-color-text-secondary);
+}
+
+/* Customer buttons of step 2: name large, phone under it. */
+.flow-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--q-space-16);
+  width: 100%;
+  min-height: 88px;
+  padding: var(--q-space-12) var(--q-space-16);
+  border: 1.5px solid var(--q-color-field-border);
+  border-radius: var(--q-radius-card);
+  background: var(--q-color-surface);
+  color: var(--q-color-text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--q-motion-press),
+    background-color var(--q-motion-press);
+}
+
+.flow-choice:hover {
+  border-color: var(--q-color-receive);
+  background: var(--q-color-table-head);
+}
+
+.flow-choice-name {
+  font-size: var(--q-fz-h3);
+  line-height: var(--q-lh-h3);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* «Done» screen: a circle with a check. */
+.flow-done {
+  max-width: 780px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.flow-done-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  color: var(--q-color-surface);
+}
+
+.flow-done-circle[data-color='green'] {
+  background: var(--q-color-sale);
+}
+
+.flow-done-circle[data-color='blue'] {
+  background: var(--q-color-receive);
+}
+
+/* Step 3: on a phone the save button on top, full width, «back» under it. */
+@media (max-width: 48em) {
+  .flow-review-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

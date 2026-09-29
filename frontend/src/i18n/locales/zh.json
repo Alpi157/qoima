@@ -37,7 +37,13 @@
     "searching": "搜索中…",
     "cancelDocument": {
       "reason": "原因",
-      "keep": "不作废"
+      "keep": "不作废",
+      "quickLabel": "快速选择原因",
+      "quick": {
+        "mistake": "录入错误",
+        "customerRefused": "顾客放弃购买",
+        "returned": "商品已退回"
+      }
     },
     "cancelled": {
       "when": "时间：{{date}}",
@@ -45,12 +51,6 @@
       "reason": "原因：{{reason}}"
     },
     "postedBy": "保存人：{{name}}，{{date}}",
-    "removeLine": "删除 {{article}}",
-    "lineSum": "金额：{{amount}}",
-    "leave": {
-      "title": "不保存就离开吗？",
-      "confirm": "离开"
-    },
     "units": {
       "pcs": "件",
       "set": "套",
@@ -148,7 +148,7 @@
       "restoreText": "商品 {{article}} 会重新出现在列表和搜索里。"
     },
     "card": {
-      "back": "← 商品",
+      "back": "商品",
       "brand": "品牌：{{brand}}",
       "edit": "修改",
       "adjust": "修改库存数量",
@@ -203,10 +203,6 @@
       "saveAndAddMore": "保存并继续添加",
       "editTitle": "修改商品",
       "newTitle": "新商品"
-    },
-    "picker": {
-      "stock": "库存：{{stock}}",
-      "create": "新建商品「{{article}}」"
     }
   },
   "receipts": {
@@ -240,7 +236,7 @@
       "sum": "金额"
     },
     "card": {
-      "back": "← 入库记录",
+      "back": "入库记录",
       "title": "入库单 {{number}} 号，{{date}}",
       "cancelled": "入库单已作废",
       "supplier": "供应商：{{supplier}}",
@@ -254,24 +250,6 @@
       "title": "作废入库单 {{number}} 号吗？",
       "description": "这张入库单的商品会从库存里扣回。入库单本身会以“已作废”保留在记录里。",
       "done": "入库单 {{number}} 号已作废"
-    },
-    "new": {
-      "qty": "数量",
-      "qtyOf": "{{article}} 的数量",
-      "cost": "进价",
-      "costOf": "{{article}} 的进价",
-      "optional": "选填",
-      "initialStock": "期初库存",
-      "posted": "入库单 {{number}} 号已保存",
-      "title": "新建入库",
-      "supplier": "供应商",
-      "date": "日期和时间",
-      "note": "备注",
-      "addProduct": "添加商品",
-      "emptyLines": "按零件号搜索商品来添加",
-      "stock": "库存",
-      "submit": "保存入库",
-      "leaveText": "入库还没有保存，已添加的商品会丢失。"
     }
   },
   "sales": {
@@ -285,25 +263,6 @@
       "sum": "金额",
       "qty": "数量",
       "price": "价格"
-    },
-    "new": {
-      "qty": "数量",
-      "qtyOf": "{{article}} 的数量",
-      "inStock": "库存 {{stock}}",
-      "price": "价格",
-      "priceOf": "{{article}} 的价格",
-      "posted": "销售单 {{number}} 号已保存",
-      "requestConflict": "这笔销售可能已经保存了，请查看<history>销售记录</history>",
-      "title": "销售",
-      "addProduct": "添加商品",
-      "emptyLines": "按零件号搜索商品来添加",
-      "stock": "库存",
-      "date": "日期和时间",
-      "note": "备注",
-      "total": "合计",
-      "submit": "保存并打印",
-      "submitHint": "Ctrl+Enter：保存并打印",
-      "leaveText": "销售还没有保存，已添加的商品会丢失。"
     },
     "list": {
       "statusAll": "全部",
@@ -326,7 +285,7 @@
     },
     "notFound": "没有找到这张销售单",
     "card": {
-      "back": "← 销售记录",
+      "back": "销售记录",
       "title": "销售单 {{number}} 号，{{date}}",
       "print": "打印发货单",
       "cancelled": "销售单已作废",
@@ -350,7 +309,7 @@
     "menu": "菜单",
     "logout": "退出",
     "home": "首页",
-    "backToMore": "← 更多"
+    "backToMore": "更多"
   },
   "home": {
     "greeting": "您好，{{name}}！",
@@ -421,7 +380,7 @@
       "title": "购买记录"
     },
     "card": {
-      "back": "← 客户",
+      "back": "客户",
       "call": "打电话",
       "edit": "修改"
     },
@@ -445,5 +404,155 @@
     "title": "设置",
     "invoiceDetails": "发货单信息（З-2 表格）",
     "noAccountant": "没有会计"
+  },
+  "flow": {
+    "search": "输入零件号或名称",
+    "results": "搜索结果",
+    "add": "添加",
+    "addOf": "添加 {{article}}",
+    "empty": "还没有商品。请在上方搜索并点击“添加”。",
+    "qty": "数量",
+    "qtyOf": "{{article}} 的数量",
+    "pcs": "件",
+    "decrease": "减少",
+    "increase": "增加",
+    "remove": "移除",
+    "removeOf": "移除 {{article}}",
+    "warn": {
+      "qty": "请填写数量。"
+    },
+    "kinds": "商品种类：<b>{{kinds}}</b>",
+    "pieces": "共计：<b>{{qty}} 件</b>",
+    "totals": "合计",
+    "blocked": {
+      "empty": "请先添加商品。",
+      "fix": "请修改橙色标记的商品。"
+    },
+    "cancel": "取消",
+    "cancelConfirm": {
+      "title": "确定取消吗？",
+      "confirm": "是，取消"
+    },
+    "draft": {
+      "clear": "清空",
+      "close": "关闭"
+    }
+  },
+  "sell": {
+    "steps": {
+      "label": "销售步骤",
+      "products": "商品",
+      "customer": "顾客",
+      "review": "核对"
+    },
+    "draftRestored": "未完成的销售已恢复。",
+    "cancelText": "已选的商品和顾客将被清除。",
+    "price": "单价，₸",
+    "priceOf": "{{article}} 的单价",
+    "sum": "金额",
+    "total": "金额",
+    "warn": {
+      "outOfStock": "该商品没有库存。请先入库。",
+      "shortage": "库存只有 {{stock}} {{unit}}。请减少数量。",
+      "price": "请填写单价。"
+    },
+    "products": {
+      "title": "卖什么？",
+      "placeholder": "例如：IKH16TT",
+      "frequent": "常卖商品：",
+      "inStock": "库存：{{stock}} {{unit}}",
+      "outOfStock": "无库存",
+      "notFound": "未找到“{{query}}”。请检查零件号后重新输入。",
+      "lines": "要卖的商品",
+      "next": "下一步：顾客"
+    },
+    "customer": {
+      "title": "卖给谁？",
+      "search": "按姓名或电话搜索",
+      "placeholder": "例如：Амангельды",
+      "recent": "最近的顾客",
+      "results": "搜索结果",
+      "notFound": "未找到该顾客。请在下方添加新顾客。",
+      "new": "新顾客",
+      "none": "不选顾客继续",
+      "name": "新顾客姓名",
+      "phone": "电话（选填）",
+      "saveAndPick": "保存并选择",
+      "back": "返回：商品"
+    },
+    "review": {
+      "title": "请核对",
+      "customer": "顾客",
+      "retail": "零售顾客",
+      "kinds": "商品种类",
+      "pieces": "共计",
+      "product": "商品",
+      "price": "单价",
+      "back": "返回：顾客",
+      "submit": "保存销售",
+      "conflict": "这笔销售可能已经保存。请查看<history>销售记录</history>。"
+    },
+    "done": {
+      "title": "销售已保存",
+      "number": "发货单 №{{number}}",
+      "customer": "顾客：<b>{{name}}</b>",
+      "amount": "金额：<b>{{amount}}</b>",
+      "print": "打印",
+      "newSale": "新销售"
+    }
+  },
+  "receive": {
+    "title": "来了什么货？",
+    "placeholder": "例如：22401-ED815",
+    "inStock": "当前库存：{{stock}} {{unit}}",
+    "notFound": "库存中还没有“{{query}}”。",
+    "addNew": "作为新商品添加",
+    "lines": "到货商品",
+    "after": "当前：{{stock}} {{unit}}。入库后：{{after}} {{unit}}。",
+    "submit": "加入库存",
+    "draftRestored": "未完成的入库已恢复。",
+    "cancelText": "已选的商品将被清除。",
+    "warn": {
+      "cost": "请检查进货价。"
+    },
+    "newProduct": {
+      "title": "新商品",
+      "article": "零件号",
+      "name": "名称",
+      "namePlaceholder": "例如：Свеча Denso",
+      "price": "售价，₸",
+      "pricePlaceholder": "例如：1200",
+      "unit": "单位",
+      "save": "保存并添加"
+    },
+    "extras": {
+      "toggle": "更多",
+      "supplier": "供应商",
+      "initialStock": "期初库存",
+      "date": "日期和时间",
+      "dateHint": "不填写则记录保存时间。",
+      "note": "备注",
+      "costs": "进货价，₸",
+      "costOf": "{{article}} 的进货价"
+    },
+    "done": {
+      "title": "商品已入库",
+      "summary": "{{kinds}} 种商品，共 {{qty}} 件。",
+      "more": "继续入库",
+      "stock": "库存里有什么？"
+    }
+  },
+  "stock": {
+    "title": "库存里有什么？",
+    "receive": "商品入库",
+    "search": "按零件号或名称搜索",
+    "placeholder": "例如：L3Y2",
+    "columns": {
+      "article": "零件号",
+      "name": "名称",
+      "price": "单价",
+      "stock": "库存"
+    },
+    "none": "无"
   }
 }

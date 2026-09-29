@@ -1,8 +1,8 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { renderWithDataRouter, renderWithProviders } from '../../test/render'
+import { setupUser } from '../../test/user'
 import { DataTable } from './DataTable'
 import { PageHeader } from './PageHeader'
 import { Stat } from './Stat'
@@ -12,7 +12,7 @@ describe('PageHeader', () => {
   it('renders one h1, the way back and the actions', () => {
     renderWithProviders(
       <PageHeader
-        back={{ to: '/products', label: '← Тауарлар' }}
+        back={{ to: '/products', label: 'Тауарлар' }}
         title="IKH16TT"
         subtitle="Свеча"
         actions={<button>Өзгерту</button>}
@@ -21,7 +21,13 @@ describe('PageHeader', () => {
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('IKH16TT')
-    expect(screen.getByRole('link', { name: '← Тауарлар' }).getAttribute('href')).toBe('/products')
+    const back = screen.getByRole('link', { name: 'Тауарлар' })
+    expect(back.getAttribute('href')).toBe('/products')
+    // The arrow is an icon of the link's color, hidden from screen readers.
+    const arrow = back.querySelector('svg')
+    expect(arrow?.getAttribute('width')).toBe('20')
+    expect(arrow?.getAttribute('stroke')).toBe('currentColor')
+    expect(back.textContent).toBe('Тауарлар')
     expect(screen.getByText('Свеча')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Өзгерту' })).toBeTruthy()
   })
@@ -79,7 +85,7 @@ describe('DataTable', () => {
   })
 
   it('opens the row address on click', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const { router } = renderWithDataRouter(
       [
         {

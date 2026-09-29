@@ -1,6 +1,5 @@
 import { notifications } from '@mantine/notifications'
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
@@ -8,6 +7,7 @@ import { ApiError } from '../../api/errors'
 import { fieldErrorOf } from '../../test/fields'
 import { fieldError, makeBusinessSettings, ok } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
+import { fill, setupUser } from '../../test/user'
 import type { BusinessSettingsUpdate } from './api'
 import { SettingsPage } from './SettingsPage'
 
@@ -33,7 +33,7 @@ afterEach(() => {
 
 describe('SettingsPage', () => {
   it('«Нет бухгалтера» writes the phrase for the invoice', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(makeBusinessSettings({ chief_accountant: 'Иванова' })))
     const put = vi.spyOn(api, 'PUT').mockReturnValue(ok(makeBusinessSettings()))
     renderWithProviders(<SettingsPage />)
@@ -50,18 +50,18 @@ describe('SettingsPage', () => {
   })
 
   it('saves trimmed values and confirms', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(EMPTY))
     const saved = makeBusinessSettings()
     const put = vi.spyOn(api, 'PUT').mockReturnValue(ok(saved))
     const notify = vi.spyOn(notifications, 'show')
     renderWithProviders(<SettingsPage />)
 
-    await user.type(await screen.findByLabelText(SELLER), ' 3А Аuto Parts.KZ ')
-    await user.type(field('ИИН/БИН'), '900101300123')
-    await user.type(field('Ответственный за поставку (Ф.И.О.)'), 'Кәкеш Арман')
-    await user.type(field('Отпустил (расшифровка подписи)'), 'Кәкеш А.')
-    await user.type(field('Главный бухгалтер (расшифровка подписи)'), 'Қамтамасыз етілмейді')
+    await fill(user, await screen.findByLabelText(SELLER), ' 3А Аuto Parts.KZ ')
+    await fill(user, field('ИИН/БИН'), '900101300123')
+    await fill(user, field('Ответственный за поставку (Ф.И.О.)'), 'Кәкеш Арман')
+    await fill(user, field('Отпустил (расшифровка подписи)'), 'Кәкеш А.')
+    await fill(user, field('Главный бухгалтер (расшифровка подписи)'), 'Қамтамасыз етілмейді')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     await waitFor(() => expect(put).toHaveBeenCalledTimes(1))
@@ -93,12 +93,12 @@ describe('SettingsPage', () => {
   })
 
   it('checks the ИИН/БИН before sending', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(EMPTY))
     const put = vi.spyOn(api, 'PUT')
     renderWithProviders(<SettingsPage />)
 
-    await user.type(await screen.findByLabelText('ИИН/БИН'), '12345')
+    await fill(user, await screen.findByLabelText('ИИН/БИН'), '12345')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     expect(fieldErrorOf(field('ИИН/БИН'))).toBe(IIN_BIN_ERROR)
@@ -106,7 +106,7 @@ describe('SettingsPage', () => {
   })
 
   it('shows the server error under the ИИН/БИН field', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(EMPTY))
     vi.spyOn(api, 'PUT').mockRejectedValue(
       new ApiError(
@@ -118,7 +118,7 @@ describe('SettingsPage', () => {
     )
     renderWithProviders(<SettingsPage />)
 
-    await user.type(await screen.findByLabelText('ИИН/БИН'), '900101300123')
+    await fill(user, await screen.findByLabelText('ИИН/БИН'), '900101300123')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     await waitFor(() =>

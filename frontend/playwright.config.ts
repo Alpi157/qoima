@@ -5,6 +5,8 @@ import { defineConfig } from '@playwright/test'
 // Own ports, so the working database and the dev servers on 8000 and 5173 are not touched.
 const API_PORT = 8011
 const WEB_PORT = 5183
+const DESKTOP = { width: 1366, height: 800 }
+const PHONE = { width: 390, height: 844 }
 
 export default defineConfig({
   testDir: './e2e',
@@ -18,9 +20,23 @@ export default defineConfig({
     timezoneId: 'Asia/Almaty',
     deviceScaleFactor: 1,
   },
+  // Screens first on both widths, then the flows that save a sale and a receiving: the numbers
+  // on the screens (today's sales, stock) are the seed's on both widths.
   projects: [
-    { name: '1366', use: { viewport: { width: 1366, height: 800 } } },
-    { name: '390', use: { viewport: { width: 390, height: 844 } } },
+    { name: '1366', testMatch: 'screenshots.spec.ts', use: { viewport: DESKTOP } },
+    { name: '390', testMatch: 'screenshots.spec.ts', use: { viewport: PHONE } },
+    {
+      name: 'flows-1366',
+      testMatch: 'flows.spec.ts',
+      dependencies: ['1366', '390'],
+      use: { viewport: DESKTOP },
+    },
+    {
+      name: 'flows-390',
+      testMatch: 'flows.spec.ts',
+      dependencies: ['1366', '390'],
+      use: { viewport: PHONE },
+    },
   ],
   webServer: [
     {

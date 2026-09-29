@@ -31,10 +31,12 @@ export interface SaleListParams {
 export const queryKeys = {
   products: (params: ProductListParams) => ['products', params] as const,
   productSearch: (q: string) => ['products', 'search', q] as const,
+  frequentProducts: ['products', 'frequent'] as const,
   product: (id: number) => ['product', id] as const,
   productMovements: (id: number, page: number) => ['product-movements', id, page] as const,
   customers: (params: CustomerListParams) => ['customers', params] as const,
   customerSearch: (q: string) => ['customers', 'search', q] as const,
+  recentCustomers: ['customers', 'recent'] as const,
   customer: (id: number) => ['customer', id] as const,
   receipts: (params: ReceiptListParams) => ['receipts', params] as const,
   receipt: (id: number) => ['receipt', id] as const,

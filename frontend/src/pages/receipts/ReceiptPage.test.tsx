@@ -1,11 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { makeReceipt, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
+import { fill, setupUser, type TestUser } from '../../test/user'
 import { ReceiptPage } from './ReceiptPage'
 
 const POSTED = makeReceipt({
@@ -21,7 +21,7 @@ function renderPage() {
   })
 }
 
-async function openCancel(user: ReturnType<typeof userEvent.setup>) {
+async function openCancel(user: TestUser) {
   await user.click(await screen.findByRole('button', { name: 'Отменить приход' }))
   return screen.getByRole('dialog', { name: 'Отменить приход №12?' })
 }
@@ -46,13 +46,13 @@ describe('ReceiptPage', () => {
   })
 
   it('does not cancel without a reason', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
     const post = vi.spyOn(api, 'POST')
     renderPage()
 
     const dialog = await openCancel(user)
-    await user.type(within(dialog).getByRole('textbox', { name: 'Причина' }), ' аб ')
+    await fill(user, within(dialog).getByRole('textbox', { name: 'Причина' }), ' аб ')
     await user.click(within(dialog).getByRole('button', { name: 'Отменить приход' }))
 
     expect(post).not.toHaveBeenCalled()
@@ -60,14 +60,14 @@ describe('ReceiptPage', () => {
   })
 
   it('shows a 409 inside the window', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
     const message = 'Нельзя отменить приход: остаток OC-90 станет -2'
     const post = vi.spyOn(api, 'POST').mockRejectedValue(new ApiError(409, message))
     renderPage()
 
     const dialog = await openCancel(user)
-    await user.type(within(dialog).getByRole('textbox', { name: 'Причина' }), 'Ошибка поставщика')
+    await fill(user, within(dialog).getByRole('textbox', { name: 'Причина' }), 'Ошибка поставщика')
     await user.click(within(dialog).getByRole('button', { name: 'Отменить приход' }))
 
     await waitFor(() => expect(within(dialog).getByRole('alert').textContent).toBe(message))

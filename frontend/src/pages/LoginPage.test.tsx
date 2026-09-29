@@ -1,5 +1,4 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import i18n from 'i18next'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -9,6 +8,7 @@ import { ApiError } from '../api/errors'
 import { LANGUAGE_STORAGE_KEY } from '../i18n/language'
 import { onlyKazakh } from '../test/i18n'
 import { renderWithProviders } from '../test/render'
+import { setupUser } from '../test/user'
 import { LoginPage } from './LoginPage'
 
 function renderLogin(route: string) {
@@ -51,7 +51,7 @@ describe('LoginPage', () => {
   })
 
   it('opens the main screen after login', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockLoggedOut()
     const post = vi.spyOn(api, 'POST').mockResolvedValue({
       data: { id: 1, username: 'owner', full_name: 'Владелец', role: 'owner', locale: 'ru' },
@@ -81,7 +81,7 @@ describe('LoginPage', () => {
   })
 
   it('switches the language before login without saving it on the server', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockLoggedOut()
     const patch = vi.spyOn(api, 'PATCH')
     renderLogin('/login')

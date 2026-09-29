@@ -42,6 +42,17 @@ export function useCustomerSearch(q: string) {
   })
 }
 
+const RECENT_LIMIT = 6
+
+/** «Соңғы сатып алушылар»: customers of the latest sales, then the newest ones. */
+export function useRecentCustomers() {
+  return useQuery({
+    queryKey: queryKeys.recentCustomers,
+    queryFn: () =>
+      unwrap(api.GET('/api/customers/recent', { params: { query: { limit: RECENT_LIMIT } } })),
+  })
+}
+
 export function useCustomer(id: number) {
   return useQuery({
     queryKey: queryKeys.customer(id),

@@ -47,12 +47,24 @@
   --q-color-sale: #17703f;
   --q-color-receive: #1d5aa6;
   --q-color-danger: #a32020;
+  /* A line to fix: orange border and strip (simple-ui.md, «Продажа»). */
+  --q-color-warning-border: #e08a3c;
+  --q-color-warning-bg: #fff1e0;
+  --q-color-warning-text: #7a3500;
+  --q-color-sale-light: #e3f1e8;
+  --q-color-sale-light-border: #9ccbae;
+  --q-color-sale-text: #0f5530;
 
   /* Surfaces. */
   --q-radius-control: 10px;
   --q-radius-card: 12px;
   --q-radius-tile: 16px;
   --q-radius-badge: 8px;
+
+  /* Field widths (design-system.md, «Ширины полей»); full and half width come from the grid. */
+  --q-field-qty: 120px;
+  --q-field-price: 180px;
+  --q-field-date: 240px;
 
   /* Layout. */
   --q-container: 1200px;
@@ -67,6 +79,11 @@
 @media (max-width: 48em) {
   :root {
     --q-gutter: 16px;
+    /* Narrow screens: long titles («Сатылым №9, 28.09.2026 11:00») fit in two lines. */
+    --q-fz-h1: 28px;
+    --q-fz-h2: 24px;
+    --mantine-h1-font-size: 28px;
+    --mantine-h2-font-size: 24px;
   }
 }
 

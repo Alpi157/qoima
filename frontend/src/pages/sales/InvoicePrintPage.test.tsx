@@ -1,5 +1,4 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import i18n from 'i18next'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +6,7 @@ import { api } from '../../api/client'
 import { makeBusinessSettings, makeSale, ok } from '../../test/fixtures'
 import { fakeKazakh } from '../../test/i18n'
 import { renderWithDataRouter } from '../../test/render'
+import { setupUser } from '../../test/user'
 import type { BusinessSettings } from '../settings/api'
 import type { Sale } from './api'
 import { InvoicePrintPage } from './InvoicePrintPage'
@@ -265,7 +265,7 @@ describe('InvoicePrintPage', () => {
   })
 
   it('does not print by itself without auto=1, but prints on the button', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi()
     renderPage()
 
@@ -287,7 +287,7 @@ describe('InvoicePrintPage', () => {
   })
 
   it('Назад without history goes to the sale card', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi()
     const { router } = renderPage()
 

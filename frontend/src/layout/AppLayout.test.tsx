@@ -1,5 +1,4 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import i18n from 'i18next'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -9,6 +8,7 @@ import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { LANGUAGE_STORAGE_KEY } from '../i18n/language'
 import { ok } from '../test/fixtures'
 import { renderWithDataRouter } from '../test/render'
+import { setupUser } from '../test/user'
 import { AppLayout } from './AppLayout'
 
 function user(locale: CurrentUser['locale']): CurrentUser {
@@ -51,7 +51,7 @@ describe('header', () => {
   })
 
   it('has the «home» button on other pages', async () => {
-    const clicker = userEvent.setup()
+    const clicker = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(user('ru')))
     const { router } = renderApp('/products')
 
@@ -64,7 +64,7 @@ describe('header', () => {
   })
 
   it("shows the user's name and logs out", async () => {
-    const clicker = userEvent.setup()
+    const clicker = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(user('ru')))
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok(null))
     const { router } = renderApp()
@@ -78,7 +78,7 @@ describe('header', () => {
   })
 
   it('on a narrow screen keeps languages and logout in the menu', async () => {
-    const clicker = userEvent.setup()
+    const clicker = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(user('ru')))
     const patch = vi.spyOn(api, 'PATCH').mockReturnValue(ok(user('kk')))
     renderApp()
@@ -107,7 +107,7 @@ describe('language after login', () => {
   })
 
   it('is saved on the server when switched in the header', async () => {
-    const clicker = userEvent.setup()
+    const clicker = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(user('ru')))
     const patch = vi.spyOn(api, 'PATCH').mockReturnValue(ok(user('kk')))
     renderApp()

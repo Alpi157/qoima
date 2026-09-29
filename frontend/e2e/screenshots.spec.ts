@@ -1,65 +1,18 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+
+import { getJson, type ListPage, login, settle, snap } from './snap.js'
 
 // Every screen of docs/design/design-system.md, «Проверка глазами», in Kazakh on demo data.
 // Files: review/screenshots/<screen>-<width>.png. Each screen is also checked for machine
-// dates, horizontal scrolling and the number of h1.
-
-const OUT_DIR = '../review/screenshots'
-const MACHINE_DATE = /\b\d{4}-\d{2}-\d{2}\b/
-
-interface ListPage<T> {
-  items: T[]
-}
-
-async function settle(page: Page) {
-  await page.waitForLoadState('networkidle')
-  await page.evaluate(() => document.fonts.ready)
-  // Loaders are replaced by content once the queries are done.
-  await expect(page.locator('.mantine-Loader-root')).toHaveCount(0)
-}
-
-interface SnapOptions {
-  /** The invoice has no h1: it is a printed form. */
-  h1?: boolean
-  /** Dialogs: only the visible screen, the backdrop does not cover a full-page capture. */
-  fullPage?: boolean
-}
-
-async function snap(page: Page, name: string, width: string, options: SnapOptions = {}) {
-  await settle(page)
-  const text = await page.locator('body').innerText()
-  expect.soft(text, `${name}: date in machine format`).not.toMatch(MACHINE_DATE)
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  )
-  expect.soft(overflow, `${name}: horizontal scroll`).toBeLessThanOrEqual(0)
-  if (options.h1 !== false) {
-    expect.soft(await page.locator('h1').count(), `${name}: one h1`).toBe(1)
-  }
-  await page.screenshot({
-    path: `${OUT_DIR}/${name}-${width}.png`,
-    fullPage: options.fullPage !== false,
-    animations: 'disabled',
-  })
-}
-
-async function getJson<T>(page: Page, url: string): Promise<T> {
-  const response = await page.request.get(url)
-  expect(response.ok(), url).toBeTruthy()
-  return (await response.json()) as T
-}
+// dates, horizontal scrolling and the number of h1. The sale and receiving flows are in
+// flows.spec.ts: they save documents and run after these screens on both widths.
 
 test('screens', async ({ page }, testInfo) => {
   const width = testInfo.project.name
-  const password = process.env.DEMO_PASSWORD
-  if (!password) throw new Error('DEMO_PASSWORD is not set: run make screenshots')
 
   await page.goto('/login')
   await snap(page, 'login', width)
-  await page.getByLabel('Логин').fill('demo')
-  await page.getByLabel('Құпиясөз').fill(password)
-  await page.getByRole('button', { name: 'Кіру' }).click()
-  await page.waitForURL('/')
+  await login(page)
 
   const products = await getJson<ListPage<{ id: number; article: string }>>(
     page,
@@ -76,8 +29,6 @@ test('screens', async ({ page }, testInfo) => {
   const screens: [string, string][] = [
     ['home', '/'],
     ['more', '/more'],
-    ['sell', '/sell'],
-    ['receive', '/receive'],
     ['stock', '/stock'],
     ['products', '/products'],
     ['product', `/products/${productId}`],
@@ -104,7 +55,9 @@ test('screens', async ({ page }, testInfo) => {
   await page.goto(`/sales/${saleId}`)
   await settle(page)
   await page.getByRole('button', { name: 'Сатылымның күшін жою' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Сатып алушы бас тартты' }).click()
   await snap(page, 'sale-cancel-modal', width, { fullPage: false })
 
   await page.goto(`/sales/${saleId}/print`)

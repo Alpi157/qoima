@@ -1,7 +1,4 @@
-import { Input, SegmentedControl } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
-
-import { WIDE_SCREEN } from '../lib/breakpoints'
+import { Button, Group, Input } from '@mantine/core'
 
 export interface StatusFilterProps {
   label: string
@@ -11,31 +8,29 @@ export interface StatusFilterProps {
 }
 
 /**
- * Document status filter with a visible label. On a phone the options stand one under another:
- * side by side the Kazakh labels («Күші жойылғандар») would break in the middle of a word.
+ * Document status filter with a visible label: one sm button per option, the chosen one filled
+ * blue. When the row does not fit (Kazakh labels on a phone) the buttons wrap to the next line.
  */
 export function StatusFilter({ label, options, value, onChange }: StatusFilterProps) {
-  const isWide = useMediaQuery(WIDE_SCREEN, true)
   return (
-    <Input.Wrapper label={label} w={isWide ? undefined : '100%'}>
-      <SegmentedControl
-        aria-label={label}
-        data={options}
-        value={value}
-        onChange={onChange}
-        orientation={isWide ? 'horizontal' : 'vertical'}
-        fullWidth={!isWide}
-        styles={{
-          root: { minHeight: 'var(--q-control-md)' },
-          label: {
-            whiteSpace: isWide ? 'nowrap' : 'normal',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-          },
-        }}
-      />
+    <Input.Wrapper label={label} component="div">
+      <Group gap="xs" wrap="wrap" role="group" aria-label={label}>
+        {options.map((option) => {
+          const selected = option.value === value
+          return (
+            <Button
+              key={option.value}
+              size="sm"
+              variant={selected ? 'filled' : 'default'}
+              color="blue"
+              aria-pressed={selected}
+              onClick={() => onChange(option.value)}
+            >
+              {option.label}
+            </Button>
+          )
+        })}
+      </Group>
     </Input.Wrapper>
   )
 }

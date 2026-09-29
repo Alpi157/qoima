@@ -84,20 +84,42 @@ CUSTOMERS = [
     ("Ерлан Төлеуов", "77780012233"),
     ("Бауыржан Жұмабеков", "77019876543"),
     ("Сәуле Мұхамедқызы", "77076665544"),
+    ("Дәурен Оспанов", "77024447788"),
+    ("Жанар Ахметова", "77752223344"),
+    ("Марат Ибраев", "77018889900"),
+    ("Гүлнар Сейітова", "77475556677"),
 ]
 
-# (days ago, customer index or None, [(article, qty)]). The first is cancelled below.
+# Sales over the last ten days in working hours (9:00-19:00 local time), to different
+# customers, two of them today in the morning so they exist whenever the seed runs:
+# (days ago, (hour, minute), customer index or None, [(article, qty)]).
+# The first is cancelled below.
 SALES = [
-    (9, 0, [("IKH16TT", 4), ("15208-65F0E", 1)]),
-    (8, 1, [("22401-ED815", 4), ("22401-8H515", 4)]),
-    (7, None, [("90915-YZZE1", 2)]),
-    (6, 2, [("L3Y2-18-110", 4), ("17801-0H050", 1)]),
-    (5, 3, [("04465-33471", 1), ("PE5R-18-110", 4)]),
-    (4, 0, [("IXEH22TT", 4)]),
-    (3, 4, [("22401-8H515", 4), ("26300-35505", 2)]),
-    (1, 5, [("IKH20TT", 6), ("87139-0N010", 1)]),
-    (0, 1, [("12686362 41-157", 4), ("58101-2SA70", 1)]),
+    (9, (10, 20), 0, [("IKH16TT", 4), ("15208-65F0E", 1)]),
+    (8, (12, 5), 1, [("22401-ED815", 4), ("22401-8H515", 4)]),
+    (7, (15, 40), None, [("90915-YZZE1", 2)]),
+    (6, (9, 50), 2, [("L3Y2-18-110", 4), ("17801-0H050", 1)]),
+    (5, (17, 30), 3, [("04465-33471", 1), ("PE5R-18-110", 4)]),
+    (4, (11, 15), 6, [("IXEH22TT", 4)]),
+    (3, (13, 45), 4, [("22401-8H515", 4), ("26300-35505", 2)]),
+    (2, (16, 10), 7, [("IKH16TT", 2), ("87139-0N010", 1)]),
+    (2, (18, 25), 8, [("90915-YZZE1", 1)]),
+    (1, (10, 5), 5, [("IKH20TT", 6), ("87139-0N010", 1)]),
+    (1, (14, 30), 9, [("28113-2S000", 1)]),
+    (0, (9, 15), 0, [("12686362 41-157", 4), ("58101-2SA70", 1)]),
+    (0, (10, 40), 3, [("IKH20TT", 2)]),
 ]
+
+# Deliveries after the opening balance:
+# (days ago, (hour, minute), supplier, [(article, qty, unit cost in tenge)]).
+RECEIPTS = [
+    (8, (9, 30), "«Автоимпорт» ЖШС", [("IKH16TT", 10, 1100), ("15208-65F0E", 6, 1700)]),
+    (5, (16, 45), "«Жапон Авто» ЖШС", [("04465-33471", 4, 12000), ("58101-2SA70", 3, 11000)]),
+    (2, (11, 20), "«Автоимпорт» ЖШС", [("90915-YZZE1", 10, 1900), ("26300-35505", 6, 1500)]),
+]
+OPENING_SUPPLIER = "Бастапқы қалдық"
+OPENING_TIME = (11, (9, 0))
+
 CANCELLED_SALE_INDEX = 0
 CANCEL_REASON = "Сатып алушы бас тартты"
 
@@ -137,10 +159,10 @@ def recreate_database(database_url: str) -> str:
     return demo_url
 
 
-def _sale_time(now: datetime, days_ago: int) -> datetime:
-    """11:00 local time N days ago; today's sale never lands in the future."""
+def _local_time(now: datetime, days_ago: int, at: tuple[int, int]) -> datetime:
+    """Local time of day N days ago; a moment later than now is moved to a minute ago."""
     local_day = now.astimezone(LOCAL_TZ).date() - timedelta(days=days_ago)
-    moment = datetime.combine(local_day, time(11, 0), tzinfo=LOCAL_TZ)
+    moment = datetime.combine(local_day, time(*at), tzinfo=LOCAL_TZ)
     return min(moment, now - timedelta(minutes=1))
 
 
@@ -172,9 +194,9 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
     receipts_service.post_receipt(
         db,
         ReceiptCreate(
-            supplier="Бастапқы қалдық",
-            note="Бастапқы қалдық",
-            received_at=_sale_time(now, 11),
+            supplier=OPENING_SUPPLIER,
+            note=OPENING_SUPPLIER,
+            received_at=_local_time(now, *OPENING_TIME),
             lines=[
                 ReceiptLineIn(product_id=product_ids[item.article], qty=item.initial_qty)
                 for item in PRODUCTS
@@ -184,14 +206,28 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         user.id,
     )
 
+    for days_ago, at, supplier, receipt_lines in RECEIPTS:
+        receipts_service.post_receipt(
+            db,
+            ReceiptCreate(
+                supplier=supplier,
+                received_at=_local_time(now, days_ago, at),
+                lines=[
+                    ReceiptLineIn(product_id=product_ids[article], qty=qty, unit_cost=cost * 100)
+                    for article, qty, cost in receipt_lines
+                ],
+            ),
+            user.id,
+        )
+
     sale_ids: list[int] = []
-    for number, (days_ago, customer, lines) in enumerate(SALES):
+    for number, (days_ago, at, customer, lines) in enumerate(SALES):
         sale, _ = sales_service.post_sale(
             db,
             SaleCreate(
                 request_id=uuid.uuid5(_REQUEST_NS, f"sale-{number}"),
                 customer_id=customer_ids[customer] if customer is not None else None,
-                sold_at=_sale_time(now, days_ago),
+                sold_at=_local_time(now, days_ago, at),
                 lines=[
                     SaleLineIn(product_id=product_ids[article], qty=qty) for article, qty in lines
                 ],

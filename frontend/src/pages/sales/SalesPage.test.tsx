@@ -1,10 +1,10 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
+import { setupUser } from '../../test/user'
 import type { SaleListItem } from './api'
 import { SalesPage } from './SalesPage'
 
@@ -74,7 +74,7 @@ describe('SalesPage', () => {
     ['Неделя', '2026-09-21', '2026-09-27'],
     ['Месяц', '2026-09-01', '2026-09-27'],
   ])('"%s" sets the period by Astana time', async (label, from, to) => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const get = mockSales()
     const { router } = renderPage()
 

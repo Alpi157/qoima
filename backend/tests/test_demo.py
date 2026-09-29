@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 
 import pytest
 from sqlalchemy import func, select
@@ -48,12 +48,27 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     assert _stock(db_session, "22401-8H515") == 2
     assert _stock(db_session, "L3Y4-18-110") == 0
 
-    assert db_session.scalar(select(func.count()).select_from(Customer)) == 6
-    receipt = db_session.execute(select(Receipt)).scalar_one()
-    assert receipt.supplier == "Бастапқы қалдық"
+    assert db_session.scalar(select(func.count()).select_from(Customer)) == len(demo.CUSTOMERS)
+    receipts = db_session.scalars(select(Receipt).order_by(Receipt.received_at)).all()
+    assert len(receipts) == len(demo.RECEIPTS) + 1
+    assert receipts[0].supplier == "Бастапқы қалдық"
 
     statuses = db_session.scalars(select(Sale.status)).all()
     assert len(statuses) == len(demo.SALES)
     assert statuses.count("cancelled") == 1
-    days = {sale.sold_at.date() for sale in db_session.scalars(select(Sale))}
-    assert min(days) >= datetime(2026, 9, 17).date()
+    sales = db_session.scalars(select(Sale)).all()
+    assert min(sale.sold_at for sale in sales) > receipts[0].received_at
+    local_times = [sale.sold_at.astimezone(demo.LOCAL_TZ) for sale in sales]
+    assert min(moment.date() for moment in local_times) >= date(2026, 9, 18)
+    assert all(time(9) <= moment.time() <= time(19) for moment in local_times)
+    today = [moment for moment in local_times if moment.date() == date(2026, 9, 27)]
+    assert 1 <= len(today) <= 2
+    customers = [sale.customer_id for sale in sales if sale.customer_id is not None]
+    assert len(set(customers)) >= 8
+
+
+def test_seed_before_opening_hours_keeps_sales_in_the_past(db_session: Session) -> None:
+    now = datetime(2026, 9, 27, 3, 0, tzinfo=UTC)  # 8:00 in Almaty
+    demo.seed(db_session, "demo-password", now=now)
+
+    assert max(db_session.scalars(select(Sale.sold_at))) < now

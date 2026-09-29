@@ -1,7 +1,6 @@
 import { Box, Button, Group, Loader, Stack, Switch, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
 
 import { EmptyState } from '../../components/EmptyState'
 import { ListPagination } from '../../components/ListPagination'
@@ -23,8 +22,6 @@ import { type Product, useProducts } from './api'
 import { ProductFormModal } from './ProductFormModal'
 
 const ARCHIVED_PARAM = 'archived'
-// Until step 16.3 the simple «Қоймада не бар?» screen shows this list without the way back.
-const STOCK_PATH = '/stock'
 
 const productPath = (product: Product) => `/products/${product.id}`
 
@@ -110,14 +107,13 @@ export function ProductsPage() {
   const products = useProducts({ q, includeArchived, page })
   const { t } = useTranslation()
   const backToMore = useBackToMore()
-  const isStockScreen = useLocation().pathname === STOCK_PATH
 
   const isFiltered = Boolean(q) || includeArchived
 
   return (
     <PageContainer>
       <PageHeader
-        back={isStockScreen ? undefined : backToMore}
+        back={backToMore}
         title={t('products.list.title')}
         actions={<Button onClick={form.open}>{t('products.list.add')}</Button>}
       />

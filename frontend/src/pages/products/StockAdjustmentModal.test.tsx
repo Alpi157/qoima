@@ -1,11 +1,11 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { ApiError } from '../../api/errors'
 import { makeProduct, ok } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
+import { fill, setupUser } from '../../test/user'
 import { StockAdjustmentModal } from './StockAdjustmentModal'
 
 const PRODUCT = makeProduct({ id: 1, article: 'OC-90', stock: 5 })
@@ -26,7 +26,7 @@ afterEach(() => {
 
 describe('StockAdjustmentModal', () => {
   it('"Списать 3" sends qty = -3 and shows the stock after', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok({ stock: 2, movement: {} }))
     const { onClose } = renderModal()
 
@@ -44,7 +44,7 @@ describe('StockAdjustmentModal', () => {
   })
 
   it('needs a reason', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const post = vi.spyOn(api, 'POST')
     renderModal()
 
@@ -55,7 +55,7 @@ describe('StockAdjustmentModal', () => {
   })
 
   it('shows a 409 (stock would go negative) inside the window', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const message = 'Недостаточно товара OC-90: остаток 5, нужно 9'
     vi.spyOn(api, 'POST').mockRejectedValue(new ApiError(409, message))
     const { onClose } = renderModal()
@@ -63,7 +63,7 @@ describe('StockAdjustmentModal', () => {
     await user.click(screen.getByRole('radio', { name: 'Списать' }))
     await user.clear(qtyField())
     await user.type(qtyField(), '9')
-    await user.type(screen.getByRole('textbox', { name: 'Причина' }), 'Пересчёт')
+    await fill(user, screen.getByRole('textbox', { name: 'Причина' }), 'Пересчёт')
     await user.click(screen.getByRole('button', { name: 'Списать' }))
 
     expect((await screen.findByRole('alert')).textContent).toBe(message)

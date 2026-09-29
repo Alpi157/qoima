@@ -1,5 +1,4 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
@@ -7,6 +6,7 @@ import { todayLocal } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
+import { setupUser } from '../../test/user'
 import { HomePage } from './HomePage'
 
 const OWNER = { id: 1, username: 'owner', full_name: 'Арман', role: 'owner', locale: 'ru' }
@@ -86,7 +86,7 @@ describe('HomePage', () => {
   })
 
   it('«Ещё» opens /more, the history button /sales', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     mockApi({ total: 0, sum_posted: 0 })
     const { router } = renderHome()
 

@@ -10,16 +10,19 @@ import {
   InvoicePrintPage,
   LoginPage,
   MorePage,
-  NewReceiptPage,
-  NewSalePage,
   NotFoundPage,
   ProductPage,
   ProductsPage,
   ReceiptPage,
   ReceiptsPage,
+  ReceiveDonePage,
+  ReceivePage,
   SalePage,
   SalesPage,
+  SellDonePage,
+  SellPage,
   SettingsPage,
+  StockPage,
 } from './pages/lazyPages'
 
 export const routes: RouteObject[] = [
@@ -34,18 +37,20 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <HomePage /> },
           { path: 'more', element: <MorePage /> },
-          // Until steps 16.2 and 16.3 the simple screens show the existing ones.
-          { path: 'sell', element: <NewSalePage /> },
-          { path: 'receive', element: <NewReceiptPage /> },
-          { path: 'stock', element: <ProductsPage /> },
+          // The simple screens of the main page (docs/design/simple-ui.md).
+          { path: 'sell', element: <SellPage /> },
+          { path: 'sell/done/:id', element: <SellDonePage /> },
+          { path: 'receive', element: <ReceivePage /> },
+          { path: 'receive/done/:id', element: <ReceiveDonePage /> },
+          { path: 'stock', element: <StockPage /> },
           { path: 'sale', element: <Navigate to="/sell" replace /> },
-          // Detailed sections opened from «Тағы»: their lists lead back with «← Тағы».
+          // Detailed sections opened from «Тағы»: their lists lead back with «Тағы».
           { path: 'products', element: <ProductsPage /> },
           { path: 'products/:id', element: <ProductPage /> },
           { path: 'customers', element: <CustomersPage /> },
           { path: 'customers/:id', element: <CustomerPage /> },
           { path: 'receipts', element: <ReceiptsPage /> },
-          { path: 'receipts/new', element: <NewReceiptPage /> },
+          { path: 'receipts/new', element: <Navigate to="/receive" replace /> },
           { path: 'receipts/:id', element: <ReceiptPage /> },
           { path: 'sales', element: <SalesPage /> },
           { path: 'sales/:id', element: <SalePage /> },

@@ -1,11 +1,11 @@
 import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../api/client'
 import { makeCustomer, ok } from '../test/fixtures'
 import { renderWithProviders } from '../test/render'
+import { setupUser } from '../test/user'
 import { CustomerPicker, type CustomerPickerProps, type PickedCustomer } from './CustomerPicker'
 
 const YERZHAN = makeCustomer({ id: 1, name: 'Ержан', phone: '+7 701 111 22 33' })
@@ -39,7 +39,7 @@ afterEach(() => {
 
 describe('CustomerPicker', () => {
   it('searches by name or phone, picks with arrows and Enter, shows a plate to reset', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     const get = vi.spyOn(api, 'GET').mockReturnValue(ok({ items: [YERZHAN, AIDOS], total: 2 }))
     const onChange = vi.fn()
     renderWithProviders(<Harness onChange={onChange} />)
@@ -62,7 +62,7 @@ describe('CustomerPicker', () => {
   })
 
   it('creates a customer from the typed name and selects it', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok({ items: [], total: 0 }))
     const created = makeCustomer({ id: 5, name: 'Болат', phone: null })
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok(created))
@@ -84,7 +84,7 @@ describe('CustomerPicker', () => {
   })
 
   it('does not offer creation when it is turned off', async () => {
-    const user = userEvent.setup()
+    const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok({ items: [], total: 0 }))
     renderWithProviders(<Harness onChange={vi.fn()} allowCreate={false} />)
 

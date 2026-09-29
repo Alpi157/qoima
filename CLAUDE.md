@@ -62,7 +62,8 @@
   `cd backend && uv run python -m app.demo serve --port 8011`. Пользователь `demo`, язык kk,
   пароль из переменной `DEMO_PASSWORD`, в git его нет.
 - Снимки экранов: `make screenshots` (пересоздаёт `qoima_demo`, поднимает API на 8011 и фронтенд
-  на 5183, снимает все экраны в 1366x800 и 390x844 в `review/screenshots/`; пароль demo берётся
+  на 5183, снимает все экраны в 1366x800 и 390x844 в `review/screenshots/`, затем проходит продажу
+  и приём по шагам (`e2e/flows.spec.ts`, сохраняет документы в демо-базе); пароль demo берётся
   из `DEMO_PASSWORD` или генерируется на запуск). Один раз поставить браузер:
   `cd frontend && npx playwright install chromium`.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
