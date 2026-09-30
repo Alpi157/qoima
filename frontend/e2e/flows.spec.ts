@@ -27,6 +27,14 @@ test('sale in three steps', async ({ page }) => {
   await snap(page, 'sell-1-empty', w)
 
   await addByEnter(page, 'IKH16TT')
+  const decrement = page.getByRole('button', { name: 'Азайту' }).first()
+  await expect(decrement).toBeDisabled()
+  expect(
+    await decrement.evaluate((button) => {
+      const style = getComputedStyle(button)
+      return [style.backgroundColor, style.color, style.cursor]
+    }),
+  ).toEqual(['rgb(255, 255, 255)', 'rgb(174, 184, 196)', 'not-allowed'])
   await addByEnter(page, 'IKH20TT')
   // Two in stock: three of them show the orange warning and block «Келесі».
   await addByEnter(page, '22401-8H515')

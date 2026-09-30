@@ -461,6 +461,7 @@
       "placeholder": "例如：IKH16TT",
       "frequent": "常卖商品：",
       "inStock": "库存：{{stock}} {{unit}}",
+      "lineStock": "库存：{{qty}} {{unit}}",
       "outOfStock": "无库存",
       "notFound": "未找到“{{query}}”。请检查零件号后重新输入。",
       "lines": "要卖的商品",

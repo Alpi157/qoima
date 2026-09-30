@@ -467,6 +467,7 @@
       "placeholder": "Мысалы: IKH16TT",
       "frequent": "Жиі сатылатындар:",
       "inStock": "Қоймада: {{stock}} {{unit}}",
+      "lineStock": "Қоймада: {{qty}} {{unit}}",
       "outOfStock": "Қоймада жоқ",
       "notFound": "«{{query}}» табылмады. Артикулды тексеріп, қайта жазыңыз.",
       "lines": "Сатылатын тауарлар",

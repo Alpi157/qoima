@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { PDFDocument } from 'pdf-lib'
 
 import { getJson, type ListPage, login, settle, snap } from './snap.js'
 
@@ -62,4 +63,75 @@ test('screens', async ({ page }, testInfo) => {
 
   await page.goto(`/sales/${saleId}/print`)
   await snap(page, 'invoice', width, { h1: false })
+})
+
+test('printed invoices fit one A4 page', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  const sales = await getJson<ListPage<{ id: number; status: string }>>(page, '/api/sales')
+  for (const lineCount of [3, 12]) {
+    let saleId: number | undefined
+    let saleLines: { article: string; name: string }[] = []
+    for (const candidate of sales.items) {
+      if (candidate.status !== 'posted') continue
+      const sale = await getJson<{ lines: { article: string; name: string }[] }>(
+        page,
+        `/api/sales/${candidate.id}`,
+      )
+      if (sale.lines.length === lineCount) {
+        saleId = candidate.id
+        saleLines = sale.lines
+        break
+      }
+    }
+    expect(saleId, `seeded sale with ${lineCount} lines`).toBeDefined()
+    if (lineCount === 12) {
+      expect(saleLines.some((line) => line.article === '12686362 41-157')).toBe(true)
+      expect(saleLines.some((line) => line.name === 'Колодки тормозные передние')).toBe(true)
+    }
+    await page.goto(`/sales/${saleId}/print`)
+    await settle(page)
+    await page.emulateMedia({ media: 'print' })
+    const originalViewport = page.viewportSize()!
+    // A4 after its 12 mm margins: 186 mm printable width and 273 mm height at 96 px/in.
+    await page.setViewportSize({ width: 703, height: 1032 })
+    const overflowingCells = await page
+      .locator('[data-testid="invoice"] th, [data-testid="invoice"] td')
+      .evaluateAll((cells) =>
+        cells
+          .filter((cell) => cell.scrollWidth > cell.clientWidth + 1)
+          .map((cell) => ({
+            text: cell.textContent?.trim(),
+            scrollWidth: cell.scrollWidth,
+            clientWidth: cell.clientWidth,
+          })),
+      )
+    expect(overflowingCells, `${lineCount} line invoice: overflowing cells`).toEqual([])
+    if (lineCount === 12) {
+      await expect(page.locator('.z2-article', { hasText: '12686362 41-157' })).toHaveCSS(
+        'white-space',
+        'nowrap',
+      )
+    }
+    await page.screenshot({
+      path: `../review/screenshots/invoice-${lineCount}-print-${width}.png`,
+      fullPage: true,
+    })
+    if (width === '1366') {
+      const path = `../review/screenshots/invoice-${lineCount}.pdf`
+      const bytes = await page.pdf({
+        path,
+        format: 'A4',
+        preferCSSPageSize: true,
+        printBackground: true,
+      })
+      const pdf = await PDFDocument.load(bytes)
+      expect(pdf.getPageCount(), `${lineCount} line invoice pages`).toBe(1)
+      const { width: pageWidth, height: pageHeight } = pdf.getPage(0).getSize()
+      expect(Math.abs(pageWidth - 595.28)).toBeLessThan(1)
+      expect(Math.abs(pageHeight - 841.89)).toBeLessThan(1)
+    }
+    await page.emulateMedia({ media: 'screen' })
+    await page.setViewportSize(originalViewport)
+  }
 })

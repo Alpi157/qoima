@@ -529,6 +529,7 @@
       "placeholder": "Например: IKH16TT",
       "frequent": "Часто продаются:",
       "inStock": "На складе: {{stock}} {{unit}}",
+      "lineStock": "На складе: {{qty}} {{unit}}",
       "outOfStock": "Нет на складе",
       "notFound": "«{{query}}» не найден. Проверьте артикул и напишите ещё раз.",
       "lines": "Товары в продаже",

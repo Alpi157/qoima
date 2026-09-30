@@ -156,6 +156,13 @@
   padding: 0;
 }
 
+.flow-qty-button:disabled {
+  background: var(--q-color-surface);
+  color: var(--q-color-field-border);
+  border-color: var(--q-color-field-border);
+  cursor: not-allowed;
+}
+
 .flow-article {
   font-size: var(--q-fz-h3);
   line-height: var(--q-lh-h3);

@@ -90,8 +90,8 @@ rm -f "$ZIP"
   for f in "$OUT/REVIEW.md" "$LOG" "$SUMMARY" "$OUT/diffstat.txt" "$OUT/changes.diff"; do
     [ -f "$f" ] && echo "$f"
   done
-  # Screenshots of `make screenshots` (review/ is not in git).
-  for f in "$OUT"/screenshots/*.png; do
+  # Screenshots and printable PDFs of `make screenshots` (review/ is not in git).
+  for f in "$OUT"/screenshots/*.png "$OUT"/screenshots/*.pdf; do
     [ -f "$f" ] && echo "$f"
   done
 } | sort -u | zip -q "$ZIP" -@

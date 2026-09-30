@@ -109,10 +109,14 @@ describe('SellPage, step 1', () => {
     renderSell()
 
     await screen.findByRole('textbox', { name: 'Количество IKH16TT' })
+    const stock = screen.getByTestId('line-stock-2')
+    expect(stock.textContent).toBe('На складе: 1 шт')
+    expect(stock.classList.contains('flow-hint-warning')).toBe(false)
     expect(nextButton().disabled).toBe(false)
 
     await user.click(screen.getByRole('button', { name: 'Увеличить' }))
     expect(qtyField('IKH16TT').value).toBe('2')
+    expect(stock.classList.contains('flow-hint-warning')).toBe(true)
     expect(screen.getByText('На складе только 1 шт. Уменьшите количество.')).toBeTruthy()
     expect(nextButton().disabled).toBe(true)
     expect(screen.getByText('Исправьте товары, отмеченные оранжевым.')).toBeTruthy()
@@ -300,6 +304,29 @@ describe('SellPage, step 3', () => {
 })
 
 describe('SellPage, draft', () => {
+  it('hides the restored notice after editing a line and keeps the draft', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    saveDraft({})
+    renderSell()
+    expect(await screen.findByText('Незавершённая продажа восстановлена.')).toBeTruthy()
+    await screen.findByRole('textbox', { name: 'Количество OC-90' })
+    await user.click(screen.getByRole('button', { name: 'Увеличить' }))
+    expect(screen.queryByText('Незавершённая продажа восстановлена.')).toBeNull()
+    expect(storedDraft()?.lines[0].qty).toBe(3)
+  })
+
+  it('hides the restored notice when the user changes steps', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    saveDraft({})
+    const { router } = renderSell()
+    expect(await screen.findByText('Незавершённая продажа восстановлена.')).toBeTruthy()
+    await screen.findByRole('textbox', { name: 'Количество OC-90' })
+    await user.click(nextButton())
+    expect(router.state.location.search).toBe('?step=2')
+    expect(screen.queryByText('Незавершённая продажа восстановлена.')).toBeNull()
+  })
   it('restores the draft with the current price and clears it with «Очистить»', async () => {
     const user = setupUser()
     mockFlowGet({ products: [{ ...FILTER, sale_price: 1500000 }] })

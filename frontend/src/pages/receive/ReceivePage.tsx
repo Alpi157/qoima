@@ -291,6 +291,7 @@ function ReceiveFlow({ userId }: { userId: number }) {
                             <Text c="dimmed">{product.name}</Text>
                           </Stack>
                           <MoneyInput
+                            showHint={false}
                             aria-label={t('receive.extras.costOf', { article: product.article })}
                             value={line.cost}
                             onChange={(cost) => changeLine(product.id, { cost })}
@@ -315,7 +316,7 @@ function ReceiveFlow({ userId }: { userId: number }) {
           error={saveError}
           onCancel={() => (value.lines.length > 0 ? setConfirmCancel(true) : cancel())}
           summary={
-            <Text fz="var(--q-fz-h3)" lh="var(--q-lh-h3)">
+            <Text>
               <Trans i18nKey="flow.pieces" values={{ qty: pieces }} components={{ b: <b /> }} />
             </Text>
           }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { formatMoney, parseMoney, validateMoneyText } from '../lib/money'
 
 export interface MoneyInputProps extends Omit<TextInputProps, 'value' | 'onChange'> {
+  showHint?: boolean
   /** Text as typed, for example "12 500". */
   value?: string
   /** Receives the text and its value in tiyn (null when empty or invalid). */
@@ -22,7 +23,14 @@ const WRAPPER_ORDER: ('label' | 'input' | 'description' | 'error')[] = [
 ]
 
 /** Amount in tenge; the hint under the field shows how it was understood. */
-export function MoneyInput({ value = '', onChange, onBlur, error, ...props }: MoneyInputProps) {
+export function MoneyInput({
+  value = '',
+  onChange,
+  onBlur,
+  error,
+  showHint = true,
+  ...props
+}: MoneyInputProps) {
   const [touched, setTouched] = useState(false)
   const tiyn = parseMoney(value)
   const ownError = touched ? validateMoneyText(value) : null
@@ -41,8 +49,8 @@ export function MoneyInput({ value = '', onChange, onBlur, error, ...props }: Mo
         setTouched(true)
         onBlur?.(event)
       }}
-      inputWrapperOrder={WRAPPER_ORDER}
-      description={tiyn !== null ? formatMoney(tiyn) : EMPTY_HINT}
+      inputWrapperOrder={showHint ? WRAPPER_ORDER : undefined}
+      description={showHint ? (tiyn !== null ? formatMoney(tiyn) : EMPTY_HINT) : undefined}
       error={error || ownError}
     />
   )

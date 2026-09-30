@@ -161,8 +161,28 @@ export function SellStepProducts({
                     label={t('flow.qtyOf', { article: product.article })}
                     unit={unitLabel(product.unit)}
                   />
+                  <Text
+                    size="sm"
+                    c={
+                      typeof line.qty === 'number' && line.qty > product.stock
+                        ? undefined
+                        : 'dimmed'
+                    }
+                    className={
+                      typeof line.qty === 'number' && line.qty > product.stock
+                        ? 'flow-hint-warning'
+                        : undefined
+                    }
+                    data-testid={`line-stock-${product.id}`}
+                  >
+                    {t('sell.products.lineStock', {
+                      qty: product.stock,
+                      unit: unitLabel(product.unit),
+                    })}
+                  </Text>
                 </Stack>
                 <MoneyInput
+                  showHint={false}
                   label={t('sell.price')}
                   aria-label={t('sell.priceOf', { article: product.article })}
                   value={linePriceText(line, product)}

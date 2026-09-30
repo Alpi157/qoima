@@ -125,8 +125,10 @@
 }
 
 .z2-items th {
-  font-size: 8pt;
+  font-size: 7pt;
   line-height: 1.15;
+  hyphens: auto;
+  overflow-wrap: anywhere;
 }
 
 .z2-items .z2-column-numbers th {
@@ -157,8 +159,9 @@
   text-align: center;
 }
 
-.z2-article {
-  word-break: break-all;
+.z2-items td.z2-article {
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .z2-total-row td {

@@ -1,6 +1,6 @@
 import { Alert } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
-import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -68,6 +68,7 @@ function SellFlow({ userId }: { userId: number }) {
   const [query, setQuery] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [saveError, setSaveError] = useState<ReactNode>(null)
+  const previousStep = useRef<Step | null>(null)
 
   const changeLines = useCallback(
     (change: (lines: SaleDraftLine[]) => SaleDraftLine[]) => {
@@ -104,6 +105,12 @@ function SellFlow({ userId }: { userId: number }) {
     if (state?.fromStep === previous) navigate(-1)
     else navigate({ search: stepSearch(previous) }, { replace: true })
   }
+
+  useEffect(() => {
+    if (previousStep.current !== null && previousStep.current !== step) draft.dismissRestored()
+    previousStep.current = step
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
   const addProduct = (product: Product) => {
     rememberProduct(product)

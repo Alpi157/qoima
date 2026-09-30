@@ -57,7 +57,7 @@ export function useDraft<T>({ userId, flow, create, parse, isEmpty }: DraftOptio
 
   const update = useCallback(
     (change: (value: T) => T) =>
-      setState((current) => ({ ...current, value: change(current.value) })),
+      setState((current) => ({ value: change(current.value), restored: false })),
     [],
   )
 

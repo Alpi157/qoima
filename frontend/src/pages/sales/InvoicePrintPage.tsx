@@ -123,7 +123,7 @@ function ItemsTable({
       <colgroup>
         <col style={{ width: '6%' }} />
         <col />
-        <col style={{ width: '15%' }} />
+        <col style={{ width: '20%' }} />
         <col style={{ width: '8%' }} />
         <col style={{ width: '8%' }} />
         <col style={{ width: '8%' }} />

@@ -11,7 +11,7 @@ from app.catalog import service as catalog_service
 from app.catalog.models import Product
 from app.customers.models import Customer
 from app.receipts.models import Receipt
-from app.sales.models import Sale
+from app.sales.models import Sale, SaleLine
 from app.settings.service import get_business_settings
 
 
@@ -57,6 +57,12 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     assert len(statuses) == len(demo.SALES)
     assert statuses.count("cancelled") == 1
     sales = db_session.scalars(select(Sale)).all()
+    assert {
+        count
+        for _, count in db_session.execute(
+            select(SaleLine.sale_id, func.count()).group_by(SaleLine.sale_id)
+        )
+    } >= {3, 12}
     assert min(sale.sold_at for sale in sales) > receipts[0].received_at
     local_times = [sale.sold_at.astimezone(demo.LOCAL_TZ) for sale in sales]
     assert min(moment.date() for moment in local_times) >= date(2026, 9, 18)

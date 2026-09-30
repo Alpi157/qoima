@@ -179,6 +179,17 @@ describe('ReceivePage', () => {
 })
 
 describe('ReceivePage, draft', () => {
+  it('hides the restored notice after changing a line and retains the draft', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: [FILTER] })
+    saveDraft({})
+    renderReceive()
+    expect(await screen.findByText('Незавершённый приём восстановлен.')).toBeTruthy()
+    await screen.findByRole('textbox', { name: 'Количество OC-90' })
+    await user.click(screen.getByRole('button', { name: 'Увеличить' }))
+    expect(screen.queryByText('Незавершённый приём восстановлен.')).toBeNull()
+    expect(storedDraft()?.lines[0].qty).toBe(4)
+  })
   it('is restored with a notice and cleared with «Очистить»', async () => {
     const user = setupUser()
     mockFlowGet({ products: [FILTER] })

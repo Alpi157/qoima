@@ -108,6 +108,18 @@ SALES = [
     (1, (14, 30), 9, [("28113-2S000", 1)]),
     (0, (9, 15), 0, [("12686362 41-157", 4), ("58101-2SA70", 1)]),
     (0, (10, 40), 3, [("IKH20TT", 2)]),
+    (4, (15, 10), 1, [("IKH16TT", 1), ("15208-65F0E", 1), ("90915-YZZE1", 1)]),
+    (
+        3,
+        (16, 20),
+        2,
+        [
+            (item.article, 1)
+            for item in PRODUCTS
+            if item.initial_qty > 0 and not item.archived and item.article != "22401-8H515"
+        ][:11]
+        + [("04465-33471", 1)],
+    ),
 ]
 
 # Deliveries after the opening balance:
