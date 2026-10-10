@@ -19,6 +19,8 @@ describe('movementKindLabel', () => {
       'receipt_cancel',
       'sale',
       'sale_cancel',
+      'return',
+      'return_cancel',
       'adjustment',
     ])
   })

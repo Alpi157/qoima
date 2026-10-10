@@ -8,6 +8,7 @@ import { ListPagination } from '../../components/ListPagination'
 import { PeriodInput } from '../../components/PeriodInput'
 import { QueryError } from '../../components/QueryError'
 import { StatusFilter } from '../../components/StatusFilter'
+import { TwoChoice } from '../../components/TwoChoice'
 import {
   Card,
   DataTable,
@@ -25,6 +26,7 @@ import { useListParams } from '../../lib/useListParams'
 import { useCustomer } from '../customers/api'
 import { isSaleStatus, type SaleListItem, useSales } from './api'
 import { SaleStatusBadge } from './SaleStatusBadge'
+import { PaymentStatusBadge } from './PaymentStatusBadge'
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'sales.list.statusAll' },
@@ -40,11 +42,14 @@ function SaleCard({ sale }: { sale: SaleListItem }) {
   const { t } = useTranslation()
   return (
     <Stack gap="xs">
-      <Group justify="space-between" wrap="nowrap">
+      <Group justify="space-between" wrap="wrap">
         <Text fw={600} inherit>
           {t('common.documentNumber', { number: sale.number })}
         </Text>
-        <SaleStatusBadge status={sale.status} debtAtSale={sale.debt_at_sale} />
+        <SaleStatusBadge status={sale.status} />
+      </Group>
+      <Group>
+        <PaymentStatusBadge status={sale.payment_status} outstanding={sale.outstanding} />
       </Group>
       <Text size="sm" c="dimmed">
         {formatDateTime(sale.sold_at)}
@@ -103,7 +108,12 @@ function SaleTable({ items }: { items: SaleListItem[] }) {
     {
       key: 'status',
       header: t('sales.list.status'),
-      cell: (sale) => <SaleStatusBadge status={sale.status} debtAtSale={sale.debt_at_sale} />,
+      cell: (sale) => (
+        <Stack gap="xs">
+          <SaleStatusBadge status={sale.status} />
+          <PaymentStatusBadge status={sale.payment_status} outstanding={sale.outstanding} />
+        </Stack>
+      ),
     },
   ]
   return (
@@ -155,12 +165,20 @@ export function SalesPage() {
   const customerId = parseId(searchParams.get('customer') ?? undefined)
   const rawStatus = searchParams.get('status') ?? ''
   const status = isSaleStatus(rawStatus) ? rawStatus : ''
-  const sales = useSales({ from, to, customerId: customerId ?? undefined, status, page })
+  const paymentStatus = searchParams.get('payment_status') === 'open' ? 'open' : undefined
+  const sales = useSales({
+    from,
+    to,
+    customerId: customerId ?? undefined,
+    status,
+    paymentStatus,
+    page,
+  })
   const navigate = useNavigate()
   const { t } = useTranslation()
   const backToMore = useBackToMore()
 
-  const isFiltered = Boolean(from || to || status || customerId)
+  const isFiltered = Boolean(from || to || status || customerId || paymentStatus)
 
   return (
     <PageContainer>
@@ -194,6 +212,16 @@ export function SalesPage() {
           />
         </Group>
       </Stack>
+
+      <TwoChoice
+        label={t('sales.paymentStatus.label')}
+        value={paymentStatus ?? 'all'}
+        options={[
+          { value: 'all', label: t('sales.paymentStatus.all') },
+          { value: 'open', label: t('sales.paymentStatus.open') },
+        ]}
+        onChange={(value) => setParam('payment_status', value === 'open' ? value : null)}
+      />
 
       {sales.isPending ? (
         <Group justify="center" p="xl">

@@ -2,6 +2,12 @@ import { expect, test } from '@playwright/test'
 import { PDFDocument } from 'pdf-lib'
 
 import { getJson, type ListPage, login, settle, snap } from './snap.js'
+import type { components } from '../src/api/schema.js'
+import { todayLocal } from '../src/lib/dates.js'
+
+type Sale = components['schemas']['SaleOut']
+type ReturnDocument = components['schemas']['ReturnOut']
+type ReturnListItem = components['schemas']['ReturnListItem']
 
 // Every screen of docs/design/design-system.md, «Проверка глазами», in Kazakh on demo data.
 // Files: review/screenshots/<screen>-<width>.png. Each screen is also checked for machine
@@ -20,6 +26,7 @@ test('screens', async ({ page }, testInfo) => {
     '/api/products?q=IKH16TT',
   )
   const customers = await getJson<ListPage<{ id: number }>>(page, '/api/customers')
+  const returns = await getJson<ListPage<ReturnListItem>>(page, '/api/returns')
   const receipts = await getJson<ListPage<{ id: number }>>(page, '/api/receipts')
   const sales = await getJson<ListPage<{ id: number; status: string }>>(page, '/api/sales')
   const debts = await getJson<ListPage<{ id: number; debt: number }>>(page, '/api/customers/debts')
@@ -34,7 +41,39 @@ test('screens', async ({ page }, testInfo) => {
   const productId = products.items[0].id
   const customerId = customers.items[0].id
   const receiptId = receipts.items[0].id
-  const saleId = sales.items.find((sale) => sale.status === 'posted')!.id
+  const saleDetails = await Promise.all(
+    sales.items
+      .filter((sale) => sale.status === 'posted')
+      .map((sale) => getJson<Sale>(page, `/api/sales/${sale.id}`)),
+  )
+  const saleId = saleDetails.find(
+    (sale) => !sale.returns.some((document) => document.status === 'posted'),
+  )!.id
+  const withReturn = saleDetails.find(
+    (sale) =>
+      sale.returns.some((document) => document.status === 'posted') && (sale.outstanding ?? 0) > 0,
+  )!
+  const formSale = saleDetails.find(
+    (sale) =>
+      sale.customer &&
+      (sale.outstanding ?? 0) > 0 &&
+      sale.lines.some((line) => line.qty > line.returned_qty),
+  )!
+  let retailSale = saleDetails.find(
+    (sale) => !sale.customer && sale.lines.some((line) => line.qty > line.returned_qty),
+  )
+  const postedReturn = returns.items.find(
+    (document) => document.status === 'posted' && document.customer,
+  )!
+  const returnDetails = await Promise.all(
+    returns.items
+      .filter((document) => document.status === 'posted')
+      .map((document) => getJson<ReturnDocument>(page, `/api/returns/${document.id}`)),
+  )
+  const defective = returnDetails.find((document) =>
+    document.lines.some((line) => line.condition === 'defective' && (line.unit_cost ?? 0) > 0),
+  )!
+  const returnDay = todayLocal(new Date(defective.returned_at))
 
   const screens: [string, string][] = [
     ['home', '/'],
@@ -54,6 +93,12 @@ test('screens', async ({ page }, testInfo) => {
     ['receipts', '/receipts'],
     ['receipt', `/receipts/${receiptId}`],
     ['sales', '/sales'],
+    ['sales-open', '/sales?payment_status=open'],
+    ['returns', '/returns'],
+    ['return-card', `/returns/${postedReturn.id}`],
+    ['sale-return', `/sales/${withReturn.id}`],
+    ['customer-return-ledger', `/customers/${postedReturn.customer!.id}`],
+    ['report-returns', `/report?from=${returnDay}&to=${returnDay}`],
     ['sale', `/sales/${saleId}`],
     ['sale-debt', `/sales/${debtSaleId}`],
     ['settings', '/settings'],
@@ -62,6 +107,47 @@ test('screens', async ({ page }, testInfo) => {
   for (const [name, path] of screens) {
     await page.goto(path)
     await snap(page, name, width)
+  }
+
+  // The seeded retail sale is fully returned. Create an isolated example after list shots.
+  if (!retailSale) {
+    const product = await page.request.post('/api/products', {
+      data: {
+        article: `RET-SCREEN-${width}`,
+        name: 'Қайтару үлгісі',
+        sale_price: 120000,
+      },
+    })
+    expect(product.ok()).toBeTruthy()
+    const { id } = (await product.json()) as components['schemas']['ProductOut']
+    const receipt = await page.request.post('/api/receipts', {
+      data: {
+        lines: [{ product_id: id, qty: 2, unit_cost: 60000 }],
+      },
+    })
+    expect(receipt.ok()).toBeTruthy()
+    const sale = await page.request.post('/api/sales', {
+      data: {
+        request_id: crypto.randomUUID(),
+        payment_method: 'cash',
+        lines: [{ product_id: id, qty: 2 }],
+      },
+    })
+    expect(sale.ok()).toBeTruthy()
+    retailSale = (await sale.json()) as Sale
+  }
+
+  for (const [name, document] of [
+    ['return-debt', formSale],
+    ['return-retail', retailSale],
+  ] as const) {
+    await page.goto(`/sales/${document.id}/return`)
+    await settle(page)
+    for (const line of document.lines.filter((line) => line.qty > line.returned_qty).slice(0, 2)) {
+      await page.getByRole('textbox', { name: `${line.article} саны` }).fill('1')
+    }
+    await snap(page, name, width)
+    await snap(page, `${name}-screen`, width, { fullPage: false })
   }
 
   await page.goto(`/customers/${debtCustomerId}`)

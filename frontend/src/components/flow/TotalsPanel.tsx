@@ -1,12 +1,15 @@
 import { Button, Card, Stack, Text } from '@mantine/core'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { StickyActions } from './StickyActions'
 
 export interface TotalsPanelProps {
   /** The main number, always on screen: the sum of a sale, the pieces of a receiving. */
   summary: ReactNode
   /** Other numbers (kinds, pieces): on a phone they are left out of the sticky panel. */
   children?: ReactNode
+  /** Calculation to review before saving, placed between the main sum and the action. */
+  belowSummary?: ReactNode
   /** The main button of the step, size lg. */
   actionLabel: string
   actionColor: 'green' | 'blue'
@@ -27,6 +30,7 @@ export interface TotalsPanelProps {
 export function TotalsPanel({
   summary,
   children,
+  belowSummary,
   actionLabel,
   actionColor,
   onAction,
@@ -41,26 +45,29 @@ export function TotalsPanel({
       <Card className="flow-aside" component="aside" aria-label={t('flow.totals')}>
         <Stack gap="md">
           {children && <div className="flow-aside-details">{children}</div>}
-          {summary}
-          {error}
-          <Stack gap="xs">
-            <Button
-              size="lg"
-              color={actionColor}
-              fullWidth
-              onClick={onAction}
-              disabled={blockedReason !== null}
-              loading={loading}
-              aria-describedby={blockedReason ? 'flow-blocked-reason' : undefined}
-            >
-              {actionLabel}
-            </Button>
-            {blockedReason && (
-              <Text id="flow-blocked-reason" className="flow-hint-warning" fw={600}>
-                {blockedReason}
-              </Text>
-            )}
-          </Stack>
+          <StickyActions className="flow-totals-actions">
+            {summary}
+            {belowSummary}
+            {error}
+            <Stack gap="xs" w="100%">
+              <Button
+                size="lg"
+                color={actionColor}
+                fullWidth
+                onClick={onAction}
+                disabled={blockedReason !== null}
+                loading={loading}
+                aria-describedby={blockedReason ? 'flow-blocked-reason' : undefined}
+              >
+                {actionLabel}
+              </Button>
+              {blockedReason && (
+                <Text id="flow-blocked-reason" className="flow-hint-warning" fw={600}>
+                  {blockedReason}
+                </Text>
+              )}
+            </Stack>
+          </StickyActions>
         </Stack>
       </Card>
       <Button variant="default" fullWidth onClick={onCancel} className="flow-cancel">

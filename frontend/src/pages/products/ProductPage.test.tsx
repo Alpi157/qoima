@@ -5,6 +5,36 @@ import { makeProduct, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { ProductPage } from './ProductPage'
 afterEach(() => vi.restoreAllMocks())
+it('translates return movements and links both to the return document', async () => {
+  vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+    ok(
+      path === '/api/products/{product_id}'
+        ? makeProduct()
+        : {
+            items: ['return', 'return_cancel'].map((kind, i) => ({
+              id: i + 1,
+              created_at: '2026-09-27T09:00:00Z',
+              kind,
+              qty: i ? -1 : 1,
+              balance_after: 1,
+              doc_type: 'return',
+              doc_id: 4,
+              doc_number: 10,
+              created_by_name: 'Владелец',
+              note: null,
+            })),
+            total: 2,
+          },
+    )) as never)
+  renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
+    route: '/products/1',
+  })
+  await screen.findByRole('table')
+  expect(screen.getAllByText('Возврат').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Отмена возврата').length).toBeGreaterThan(0)
+  for (const link of screen.getAllByRole('link', { name: '№ 10' }))
+    expect(link.getAttribute('href')).toBe('/returns/4')
+})
 it.each([null, 0, 100050])('shows costs %s and an explicit unset threshold', async (cost) => {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(

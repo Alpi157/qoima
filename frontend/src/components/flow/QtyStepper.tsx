@@ -12,10 +12,19 @@ export interface QtyStepperProps {
   /** «IKH16TT саны»: which line the field belongs to. */
   label: string
   unit: string
+  min?: number
+  max?: number
 }
 
 /** «−», the quantity and «+»: square 56x56 buttons around a 120 wide field. */
-export function QtyStepper({ value, onChange, label, unit }: QtyStepperProps) {
+export function QtyStepper({
+  value,
+  onChange,
+  label,
+  unit,
+  min = 1,
+  max = MAX_LINE_QTY,
+}: QtyStepperProps) {
   const { t } = useTranslation()
   const qty = typeof value === 'number' ? value : 0
   return (
@@ -24,8 +33,8 @@ export function QtyStepper({ value, onChange, label, unit }: QtyStepperProps) {
         variant="default"
         className="flow-qty-button"
         aria-label={t('flow.decrease')}
-        disabled={qty <= 1}
-        onClick={() => onChange(Math.max(1, qty - 1))}
+        disabled={qty <= min}
+        onClick={() => onChange(Math.max(min, qty - 1))}
       >
         <MinusIcon />
       </Button>
@@ -33,8 +42,8 @@ export function QtyStepper({ value, onChange, label, unit }: QtyStepperProps) {
         aria-label={label}
         value={value}
         onChange={onChange}
-        min={1}
-        max={MAX_LINE_QTY}
+        min={min}
+        max={max}
         allowDecimal={false}
         allowNegative={false}
         clampBehavior="none"
@@ -46,7 +55,7 @@ export function QtyStepper({ value, onChange, label, unit }: QtyStepperProps) {
         variant="default"
         className="flow-qty-button"
         aria-label={t('flow.increase')}
-        disabled={qty >= MAX_LINE_QTY}
+        disabled={qty >= max}
         onClick={() => onChange(qty + 1)}
       >
         <PlusIcon />

@@ -48,6 +48,7 @@ class ErrorCode(StrEnum):
     RETURN_NOT_FOUND = "return_not_found"
     RETURN_ALREADY_CANCELLED = "return_already_cancelled"
     RETURN_CANCEL_BLOCKED = "return_cancel_blocked"
+    RETURN_SPLIT_CHANGED = "return_split_changed"
     SALE_HAS_RETURNS = "sale_has_returns"
     NOT_FOUND = "not_found"
     METHOD_NOT_ALLOWED = "method_not_allowed"
@@ -286,6 +287,12 @@ class ReturnCancelBlockedError(AppError):
     default_message = "Нельзя отменить возврат: товара на складе не хватает."
 
 
+class ReturnSplitChangedError(AppError):
+    code = ErrorCode.RETURN_SPLIT_CHANGED
+    status_code = 409
+    default_message = "Долг изменился, проверьте расчёт."
+
+
 class SaleHasReturnsError(AppError):
     code = ErrorCode.SALE_HAS_RETURNS
     status_code = 409
@@ -344,6 +351,7 @@ CUSTOM_VALIDATION_TYPES = frozenset(
         "null_not_allowed",
         "payment_method_without_payment",
         "refund_method_without_refund",
+        "return_expected_split_pair",
         "returned_at_before_sale",
         "sale_line_not_in_sale",
         "report_period_order",

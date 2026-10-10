@@ -39,6 +39,7 @@ import { StockAdjustmentModal } from './StockAdjustmentModal'
 const DOCUMENT_PATHS: Record<string, string> = {
   receipt: '/receipts',
   sale: '/sales',
+  return: '/returns',
 }
 
 function DocumentLink({ movement }: { movement: Movement }) {

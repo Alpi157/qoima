@@ -25,6 +25,9 @@ import {
   SettingsPage,
   StockPage,
   ReportPage,
+  ReturnCreatePage,
+  ReturnPage,
+  ReturnsPage,
 } from './pages/lazyPages'
 
 export const routes: RouteObject[] = [
@@ -58,6 +61,9 @@ export const routes: RouteObject[] = [
           { path: 'receipts/:id', element: <ReceiptPage /> },
           { path: 'sales', element: <SalesPage /> },
           { path: 'sales/:id', element: <SalePage /> },
+          { path: 'sales/:id/return', element: <ReturnCreatePage /> },
+          { path: 'returns', element: <ReturnsPage /> },
+          { path: 'returns/:id', element: <ReturnPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],

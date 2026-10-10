@@ -44,9 +44,15 @@ export function useInvalidateSales() {
   return useInvalidatePrefixes(SALE_QUERY_PREFIXES)
 }
 
+export function useInvalidateReturns() {
+  return useInvalidatePrefixes([...SALE_QUERY_PREFIXES, 'returns', 'return'])
+}
+
 /** Payment documents change customer balances and the home debt summary. */
 export function useInvalidatePayments() {
   return useInvalidatePrefixes([
+    'sales',
+    'sale',
     'customer',
     'customers',
     'customer-debts',

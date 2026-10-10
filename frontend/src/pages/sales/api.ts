@@ -30,6 +30,7 @@ export function useSales(params: SaleListParams) {
               date_from: params.from || undefined,
               date_to: params.to || undefined,
               customer_id: params.customerId,
+              payment_status: params.paymentStatus,
               status: params.status && isSaleStatus(params.status) ? params.status : undefined,
               limit: PAGE_SIZE,
               offset: pageOffset(params.page),

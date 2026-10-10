@@ -17,6 +17,7 @@ import {
   PageContainer,
   PageHeader,
   Stat,
+  SectionTitle,
 } from '../../components/ui'
 import { formatDateTime } from '../../lib/dates'
 import { unitLabel } from '../../lib/labels'
@@ -24,6 +25,8 @@ import { formatAmount, formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { type Sale, useCancelSale, useSale } from './api'
 import { SaleStatusBadge } from './SaleStatusBadge'
+import { PaymentStatusBadge } from './PaymentStatusBadge'
+import { ReturnStatusBadge } from '../returns/ReturnStatusBadge'
 
 type SaleLineOut = Sale['lines'][number]
 
@@ -36,10 +39,16 @@ function ProductLink({ line }: { line: SaleLineOut }) {
 }
 
 function LineCard({ line }: { line: SaleLineOut }) {
+  const { t } = useTranslation()
   return (
     <Stack gap="xs">
       <ProductLink line={line} />
       <Text>{line.name}</Text>
+      {line.returned_qty > 0 && (
+        <Text size="sm">
+          {t('sales.lines.returned')}: {line.returned_qty}
+        </Text>
+      )}
       <Group justify="space-between">
         <Text size="sm">
           {line.qty} {unitLabel(line.unit)} × {formatMoney(line.unit_price)}
@@ -67,6 +76,12 @@ function LinesTable({ lines }: { lines: SaleLineOut[] }) {
       cell: (line) => `${line.qty} ${unitLabel(line.unit)}`,
     },
     {
+      key: 'returned',
+      header: t('sales.lines.returned'),
+      numeric: true,
+      cell: (line) => line.returned_qty || '',
+    },
+    {
       key: 'price',
       header: t('sales.lines.price'),
       numeric: true,
@@ -82,7 +97,7 @@ function LinesTable({ lines }: { lines: SaleLineOut[] }) {
   return (
     <DataTable
       rows={lines}
-      rowKey={(line) => line.product_id}
+      rowKey={(line) => line.id}
       columns={columns}
       mobileCard={(line) => <LineCard line={line} />}
     />
@@ -93,13 +108,16 @@ function SaleDetails({ sale }: { sale: Sale }) {
   const [cancelOpened, cancelModal] = useDisclosure()
   const cancel = useCancelSale(sale.id)
   const { t } = useTranslation()
+  const hasReturns = sale.returns.some((document) => document.status === 'posted')
+  const canReturn =
+    sale.status === 'posted' && sale.lines.some((line) => line.returned_qty < line.qty)
 
   return (
     <PageContainer>
       <PageHeader
         back={{ to: '/sales', label: t('sales.card.back') }}
         title={t('sales.card.title', { number: sale.number, date: formatDateTime(sale.sold_at) })}
-        titleAside={<SaleStatusBadge status={sale.status} debtAtSale={sale.debt_at_sale} />}
+        titleAside={<SaleStatusBadge status={sale.status} />}
         subtitle={t('common.postedBy', {
           name: sale.created_by_name,
           date: formatDateTime(sale.created_at),
@@ -109,7 +127,12 @@ function SaleDetails({ sale }: { sale: Sale }) {
             <Button component={Link} to={`/sales/${sale.id}/print`}>
               {t('sales.card.print')}
             </Button>
-            {sale.status === 'posted' && (
+            {canReturn && (
+              <Button component={Link} variant="default" to={`/sales/${sale.id}/return`}>
+                {t('returns.action')}
+              </Button>
+            )}
+            {sale.status === 'posted' && !hasReturns && (
               <Button variant="default" c="red" onClick={cancelModal.open}>
                 {t('sales.cancel.confirm')}
               </Button>
@@ -117,6 +140,12 @@ function SaleDetails({ sale }: { sale: Sale }) {
           </>
         }
       />
+
+      {sale.status === 'posted' && hasReturns && (
+        <Text size="sm" c="dimmed">
+          {t('errors.sale_has_returns')}
+        </Text>
+      )}
 
       {sale.status === 'cancelled' && (
         <CancelledNotice title={t('sales.card.cancelled')} document={sale} />
@@ -162,19 +191,73 @@ function SaleDetails({ sale }: { sale: Sale }) {
               unit="₸"
             />
           </Group>
-          {(sale.paid_at_sale > 0 || sale.debt_at_sale > 0) && (
-            <Stack gap="xs" mt="md">
-              <Group gap="xs">
-                <Text>{t('sales.card.paid', { amount: formatMoney(sale.paid_at_sale) })}</Text>
-                <PaymentMethodText method={sale.payment_method} />
-              </Group>
-              {sale.debt_at_sale > 0 && (
-                <Text>{t('sales.card.debt', { amount: formatMoney(sale.debt_at_sale) })}</Text>
-              )}
-            </Stack>
-          )}
+          <Stack gap="xs" mt="md">
+            <Group>
+              <PaymentStatusBadge
+                status={sale.payment_status}
+                outstanding={sale.outstanding}
+                detail
+              />
+            </Group>
+            <Group gap="xs">
+              <Text>{t('sales.card.paid', { amount: formatMoney(sale.paid_at_sale) })}</Text>
+              <PaymentMethodText method={sale.payment_method} />
+            </Group>
+            {(sale.outstanding ?? 0) > 0 && (
+              <Text>{t('sales.card.outstanding', { amount: formatMoney(sale.outstanding!) })}</Text>
+            )}
+          </Stack>
         </Card>
       </Stack>
+
+      {sale.returns.length > 0 && (
+        <Stack gap="md">
+          <SectionTitle>{t('returns.history')}</SectionTitle>
+          <DataTable
+            rows={sale.returns}
+            rowKey={(document) => document.id}
+            columns={[
+              {
+                key: 'number',
+                header: t('sales.list.number'),
+                cell: (document) => (
+                  <Anchor component={Link} to={`/returns/${document.id}`}>
+                    {document.number}
+                  </Anchor>
+                ),
+              },
+              {
+                key: 'date',
+                header: t('sales.list.date'),
+                cell: (document) => formatDateTime(document.returned_at),
+              },
+              {
+                key: 'total',
+                header: t('sales.list.total'),
+                numeric: true,
+                cell: (document) => formatMoney(document.total),
+              },
+              {
+                key: 'status',
+                header: t('sales.list.status'),
+                cell: (document) => <ReturnStatusBadge status={document.status} />,
+              },
+            ]}
+            mobileCard={(document) => (
+              <Stack gap="xs">
+                <Anchor component={Link} to={`/returns/${document.id}`} fw={600}>
+                  {t('returns.title', { number: document.number })}
+                </Anchor>
+                <Text size="sm">{formatDateTime(document.returned_at)}</Text>
+                <Group justify="space-between">
+                  <Text>{formatMoney(document.total)}</Text>
+                  <ReturnStatusBadge status={document.status} />
+                </Group>
+              </Stack>
+            )}
+          />
+        </Stack>
+      )}
 
       <CancelDocumentModal
         opened={cancelOpened}

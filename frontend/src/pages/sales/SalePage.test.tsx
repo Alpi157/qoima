@@ -45,14 +45,20 @@ afterEach(() => {
 const REASON_ERROR = 'Укажите причину, не короче 3 символов'
 
 describe('SalePage', () => {
-  it('shows the debt badge and the payment amounts at sale', async () => {
+  it('shows current outstanding and the original payment', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(
-      ok({ ...POSTED, paid_at_sale: 1000000, debt_at_sale: 2750000 }),
+      ok({
+        ...POSTED,
+        paid_at_sale: 1000000,
+        debt_at_sale: 2750000,
+        outstanding: 1500000,
+        payment_status: 'partial',
+      }),
     )
     renderPage()
-    expect(await screen.findByText('В долг')).toBeTruthy()
+    expect(await screen.findByText('Частично, осталось 15 000 ₸')).toBeTruthy()
     expect(screen.getByText('Оплачено: 10 000 ₸')).toBeTruthy()
-    expect(screen.getByText('В долг: 27 500 ₸')).toBeTruthy()
+    expect(screen.getByText('Остаток долга: 15 000 ₸')).toBeTruthy()
   })
   it('shows the sale with its customer, lines and total', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
@@ -136,5 +142,64 @@ describe('SalePage', () => {
     renderPage()
 
     expect(await screen.findByRole('heading', { name: 'Продажа не найдена' })).toBeTruthy()
+  })
+
+  it.each([
+    ['posted', 0, true],
+    ['posted', 3, false],
+    ['cancelled', 0, false],
+  ] as const)(
+    'offers return only with available posted lines (%s, %s)',
+    async (status, returned, visible) => {
+      vi.spyOn(api, 'GET').mockReturnValue(
+        ok({ ...POSTED, status, lines: [{ ...POSTED.lines[0], returned_qty: returned }] }),
+      )
+      renderPage()
+      await screen.findByRole('heading')
+      expect(Boolean(screen.queryByRole('link', { name: 'Вернуть' }))).toBe(visible)
+      expect(screen.getByRole('columnheader', { name: 'Возвращено' })).toBeTruthy()
+    },
+  )
+
+  it('links returns, shows returned quantities and blocks cancellation only for posted returns', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(
+      ok({
+        ...POSTED,
+        lines: [{ ...POSTED.lines[0], returned_qty: 1 }],
+        returns: [
+          {
+            id: 4,
+            number: 10,
+            returned_at: '2026-09-28T09:00:00Z',
+            total: 1250000,
+            status: 'posted',
+          },
+        ],
+      }),
+    )
+    renderPage()
+    await screen.findByText('По этой продаже есть возврат. Сначала отмените возврат.')
+    expect(screen.queryByRole('button', { name: 'Отменить продажу' })).toBeNull()
+    expect(screen.getByRole('link', { name: '10' }).getAttribute('href')).toBe('/returns/4')
+    expect(screen.getByText('Возвращено: 1')).toBeTruthy()
+  })
+
+  it('allows sale cancellation after all returns are cancelled', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(
+      ok({
+        ...POSTED,
+        returns: [
+          {
+            id: 4,
+            number: 10,
+            returned_at: '2026-09-28T09:00:00Z',
+            total: 1250000,
+            status: 'cancelled',
+          },
+        ],
+      }),
+    )
+    renderPage()
+    expect(await screen.findByRole('button', { name: 'Отменить продажу' })).toBeTruthy()
   })
 })

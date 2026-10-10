@@ -322,6 +322,19 @@ function ReportResults({ data, from, to }: { data: ReportSummary; from: string; 
           </Stack>
           <Stat label={t('report.salesCount')} value={formatInteger(data.sales_count)} />
         </SimpleGrid>
+        {data.returns_count > 0 && (
+          <Text mt="md">
+            {t('report.returns', {
+              amount: formatMoney(data.returns_total),
+              count: data.returns_count,
+            })}
+          </Text>
+        )}
+        {data.defect_loss > 0 && (
+          <Text mt="xs">
+            {t('report.defectLoss', { amount: formatRoundedMoney(data.defect_loss) })}
+          </Text>
+        )}
       </Card>
       <Card>
         <Stack gap="md">

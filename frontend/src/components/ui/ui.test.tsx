@@ -1,9 +1,10 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { Link } from 'react-router-dom'
 
 import { renderWithDataRouter, renderWithProviders } from '../../test/render'
 import { setupUser } from '../../test/user'
-import { DataTable } from './DataTable'
+import { DataTable, RowLink } from './DataTable'
 import { PageHeader } from './PageHeader'
 import { Stat } from './Stat'
 import { StatusBadge } from './StatusBadge'
@@ -107,5 +108,44 @@ describe('DataTable', () => {
     await user.click(screen.getByRole('cell', { name: 'IKH20TT' }))
 
     expect(router.state.location.pathname).toBe('/products/2')
+  })
+
+  it.each([0, 1])('preserves a separate document link in view %s', async (view) => {
+    const user = setupUser()
+    const { router } = renderWithDataRouter(
+      [
+        {
+          path: '/returns',
+          element: (
+            <DataTable
+              rows={[{ id: 1 }]}
+              rowKey={(row) => row.id}
+              rowHref={() => '/returns/1'}
+              columns={[
+                {
+                  key: 'sale',
+                  header: 'Продажа',
+                  cell: () => <Link to="/sales/2">Накладная №2</Link>,
+                },
+              ]}
+              mobileCardWithLinks
+              mobileCard={() => (
+                <>
+                  <RowLink to="/returns/1">Возврат №1</RowLink>
+                  <Link to="/sales/2">Накладная №2</Link>
+                </>
+              )}
+            />
+          ),
+        },
+        { path: '/returns/:id', element: <p>Возврат</p> },
+        { path: '/sales/:id', element: <p>Продажа</p> },
+      ],
+      { route: '/returns' },
+    )
+    const links = screen.getAllByRole('link', { name: 'Накладная №2' })
+    expect(links[1].parentElement?.closest('a')).toBeNull()
+    await user.click(links[view])
+    expect(router.state.location.pathname).toBe('/sales/2')
   })
 })

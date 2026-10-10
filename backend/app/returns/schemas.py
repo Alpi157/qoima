@@ -1,13 +1,24 @@
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
-from app.schema_types import MAX_LINES, DbId, Note, PaymentMethod, Qty, Reason, check_not_in_future
+from app.schema_types import (
+    MAX_BIGINT,
+    MAX_LINES,
+    DbId,
+    Note,
+    PaymentMethod,
+    Qty,
+    Reason,
+    check_not_in_future,
+)
 
 ReturnStatus = Literal["posted", "cancelled"]
 ReturnCondition = Literal["good", "defective"]
+ExpectedAmount = Annotated[int, Field(strict=True, ge=0, le=MAX_BIGINT)]
 
 
 class ReturnLineIn(BaseModel):
@@ -26,7 +37,18 @@ class ReturnCreate(BaseModel):
     returned_at: AwareDatetime | None = None
     note: Note = None
     refund_method: PaymentMethod | None = None
+    expected_debt_credit: ExpectedAmount | None = None
+    expected_refund_amount: ExpectedAmount | None = None
     lines: list[ReturnLineIn] = Field(min_length=1, max_length=MAX_LINES)
+
+    @model_validator(mode="after")
+    def _expected_pair(self) -> Self:
+        if (self.expected_debt_credit is None) != (self.expected_refund_amount is None):
+            raise PydanticCustomError(
+                "return_expected_split_pair",
+                "Ожидаемые суммы списания с долга и возврата денег нужно передать вместе",
+            )
+        return self
 
     @field_validator("returned_at")
     @classmethod

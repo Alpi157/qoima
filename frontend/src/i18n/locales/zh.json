@@ -102,9 +102,10 @@
     "return_request_conflict": "此请求已用于另一笔退货。",
     "return_not_found": "未找到退货。",
     "return_already_cancelled": "退货已取消。",
-    "return_cancel_blocked": "无法取消退货：库存不足。",
+    "return_cancel_blocked": "无法取消退货：库存不足。 {{items}}",
     "sale_has_returns": "此销售已有退货。请先取消退货。",
-    "duplicate_line_return": "商品 {{article}} 在退货中出现两次。"
+    "duplicate_line_return": "商品 {{article}} 在退货中出现两次。",
+    "return_split_changed": "欠款已变化，请核对。"
   },
   "validation": {
     "missing": "必填",
@@ -134,7 +135,8 @@
     "refund_method_without_refund": "只有退款金额大于零时才能指定退款方式。",
     "returned_at_before_sale": "退货日期不能早于销售日期。",
     "sale_line_not_in_sale": "此明细不属于指定的销售。",
-    "date_in_future_returned_at": "退货日期不能是未来日期。"
+    "date_in_future_returned_at": "退货日期不能是未来日期。",
+    "return_expected_split_pair": "预计抵扣欠款和退款金额必须同时提供。"
   },
   "products": {
     "movementKind": {
@@ -142,7 +144,9 @@
       "receipt_cancel": "入库作废",
       "sale": "销售",
       "sale_cancel": "销售作废",
-      "adjustment": "修改库存"
+      "adjustment": "修改库存",
+      "return": "退货",
+      "return_cancel": "退货作废"
     },
     "archivedBadge": "已隐藏",
     "notFound": "没有找到这个商品",
@@ -290,7 +294,8 @@
       "name": "名称",
       "sum": "金额",
       "qty": "数量",
-      "price": "价格"
+      "price": "价格",
+      "returned": "已退货"
     },
     "list": {
       "statusAll": "全部",
@@ -321,7 +326,7 @@
       "note": "备注：{{note}}",
       "total": "合计",
       "paid": "已付：{{amount}}",
-      "debt": "欠款：{{amount}}"
+      "outstanding": "剩余欠款：{{amount}}"
     },
     "cancel": {
       "confirm": "作废销售单",
@@ -333,6 +338,15 @@
       "print": "打印",
       "back": "返回",
       "fillSettings": "请在<settings>设置</settings>里填写公司信息"
+    },
+    "paymentStatus": {
+      "unpaid": "未付：{{amount}}",
+      "partial": "部分付款，还欠{{amount}}",
+      "returned": "已退货",
+      "paid": "已付清",
+      "label": "送货单付款",
+      "all": "全部",
+      "open": "未付清"
     }
   },
   "nav": {
@@ -371,7 +385,8 @@
     "receipts": "收货记录",
     "settings": "设置",
     "debts": "欠款",
-    "report": "报表"
+    "report": "报表",
+    "returns": "退货记录"
   },
   "auth": {
     "login": {
@@ -685,6 +700,58 @@
     "customer": "客户",
     "empty": "该时间段没有销售。",
     "partial": "部分",
-    "partialHint": "部分销售的进价未知。"
+    "partialHint": "部分销售的进价未知。",
+    "returns": "退货：{{amount}}（{{count}}）",
+    "defectLoss": "次品损失：{{amount}}"
+  },
+  "returns": {
+    "action": "退货",
+    "createTitle": "退回什么？",
+    "backSale": "销售",
+    "sale": "送货单 {{number}}号",
+    "saleDate": "送货单 {{number}}号，{{date}}",
+    "sold": "已售：{{sold}}，已退：{{returned}}",
+    "complete": "已全部退回",
+    "all": "全部退回",
+    "condition": "商品状态",
+    "goodChoice": "完好，退回库存",
+    "defectiveChoice": "有缺陷，不退回库存",
+    "good": "完好",
+    "defective": "次品",
+    "total": "退货金额",
+    "creditPreview": "抵扣欠款：{{amount}}",
+    "refundPreview": "退还现金：{{amount}}",
+    "refundQuestion": "退款方式",
+    "save": "保存退货",
+    "saved": "退货已保存",
+    "select": "请选择退货数量。",
+    "date": "退货日期",
+    "reasonLabel": "快捷原因",
+    "reasons": {
+      "defective": "次品",
+      "unsuitable": "不合适",
+      "extra": "多拿了"
+    },
+    "title": "退货单 {{number}}号",
+    "credit": "已抵扣欠款",
+    "refund": "已退款",
+    "refundAmount": "已退款：{{amount}}",
+    "notFound": "未找到退货单",
+    "unavailable": "没有可退商品。",
+    "listTitle": "退货记录",
+    "back": "退货",
+    "empty": "暂无退货。",
+    "status": {
+      "posted": "已保存",
+      "cancelled": "已作废"
+    },
+    "cancel": {
+      "title": "作废退货单 {{number}}号？",
+      "description": "完好商品将从库存移除，客户欠款将重新计算。",
+      "confirm": "退货作废",
+      "done": "退货单 {{number}}号已作废",
+      "cancelled": "退货已作废"
+    },
+    "history": "退货"
   }
 }

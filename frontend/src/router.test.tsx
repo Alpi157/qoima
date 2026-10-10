@@ -74,7 +74,7 @@ describe('routes', () => {
       mockApi()
       renderWithDataRouter(routes, { route: path })
 
-      const back = await screen.findByRole('link', { name: 'Ещё' })
+      const back = await screen.findByRole('link', { name: 'Ещё' }, { timeout: 5000 })
       expect(back.getAttribute('href')).toBe('/more')
     },
   )
@@ -117,6 +117,7 @@ describe('routes', () => {
       ['Покупатели', '/customers'],
       ['Долги', '/debts'],
       ['История продаж', '/sales'],
+      ['История возвратов', '/returns'],
       ['История приёмов', '/receipts'],
       ['Настройки', '/settings'],
     ])

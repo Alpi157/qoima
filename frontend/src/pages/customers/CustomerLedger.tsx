@@ -50,6 +50,8 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
       <RowLink to={`/sales/${item.id}`}>
         {t('customers.ledger.sale', { number: item.number })}
       </RowLink>
+    ) : item.kind === 'return' ? (
+      <RowLink to={`/returns/${item.id}`}>{t('returns.title', { number: item.number })}</RowLink>
     ) : (
       <Text>{t('customers.ledger.payment', { number: item.number })}</Text>
     )
@@ -62,6 +64,14 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
         </Text>
       )}
       <PaymentMethodText method={item.payment_method} />
+      {item.kind === 'return' && (item.refund_amount ?? 0) > 0 && (
+        <Group gap="xs">
+          <Text size="sm" c="dimmed">
+            {t('returns.refundAmount', { amount: formatMoney(item.refund_amount!) })}
+          </Text>
+          <PaymentMethodText method={item.refund_method} />
+        </Group>
+      )}
     </Stack>
   )
   const action = (item: LedgerItem) =>

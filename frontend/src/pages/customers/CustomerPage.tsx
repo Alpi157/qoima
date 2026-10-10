@@ -24,6 +24,7 @@ import { parseId } from '../../lib/routeParams'
 import { useListParams } from '../../lib/useListParams'
 import { type SaleListItem, useSales } from '../sales/api'
 import { SaleStatusBadge } from '../sales/SaleStatusBadge'
+import { PaymentStatusBadge } from '../sales/PaymentStatusBadge'
 import { type Customer, useCustomer } from './api'
 import { CustomerFormModal } from './CustomerFormModal'
 import { CustomerLedger } from './CustomerLedger'
@@ -62,7 +63,12 @@ function SaleTable({ items }: { items: SaleListItem[] }) {
     {
       key: 'status',
       header: t('customers.purchases.status'),
-      cell: (sale) => <SaleStatusBadge status={sale.status} />,
+      cell: (sale) => (
+        <Stack gap="xs">
+          <SaleStatusBadge status={sale.status} />
+          <PaymentStatusBadge status={sale.payment_status} outstanding={sale.outstanding} />
+        </Stack>
+      ),
     },
   ]
   return (
@@ -77,6 +83,9 @@ function SaleTable({ items }: { items: SaleListItem[] }) {
           <Group justify="space-between" wrap="nowrap">
             <Text fw={600}>{t('common.documentNumber', { number: sale.number })}</Text>
             <SaleStatusBadge status={sale.status} />
+          </Group>
+          <Group>
+            <PaymentStatusBadge status={sale.payment_status} outstanding={sale.outstanding} />
           </Group>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">

@@ -16,6 +16,23 @@
   gap: var(--q-space-16);
 }
 
+.flow-totals-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.return-complete {
+  color: var(--q-color-text-secondary);
+  background: var(--q-color-table-head);
+}
+
+.return-split[data-changed='true'] {
+  padding: var(--q-space-8);
+  border-radius: var(--q-radius-badge);
+  background: var(--q-color-warning-bg);
+  color: var(--q-color-warning-text);
+}
+
 .flow-aside-details {
   display: flex;
   flex-direction: column;

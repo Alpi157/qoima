@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
@@ -60,18 +60,40 @@ afterEach(() => {
 })
 
 describe('SalesPage', () => {
+  it('keeps open payment filter in URL and resets the page', async () => {
+    const get = mockSales()
+    const user = setupUser()
+    const { router } = renderPage('/sales?page=2&from=2026-09-01')
+    await screen.findByText('Продаж: 2')
+    await user.click(screen.getByRole('button', { name: 'Неоплаченные' }))
+    await waitFor(() => expect(lastQuery(get)).toMatchObject({ payment_status: 'open', offset: 0 }))
+    expect(router.state.location.search).toBe('?from=2026-09-01&payment_status=open')
+    await user.click(
+      within(screen.getByRole('group', { name: 'Оплата накладной' })).getByRole('button', {
+        name: 'Все',
+      }),
+    )
+    expect(router.state.location.search).toBe('?from=2026-09-01')
+  })
   it('marks sales made with debt in both the table and mobile cards', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(
       ok({
         items: [
-          { ...POSTED, paid_at_sale: 1000000, payment_method: 'cash', debt_at_sale: 2750000 },
+          {
+            ...POSTED,
+            paid_at_sale: 1000000,
+            payment_method: 'cash',
+            debt_at_sale: 2750000,
+            outstanding: 1500000,
+            payment_status: 'partial',
+          },
         ],
         total: 1,
         sum_posted: POSTED.total,
       }),
     )
     renderPage()
-    expect(await screen.findAllByText('В долг')).toHaveLength(2)
+    expect(await screen.findAllByText('Частично, осталось 15 000 ₸')).toHaveLength(2)
   })
   it('shows the posted total for the period and the number of sales', async () => {
     mockSales()
@@ -115,6 +137,7 @@ describe('SalesPage', () => {
           date_to: '2026-09-27',
           customer_id: undefined,
           status: 'posted',
+          payment_status: undefined,
           limit: 50,
           offset: 0,
         },

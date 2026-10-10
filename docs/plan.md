@@ -321,7 +321,7 @@ Backend, одна миграция, тесты, демо-данные и ген�
 и остатка кредитов; статусы paid, partial, unpaid, returned. Возвраты в долге,
 ledger и отчётах по дате возврата. Одна миграция, API, тесты, демо и генерация типов.
 
-## Шаг 17.3b. Возвраты и статус оплаты накладной, интерфейс
+## Шаг 17.3b. Возвраты и статус оплаты накладной, интерфейс (выполнено)
 
 Оформление и отмена возврата по строкам продажи, состояние good/defective,
 возврат денег наличными или картой/Kaspi, история возвратов. Отображение возврата
@@ -360,3 +360,32 @@ VPS, домен, защита SSH, ufw, fail2ban, автоматические �
 Аналоги и кросс-номера, отправка накладной в WhatsApp, уведомления в Telegram,
 интеграция с онлайн-кассой.
 Общий журнал оплат: сейчас отменённая оплата видна только по API.
+
+## Перед продажей другим магазинам
+
+Сознательные упрощения текущей установки для одного владельца. Перед продажей
+другим магазинам проверить и при необходимости расширить:
+
+- `/api/customers/debts` рассчитывает долг по всем покупателям, загружает все
+  ненулевые остатки и выделяет страницу в Python: `backend/app/customers/service.py`,
+  `list_debts`.
+- Лимит неудачных входов хранится в памяти процесса; поддерживается один процесс
+  uvicorn: `backend/app/auth/rate_limit.py`, `LoginRateLimiter`, `login_rate_limiter`.
+- Одна установка обслуживает один бизнес, мультиарендности нет:
+  `backend/app/db.py`, общая `SessionLocal`; `backend/app/settings/models.py`,
+  единственная запись `BusinessSettings` с id = 1.
+- Один основной склад: сводка и отображаемая средняя себестоимость выбираются
+  по основному складу: `backend/app/inventory/service.py`, `stock_summary`;
+  `backend/app/catalog/service.py`, `_avg_cost_expr`.
+- Ролевого разграничения прав нет: любой вошедший пользователь может всё,
+  включая отмену документов и настройки: `backend/app/auth/dependencies.py`,
+  `current_user`; `backend/app/main.py`, `protected_api`.
+- Черновики продажи и приёма хранятся в localStorage одного браузера:
+  `frontend/src/components/flow/useDraft.ts`, `readDraft`, `writeDraft`.
+- Фискализации и интеграции с онлайн-кассой нет, создаётся только накладная:
+  `frontend/src/pages/sales/InvoicePrintPage.tsx`; `backend/app/sales/router.py`.
+- Быстрые причины отмены и возврата заданы в коде, а не в настройках:
+  `frontend/src/components/CancelDocumentModal.tsx`, `QUICK_REASONS`;
+  `frontend/src/pages/returns/ReturnCreatePage.tsx`, `QUICK_REASONS`;
+  `frontend/src/pages/customers/CustomerLedger.tsx`, `PaymentCancellation`;
+  `frontend/src/pages/returns/ReturnPage.tsx`, `ReturnDetails`.

@@ -12,7 +12,11 @@ import { formatMoney } from '../lib/money'
 type DynamicT = (key: string, options?: Record<string, unknown>) => string
 
 /** Codes whose `params.items` lists stock shortages ({article, available, requested}). */
-const SHORTAGE_CODES = new Set(['insufficient_stock', 'receipt_cancel_blocked'])
+const SHORTAGE_CODES = new Set([
+  'insufficient_stock',
+  'receipt_cancel_blocked',
+  'return_cancel_blocked',
+])
 
 function isScalar(value: unknown): value is string | number | boolean {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'

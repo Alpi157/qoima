@@ -61,6 +61,19 @@ afterEach(() => {
 
 describe('ReportPage', () => {
   it.each([
+    [2, 10050, true],
+    [0, 0, false],
+  ])(
+    'shows return totals and rounded defect loss only when present (%s)',
+    async (count, loss, shown) => {
+      mockReport({ returns_count: count, returns_total: 30000, defect_loss: loss, sales_count: 0 })
+      renderReport()
+      await screen.findByTestId('report-profit')
+      expect(Boolean(screen.queryByText('Возвраты: 300 ₸ (2)'))).toBe(shown)
+      expect(Boolean(screen.queryByText('Потери на браке: 101 ₸'))).toBe(shown)
+    },
+  )
+  it.each([
     ['ru', 'Неизвестно', 'частично'],
     ['kk', 'Белгісіз', 'ішінара'],
     ['zh', '未知', '部分'],

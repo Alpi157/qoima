@@ -3004,6 +3004,7 @@
           "return_not_found",
           "return_already_cancelled",
           "return_cancel_blocked",
+          "return_split_changed",
           "sale_has_returns",
           "not_found",
           "method_not_allowed",
@@ -4422,6 +4423,32 @@
               }
             ],
             "title": "Refund Method"
+          },
+          "expected_debt_credit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Debt Credit"
+          },
+          "expected_refund_amount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Refund Amount"
           },
           "lines": {
             "items": {

@@ -20,6 +20,7 @@ from app.errors import (
     ReturnNotFoundError,
     ReturnQtyExceedsSoldError,
     ReturnRequestConflictError,
+    ReturnSplitChangedError,
     SaleNotFoundError,
     SaleNotPostedError,
 )
@@ -159,6 +160,10 @@ def _create_return(db: Session, data: ReturnCreate, sale: Sale, user_id: int) ->
     debt = current_debt(db, sale.customer_id) if sale.customer_id is not None else 0
     credit = min(total, max(debt, 0))
     refund = total - credit
+    if data.expected_debt_credit is not None and (
+        data.expected_debt_credit != credit or data.expected_refund_amount != refund
+    ):
+        raise ReturnSplitChangedError(params={"debt_credit": credit, "refund_amount": refund})
     if refund == 0 and data.refund_method is not None:
         _validation(
             ("refund_method",),

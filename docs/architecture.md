@@ -410,6 +410,10 @@ Summary агрегирует финансовые строки по их соб�
 
 POST получает request_id, sale_id, returned_at?, note?, refund_method? и
 строки {sale_line_id, qty, condition}. Не принимает цену или себестоимость.
+В 17.3b добавлены необязательные expected_debt_credit и expected_refund_amount:
+оба целых неотрицательных значения в тиынах передаются вместе или не передаются.
+NULL считается незаданным значением; неполная пара даёт 422 validation_error
+с типом return_expected_split_pair. Верхняя граница каждого значения MAX_BIGINT.
 Продажа должна быть posted. Количество строки не больше проданного минус сумма
 возвращённого по posted-возвратам, включая брак. Ошибка `return_qty_exceeds_sold`
 содержит article, sold, returned, requested. Чужая строка даёт полевую 422
@@ -419,11 +423,18 @@ POST получает request_id, sale_id, returned_at?, note?, refund_method? �
 
 Деньги рассчитываются по текущему долгу после блокировки покупателя:
 `debt_credit = min(total, max(долг, 0))`, `refund_amount = total-debt_credit`.
+Если expected-суммы переданы, они сравниваются с рассчитанными после блокировки
+покупателя, до проверки refund_method, получения номера и записи изменений.
+Расхождение даёт 409 return_split_changed с params {debt_credit, refund_amount},
+содержащими новые суммы. Документ не создаётся и номер не расходуется.
+Изменение долга без изменения деления суммы разрешает сохранение.
 Без покупателя debt_credit 0. При положительном refund_amount пропущенный
 или NULL refund_method становится cash. При нулевом денежном возврате явный
 способ запрещён: 422 validation_error, тип `refund_method_without_refund`.
 Нельзя молча игнорировать способ, поскольку итог зависит от долга внутри транзакции.
 
+Expected-суммы в сравнение повтора не входят: сохранённый документ возвращается
+до проверки расчёта, даже если ожидания клиента изменились.
 Идемпотентность возврата всегда сравнивает sale_id, набор строк
 (sale_line_id, qty, condition) без учёта порядка и note после обрезки пробелов
 по краям и преобразования пустой строки в NULL. returned_at сравнивается как
@@ -588,6 +599,7 @@ refund-поля NULL, у возврата paid_at_sale/payment_method NULL. На
 | `date_in_future` | - | дата документа больше чем на минуту в будущем |
 | `null_not_allowed` | `fields` (список имён полей) | в PATCH поле передано как `null` |
 | `payment_method_without_payment` | - | способ оплаты при нулевой оплате продажи |
+| `return_expected_split_pair` | - | ожидаемые суммы деления возврата переданы неполной парой |
 | `refund_method_without_refund` | - | способ возврата денег при нулевой сумме |
 | `returned_at_before_sale` | - | дата возврата раньше продажи |
 | `sale_line_not_in_sale` | - | строка отсутствует или принадлежит другой продаже |
@@ -626,6 +638,7 @@ refund-поля NULL, у возврата paid_at_sale/payment_method NULL. На
 | `return_request_conflict` | 409 | - | request_id использован возвратом с другим составом |
 | `return_not_found` | 404 | - | возврат не найден |
 | `return_already_cancelled` | 409 | - | возврат уже отменён |
+| `return_split_changed` | 409 | `debt_credit`, `refund_amount` | деление суммы возврата изменилось, проверьте новый расчёт |
 | `return_cancel_blocked` | 409 | `items` | недостаточно товара для отмены годного возврата |
 | `sale_has_returns` | 409 | - | у продажи есть проведённые возвраты |
 | `sale_not_found` | 404 | - | продажа не найдена |

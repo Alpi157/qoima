@@ -9,14 +9,16 @@ export type PaymentMethod = PaymentCreate['payment_method']
 export function PaymentMethodChoice({
   value,
   onChange,
+  label,
 }: {
   value: PaymentMethod
   onChange: (value: PaymentMethod) => void
+  label?: string
 }) {
   const { t } = useTranslation()
   return (
     <TwoChoice
-      label={t('paymentMethod.question')}
+      label={label ?? t('paymentMethod.question')}
       value={value}
       onChange={onChange}
       options={[

@@ -1,5 +1,15 @@
 import { lazy } from 'react'
 
+export const ReturnCreatePage = lazy(() =>
+  import('./returns/ReturnCreatePage').then((m) => ({ default: m.ReturnCreatePage })),
+)
+export const ReturnPage = lazy(() =>
+  import('./returns/ReturnPage').then((m) => ({ default: m.ReturnPage })),
+)
+export const ReturnsPage = lazy(() =>
+  import('./returns/ReturnsPage').then((m) => ({ default: m.ReturnsPage })),
+)
+
 export const DebtsPage = lazy(() =>
   import('./debts/DebtsPage').then((m) => ({ default: m.DebtsPage })),
 )

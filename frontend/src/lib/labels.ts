@@ -5,6 +5,8 @@ export const MOVEMENT_KINDS = [
   'receipt_cancel',
   'sale',
   'sale_cancel',
+  'return',
+  'return_cancel',
   'adjustment',
 ] as const
 
@@ -15,6 +17,8 @@ const MOVEMENT_KIND_LABELS = {
   receipt_cancel: 'products.movementKind.receipt_cancel',
   sale: 'products.movementKind.sale',
   sale_cancel: 'products.movementKind.sale_cancel',
+  return: 'products.movementKind.return',
+  return_cancel: 'products.movementKind.return_cancel',
   adjustment: 'products.movementKind.adjustment',
 } as const satisfies Record<MovementKind, string>
 

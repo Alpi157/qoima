@@ -3,11 +3,144 @@ import { expect, type Page, test } from '@playwright/test'
 import { getJson, login, settle, snap } from './snap.js'
 import { todayLocal } from '../src/lib/dates.js'
 import { formatMoney } from '../src/lib/money.js'
+import type { components } from '../src/api/schema.js'
+
+type Product = components['schemas']['ProductOut']
+type Sale = components['schemas']['SaleOut']
+type Customer = components['schemas']['CustomerOut']
+type ReturnDocument = components['schemas']['ReturnOut']
 
 // The sale and receiving flows of docs/design/simple-ui.md step by step, on demo data.
 // They save a sale and a receiving, so they run after the screens (playwright.config.ts).
 
 const SEARCH = 'Артикулды немесе атауын жазыңыз'
+
+test('good and defective return and cancellation restore this customer and these products', async ({
+  page,
+}) => {
+  const w = width(page)
+  await login(page)
+  const products: Product[] = []
+  for (const [index, price] of [100000, 200000].entries()) {
+    const created = await page.request.post('/api/products', {
+      data: {
+        article: `RET-173B-${w}-${index}`,
+        name: `Қайтаруды тексеру ${w} ${index}`,
+        sale_price: price,
+      },
+    })
+    expect(created.ok()).toBeTruthy()
+    products.push((await created.json()) as Product)
+  }
+  const received = await page.request.post('/api/receipts', {
+    data: {
+      lines: products.map((product) => ({
+        product_id: product.id,
+        qty: 10,
+        unit_cost: product.sale_price === 100000 ? 50000 : 100000,
+      })),
+    },
+  })
+  expect(received.ok()).toBeTruthy()
+  const customerName = `Қайтару тексеру ${w}`
+  const created = await page.request.post('/api/customers', { data: { name: customerName } })
+  expect(created.ok()).toBeTruthy()
+  const customer = (await created.json()) as Customer
+  await page.goto('/sell')
+  for (const product of products) {
+    await addByEnter(page, product.article)
+    await page.getByRole('textbox', { name: `${product.article} саны` }).fill('3')
+  }
+  await page.getByRole('button', { name: 'Келесі: сатып алушы' }).click()
+  await expect(page.getByRole('heading', { name: 'Кімге сатамыз?' })).toBeVisible()
+  await page.getByRole('searchbox').fill(customerName)
+  await page.locator('.flow-choice').filter({ hasText: customerName }).click()
+  await page.getByRole('button', { name: 'Қарызға', exact: true }).click()
+  const savedSale = page.waitForResponse(
+    (response) => response.url().endsWith('/api/sales') && response.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: 'Сатылымды сақтау' }).click()
+  const sale = (await (await savedSale).json()) as Sale
+  await expect(page.getByRole('heading', { name: 'Сатылым сақталды' })).toBeVisible()
+  const debtBefore = (await getJson<Customer>(page, `/api/customers/${customer.id}`)).debt
+  const stockBefore = await Promise.all(
+    products.map((product) => getJson<Product>(page, `/api/products/${product.id}`)),
+  )
+  expect(debtBefore).toBe(900000)
+  await page.goto(`/sales/${sale.id}`)
+  await page.getByRole('link', { name: 'Қайтару', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Не қайтарады?' })).toBeVisible()
+  for (const product of products)
+    await page.getByRole('textbox', { name: `${product.article} саны` }).fill('1')
+  await page.getByRole('button', { name: 'Ақаулы, қоймаға қайтпайды' }).last().click()
+  await expect(page.getByTestId('return-credit')).toHaveText(
+    `Қарыздан шегеріледі: ${formatMoney(300000)}`,
+  )
+  await expect(page.getByRole('button', { name: 'Қайтаруды сақтау' })).toBeInViewport()
+  await snap(page, 'return-flow-selected', w)
+  await snap(page, 'return-flow-selected-screen', w, { fullPage: false })
+  const savedReturn = page.waitForResponse(
+    (response) => response.url().endsWith('/api/returns') && response.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: 'Қайтаруды сақтау' }).click()
+  const document = (await (await savedReturn).json()) as ReturnDocument
+  await expect(page.getByRole('heading', { name: `Қайтару №${document.number}` })).toBeVisible()
+  expect(document.total).toBe(300000)
+  expect(document.lines.map((line) => line.condition)).toEqual(['good', 'defective'])
+  expect((await getJson<Customer>(page, `/api/customers/${customer.id}`)).debt).toBe(
+    debtBefore - document.total,
+  )
+  const stockAfter = await Promise.all(
+    products.map((product) => getJson<Product>(page, `/api/products/${product.id}`)),
+  )
+  expect(stockAfter.map((product) => product.stock)).toEqual([
+    stockBefore[0].stock + 1,
+    stockBefore[1].stock,
+  ])
+  await snap(page, 'return-flow-card', w)
+  await page.goto(`/sales/${sale.id}`)
+  const saleAfter = await getJson<Sale>(page, `/api/sales/${sale.id}`)
+  expect(saleAfter.lines.map((line) => line.returned_qty)).toEqual([1, 1])
+  expect(saleAfter).toMatchObject({
+    payment_status: 'unpaid',
+    outstanding: debtBefore - document.total,
+  })
+  if (w === '1366') {
+    const table = page.getByRole('table').first()
+    await expect(table.getByRole('columnheader', { name: 'Қайтарылды' })).toBeVisible()
+    const rows = table.getByRole('row')
+    for (const index of [1, 2])
+      await expect(rows.nth(index).getByRole('cell').nth(3)).toHaveText('1')
+  } else await expect(page.getByText('Қайтарылды: 1', { exact: true })).toHaveCount(2)
+  await expect(
+    page.getByText(`Төленбеген: ${formatMoney(debtBefore - document.total)}`, { exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сатылымның күшін жою' })).toHaveCount(0)
+  await snap(page, 'return-flow-sale', w)
+  await page.goto(`/customers/${customer.id}`)
+  await expect(
+    page.getByRole('link', { name: `Қайтару №${document.number}`, exact: true }).first(),
+  ).toBeVisible()
+  await snap(page, 'return-flow-ledger', w)
+  await page.goto(`/returns/${document.id}`)
+  await page.getByRole('button', { name: 'Күшін жою', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByRole('button', { name: 'Қате енгізілді' }).click()
+  await snap(page, 'return-cancel-modal', w, { fullPage: false })
+  await modal.getByRole('button', { name: 'Күшін жою', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  await expect(page.getByText('Қайтарудың күші жойылған', { exact: true })).toBeVisible()
+  expect((await getJson<Customer>(page, `/api/customers/${customer.id}`)).debt).toBe(debtBefore)
+  const restored = await Promise.all(
+    products.map((product) => getJson<Product>(page, `/api/products/${product.id}`)),
+  )
+  expect(restored.map((product) => product.stock)).toEqual(
+    stockBefore.map((product) => product.stock),
+  )
+  const saleRestored = await getJson<Sale>(page, `/api/sales/${sale.id}`)
+  expect(saleRestored.lines.map((line) => line.returned_qty)).toEqual([0, 0])
+  expect(saleRestored).toMatchObject({ payment_status: 'unpaid', outstanding: debtBefore })
+})
 
 function width(page: Page): string {
   return String(page.viewportSize()!.width)
@@ -38,10 +171,13 @@ test('sale in three steps', async ({ page }) => {
     }),
   ).toEqual(['rgb(255, 255, 255)', 'rgb(174, 184, 196)', 'not-allowed'])
   await addByEnter(page, 'IKH20TT')
-  // Two in stock: three of them show the orange warning and block «Келесі».
+  // Both widths save this seeded product; use the stock shown by this form.
   await addByEnter(page, '22401-8H515')
-  await page.getByRole('textbox', { name: '22401-8H515 саны' }).fill('3')
-  await expect(page.getByText('Қоймада тек 2 дана бар. Санын азайтыңыз.')).toBeVisible()
+  const lowStockCard = page.locator('.flow-line').filter({ hasText: '22401-8H515' })
+  const stockText = await lowStockCard.getByText(/^Қоймада: \d+ дана$/).innerText()
+  const stock = Number(stockText.match(/\d+/)![0])
+  await page.getByRole('textbox', { name: '22401-8H515 саны' }).fill(String(stock + 1))
+  await expect(page.getByText(`Қоймада тек ${stock} дана бар. Санын азайтыңыз.`)).toBeVisible()
   await page.getByRole('searchbox', { name: SEARCH }).focus()
   await snap(page, 'sell-1-lines', w)
   // The first screen as the user sees it: on a phone the panel sticks to the bottom.

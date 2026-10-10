@@ -20,6 +20,7 @@ const SECTIONS = [
   { to: '/customers', label: 'more.customers', icon: <UsersIcon size={28} /> },
   { to: '/debts', label: 'more.debts', icon: <WalletIcon size={28} /> },
   { to: '/sales', label: 'more.sales', icon: <ReceiptIcon size={28} /> },
+  { to: '/returns', label: 'more.returns', icon: <ReceiptIcon size={28} /> },
   { to: '/receipts', label: 'more.receipts', icon: <TruckIcon size={28} /> },
   { to: '/settings', label: 'more.settings', icon: <SettingsIcon size={28} /> },
 ] as const

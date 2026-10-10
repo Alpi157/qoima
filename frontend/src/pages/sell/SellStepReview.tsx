@@ -1,9 +1,10 @@
 import { Alert, Anchor, Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { ArrowLeftIcon, CheckIcon } from '../../components/icons'
+import { StickyActions } from '../../components/flow/StickyActions'
 import { MoneyInput } from '../../components/MoneyInput'
 import { PaymentMethodChoice } from '../../components/PaymentMethodChoice'
 import { TwoChoice } from '../../components/TwoChoice'
@@ -58,26 +59,8 @@ export function SellStepReview({
 }: SellStepReviewProps) {
   const { t } = useTranslation()
   const paymentFields = useRef<HTMLDivElement>(null)
-  const actions = useRef<HTMLDivElement>(null)
   const focusPayment = useCallback(() => {
     paymentFields.current?.querySelector('input')?.focus({ preventScroll: true })
-  }, [])
-
-  useLayoutEffect(() => {
-    const panel = actions.current
-    if (!panel) return
-    const root = document.documentElement
-    const previousPadding = root.style.scrollPaddingBottom
-    const reservePanelSpace = () => {
-      root.style.scrollPaddingBottom = `${Math.ceil(panel.getBoundingClientRect().height)}px`
-    }
-    reservePanelSpace()
-    const observer = new ResizeObserver(reservePanelSpace)
-    observer.observe(panel)
-    return () => {
-      observer.disconnect()
-      root.style.scrollPaddingBottom = previousPadding
-    }
   }, [])
 
   useEffect(() => {
@@ -204,7 +187,7 @@ export function SellStepReview({
 
         {error}
 
-        <Group ref={actions} justify="space-between" gap="md" className="flow-review-actions">
+        <StickyActions>
           <Button variant="default" leftSection={<ArrowLeftIcon size={20} />} onClick={onBack}>
             {t('sell.review.back')}
           </Button>
@@ -218,7 +201,7 @@ export function SellStepReview({
           >
             {t('sell.review.submit')}
           </Button>
-        </Group>
+        </StickyActions>
       </Stack>
     </>
   )

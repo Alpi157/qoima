@@ -5,6 +5,58 @@ import type { Receipt } from '../pages/receipts/api'
 import type { Sale } from '../pages/sales/api'
 import type { BusinessSettings } from '../pages/settings/api'
 import type { Payment } from '../pages/payments/api'
+import type { ReturnDocument } from '../pages/returns/api'
+
+export function makeReturn(overrides: Partial<ReturnDocument> = {}): ReturnDocument {
+  return {
+    id: 4,
+    number: 10,
+    request_id: '11111111-1111-4111-8111-111111111111',
+    sale: { id: 9, number: 21 },
+    customer: { id: 7, name: 'Ержан', phone: null },
+    returned_at: '2026-09-28T09:00:00Z',
+    total: 30000,
+    debt_credit: 10000,
+    refund_amount: 20000,
+    refund_method: 'card',
+    note: 'Не подошло',
+    status: 'posted',
+    cancelled_at: null,
+    cancelled_by_name: null,
+    cancel_reason: null,
+    created_by_name: 'Владелец',
+    created_at: '2026-09-28T09:00:00Z',
+    lines: [
+      {
+        id: 21,
+        sale_line_id: 11,
+        product_id: 1,
+        article: 'OC-90',
+        name: 'Фильтр',
+        unit: 'шт',
+        qty: 1,
+        unit_price: 10000,
+        line_total: 10000,
+        unit_cost: 5000,
+        condition: 'good',
+      },
+      {
+        id: 22,
+        sale_line_id: 12,
+        product_id: 2,
+        article: 'OC-91',
+        name: 'Свеча',
+        unit: 'шт',
+        qty: 1,
+        unit_price: 20000,
+        line_total: 20000,
+        unit_cost: 10000,
+        condition: 'defective',
+      },
+    ],
+    ...overrides,
+  }
+}
 
 export function makePayment(overrides: Partial<Payment> = {}): Payment {
   return {

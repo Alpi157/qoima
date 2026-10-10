@@ -23,6 +23,8 @@ export interface DataTableProps<T> {
   dimmed?: (row: T) => boolean
   /** Content of a card per row on a phone; without it the table scrolls sideways. */
   mobileCard?: (row: T) => ReactNode
+  /** A card with several links uses a container; its title must include the row's link. */
+  mobileCardWithLinks?: boolean
   /** Below this width the table scrolls inside its card instead of squeezing the columns. */
   minWidth?: number
   /** Last row under the lines, e.g. the total. */
@@ -49,6 +51,7 @@ export function DataTable<T>({
   rowHref,
   dimmed,
   mobileCard,
+  mobileCardWithLinks = false,
   minWidth = 600,
   footer,
 }: DataTableProps<T>) {
@@ -76,7 +79,17 @@ export function DataTable<T>({
                     key={rowKey(row)}
                     data-clickable={href ? true : undefined}
                     data-dimmed={dimmed?.(row) || undefined}
-                    onClick={href ? () => navigate(href) : undefined}
+                    onClick={
+                      href
+                        ? (event) => {
+                            if (!(
+                              event.target instanceof Element &&
+                              event.target.closest('a,button,input,select,textarea')
+                            ))
+                              navigate(href)
+                          }
+                        : undefined
+                    }
                   >
                     {columns.map((column) => (
                       <Table.Td
@@ -101,7 +114,22 @@ export function DataTable<T>({
           {rows.map((row) => {
             const href = rowHref?.(row)
             const content = mobileCard(row)
-            return href ? (
+            return href && mobileCardWithLinks ? (
+              <Card
+                key={rowKey(row)}
+                c={dimmed?.(row) ? 'dimmed' : undefined}
+                onClick={(event) => {
+                  if (!(
+                    event.target instanceof Element &&
+                    event.target.closest('a,button,input,select,textarea')
+                  ))
+                    navigate(href)
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                {content}
+              </Card>
+            ) : href ? (
               <MantineCard
                 key={rowKey(row)}
                 component={Link}

@@ -25,6 +25,13 @@ export interface SaleListParams {
   to?: string
   customerId?: number
   status?: string
+  paymentStatus?: 'unpaid' | 'partial' | 'open'
+  page: number
+}
+
+export interface ReturnListParams {
+  from: string
+  to: string
   page: number
 }
 
@@ -51,5 +58,7 @@ export const queryKeys = {
   receipt: (id: number) => ['receipt', id] as const,
   sales: (params: SaleListParams) => ['sales', params] as const,
   sale: (id: number) => ['sale', id] as const,
+  returns: (params: ReturnListParams) => ['returns', params] as const,
+  return: (id: number) => ['return', id] as const,
   settings: ['settings'] as const,
 }

@@ -49,6 +49,74 @@ function renderCustomer(route = '/customers/7') {
 afterEach(() => vi.restoreAllMocks())
 
 describe('CustomerPage debt and ledger', () => {
+  it('links returns, shows signed debt credit and money refunded with method', async () => {
+    mockGet(50000, [
+      {
+        ...SALE,
+        kind: 'return',
+        id: 4,
+        number: 10,
+        amount: 100000,
+        paid_at_sale: null,
+        payment_method: null,
+        debt_change: -50000,
+        refund_amount: 50000,
+        refund_method: 'card',
+      },
+      {
+        ...SALE,
+        kind: 'return',
+        id: 5,
+        number: 11,
+        debt_change: 0,
+        paid_at_sale: null,
+        payment_method: null,
+        refund_amount: 0,
+        refund_method: null,
+      },
+    ])
+    renderCustomer()
+    const table = within(await screen.findByRole('table'))
+    expect(table.getByRole('link', { name: 'Возврат №10' }).getAttribute('href')).toBe('/returns/4')
+    expect(table.getByText('−500 ₸')).toBeTruthy()
+    expect(table.getByText('0 ₸')).toBeTruthy()
+    expect(table.getByText('Возвращено деньгами: 500 ₸')).toBeTruthy()
+    expect(table.getByText('Карта / Kaspi')).toBeTruthy()
+    expect(table.queryByRole('button', { name: 'Отменить' })).toBeNull()
+  })
+
+  it.each([
+    ['unpaid', 'Не оплачено: 500 ₸'],
+    ['partial', 'Частично, осталось 500 ₸'],
+    ['returned', 'Возвращено'],
+    ['paid', null],
+  ] as const)('shows invoice payment status in purchases (%s)', async (status, label) => {
+    const get = mockGet(50000)
+    get.mockImplementation(((path: string) =>
+      path === '/api/customers/{customer_id}'
+        ? ok(makeCustomer({ debt: 50000 }))
+        : path.endsWith('/ledger')
+          ? ok({ items: [], total: 0 })
+          : ok({
+              items: [
+                {
+                  id: 9,
+                  number: 21,
+                  sold_at: SALE.occurred_at,
+                  status: 'posted',
+                  payment_status: status,
+                  outstanding: 50000,
+                  total: 150000,
+                },
+              ],
+              total: 1,
+              sum_posted: 150000,
+            })) as never)
+    renderCustomer()
+    await screen.findByRole('table')
+    if (label) expect(screen.getAllByText(label)).toHaveLength(2)
+    else expect(screen.queryByText('Оплачено', { exact: true })).toBeNull()
+  })
   it.each([
     [100000, 'Долг'],
     [0, 'Долга нет'],
