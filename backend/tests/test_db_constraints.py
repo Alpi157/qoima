@@ -82,6 +82,7 @@ def sale(db_session: Session) -> Sale:
         number=next_number(db_session, "sale"),
         request_id=uuid.uuid4(),
         total=0,
+        paid_at_sale=0,
         created_by=user.id,
     )
     db_session.add(sale)

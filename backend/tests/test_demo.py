@@ -10,6 +10,8 @@ from app.auth.service import verify_password
 from app.catalog import service as catalog_service
 from app.catalog.models import Product
 from app.customers.models import Customer
+from app.customers.service import current_debt
+from app.payments.models import CustomerPayment
 from app.receipts.models import Receipt
 from app.sales.models import Sale, SaleLine
 from app.settings.service import get_business_settings
@@ -71,6 +73,14 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     assert 1 <= len(today) <= 2
     customers = [sale.customer_id for sale in sales if sale.customer_id is not None]
     assert len(set(customers)) >= 8
+    debts = [
+        current_debt(db_session, customer.id) for customer in db_session.scalars(select(Customer))
+    ]
+    assert sum(debt > 0 for debt in debts) == 3
+    assert sum(debt < 0 for debt in debts) == 1
+    payments = db_session.scalars(select(CustomerPayment)).all()
+    assert len(payments) == 3
+    assert sum(payment.status == "cancelled" for payment in payments) == 1
 
 
 def test_seed_before_opening_hours_keeps_sales_in_the_past(db_session: Session) -> None:

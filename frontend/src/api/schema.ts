@@ -161,6 +161,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/customers/debts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Debts */
+        get: operations["list_debts_api_customers_debts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/customers/{customer_id}": {
         parameters: {
             query?: never;
@@ -177,6 +194,23 @@ export interface paths {
         head?: never;
         /** Update Customer */
         patch: operations["update_customer_api_customers__customer_id__patch"];
+        trace?: never;
+    };
+    "/api/customers/{customer_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer Ledger */
+        get: operations["customer_ledger_api_customers__customer_id__ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/receipts": {
@@ -277,6 +311,58 @@ export interface paths {
         put?: never;
         /** Cancel Sale */
         post: operations["cancel_sale_api_sales__sale_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Payments */
+        get: operations["list_payments_api_payments_get"];
+        put?: never;
+        /** Post Payment */
+        post: operations["post_payment_api_payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payments/{payment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Payment */
+        get: operations["get_payment_api_payments__payment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payments/{payment_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Payment */
+        post: operations["cancel_payment_api_payments__payment_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -397,6 +483,17 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** CustomerDebtsPage */
+        CustomerDebtsPage: {
+            /** Items */
+            items: components["schemas"]["CustomerOut"][];
+            /** Total */
+            total: number;
+            /** Total Debt */
+            total_debt: number;
+            /** Debtors Count */
+            debtors_count: number;
+        };
         /** CustomerOut */
         CustomerOut: {
             /** Id */
@@ -412,6 +509,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Debt */
+            debt: number;
         };
         /** CustomerPage */
         CustomerPage: {
@@ -434,7 +533,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "missing_price" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "not_found" | "method_not_allowed" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "missing_price" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "not_found" | "method_not_allowed" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -468,6 +567,35 @@ export interface components {
             params: {
                 [key: string]: unknown;
             };
+        };
+        /** LedgerItem */
+        LedgerItem: {
+            /** Kind */
+            kind: string;
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Amount */
+            amount: number;
+            /** Paid At Sale */
+            paid_at_sale: number | null;
+            /** Debt Change */
+            debt_change: number;
+            /** Debt After */
+            debt_after: number;
+        };
+        /** LedgerPage */
+        LedgerPage: {
+            /** Items */
+            items: components["schemas"]["LedgerItem"][];
+            /** Total */
+            total: number;
         };
         /** LoginIn */
         LoginIn: {
@@ -508,6 +636,85 @@ export interface components {
             items: components["schemas"]["MovementOut"][];
             /** Total */
             total: number;
+        };
+        /** PaymentCancel */
+        PaymentCancel: {
+            /** Reason */
+            reason: string;
+        };
+        /** PaymentCreate */
+        PaymentCreate: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Customer Id */
+            customer_id: number;
+            /** Amount */
+            amount: number;
+            /** Paid At */
+            paid_at?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** PaymentCustomerOut */
+        PaymentCustomerOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+        };
+        /** PaymentOut */
+        PaymentOut: {
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            customer: components["schemas"]["PaymentCustomerOut"];
+            /**
+             * Paid At
+             * Format: date-time
+             */
+            paid_at: string;
+            /** Amount */
+            amount: number;
+            /** Note */
+            note: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "posted" | "cancelled";
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancelled By Name */
+            cancelled_by_name: string | null;
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /** Created By Name */
+            created_by_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PaymentPage */
+        PaymentPage: {
+            /** Items */
+            items: components["schemas"]["PaymentOut"][];
+            /** Total */
+            total: number;
+            /** Sum Posted */
+            sum_posted: number;
         };
         /** ProductCreate */
         ProductCreate: {
@@ -708,6 +915,8 @@ export interface components {
             request_id: string;
             /** Customer Id */
             customer_id?: number | null;
+            /** Paid Amount */
+            paid_amount?: number | null;
             /** Sold At */
             sold_at?: string | null;
             /** Note */
@@ -774,6 +983,10 @@ export interface components {
             total_qty: number;
             /** Total */
             total: number;
+            /** Paid At Sale */
+            paid_at_sale: number;
+            /** Debt At Sale */
+            debt_at_sale: number;
         };
         /** SaleOut */
         SaleOut: {
@@ -816,6 +1029,10 @@ export interface components {
             lines: components["schemas"]["SaleLineOut"][];
             /** Total */
             total: number;
+            /** Paid At Sale */
+            paid_at_sale: number;
+            /** Debt At Sale */
+            debt_at_sale: number;
         };
         /** SalePage */
         SalePage: {
@@ -1274,6 +1491,38 @@ export interface operations {
             };
         };
     };
+    list_debts_api_customers_debts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDebtsPage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     get_customer_api_customers__customer_id__get: {
         parameters: {
             query?: never;
@@ -1327,6 +1576,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    customer_ledger_api_customers__customer_id__ledger_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                customer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerPage"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */
@@ -1605,6 +1888,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaleOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    list_payments_api_payments_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                customer_id?: number | null;
+                status?: ("posted" | "cancelled") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentPage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    post_payment_api_payments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentCreate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_payment_api_payments__payment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    cancel_payment_api_payments__payment_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

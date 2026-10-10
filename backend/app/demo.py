@@ -28,6 +28,8 @@ from app.catalog.schemas import ProductCreate, ProductUpdate
 from app.config import get_settings
 from app.customers import service as customers_service
 from app.customers.schemas import CustomerCreate
+from app.payments import service as payments_service
+from app.payments.schemas import PaymentCreate
 from app.receipts import service as receipts_service
 from app.receipts.schemas import ReceiptCreate, ReceiptLineIn
 from app.sales import service as sales_service
@@ -233,12 +235,24 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         )
 
     sale_ids: list[int] = []
+    debt_sale_indices = {0, 1, 4, 6}
     for number, (days_ago, at, customer, lines) in enumerate(SALES):
         sale, _ = sales_service.post_sale(
             db,
             SaleCreate(
                 request_id=uuid.uuid5(_REQUEST_NS, f"sale-{number}"),
                 customer_id=customer_ids[customer] if customer is not None else None,
+                paid_amount=(
+                    sum(
+                        next(item.price_tenge for item in PRODUCTS if item.article == article)
+                        * qty
+                        * 100
+                        for article, qty in lines
+                    )
+                    // 2
+                    if number in debt_sale_indices
+                    else None
+                ),
                 sold_at=_local_time(now, days_ago, at),
                 lines=[
                     SaleLineIn(product_id=product_ids[article], qty=qty) for article, qty in lines
@@ -247,6 +261,19 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
             user.id,
         )
         sale_ids.append(sale.id)
+    for number, amount in ((0, 100_000), (4, 100_000), (6, 50_000)):
+        payment, _ = payments_service.post_payment(
+            db,
+            PaymentCreate(
+                request_id=uuid.uuid5(_REQUEST_NS, f"payment-{number}"),
+                customer_id=customer_ids[SALES[number][2]],
+                amount=amount,
+                paid_at=_local_time(now, 1, (16, 30)),
+            ),
+            user.id,
+        )
+        if number == 6:
+            payments_service.cancel_payment(db, payment.id, "Қате төлем", user.id)
     sales_service.cancel_sale(db, sale_ids[CANCELLED_SALE_INDEX], CANCEL_REASON, user.id)
 
     for item in PRODUCTS:

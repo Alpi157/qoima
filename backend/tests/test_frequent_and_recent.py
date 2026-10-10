@@ -161,7 +161,7 @@ def test_recent_by_last_posted_sale(auth_client: TestClient, db_session: Session
     items = _recent(auth_client)
 
     assert [i["name"] for i in items] == ["Бірінші", "Екінші"]
-    assert set(items[0]) == {"id", "name", "phone", "note", "created_at"}
+    assert set(items[0]) == {"id", "name", "phone", "note", "created_at", "debt"}
 
 
 def test_recent_filled_with_newest_customers_without_sales(

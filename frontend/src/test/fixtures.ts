@@ -55,6 +55,7 @@ export function makeCustomer(overrides: Partial<Customer> = {}): Customer {
     phone: '+7 701 123 45 67',
     note: null,
     created_at: '2026-09-27T09:00:00Z',
+    debt: 0,
     ...overrides,
   }
 }
@@ -75,6 +76,8 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
     created_at: '2026-09-27T09:00:00Z',
     lines: [],
     total: 0,
+    paid_at_sale: 0,
+    debt_at_sale: 0,
     ...overrides,
   }
 }

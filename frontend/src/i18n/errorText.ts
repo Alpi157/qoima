@@ -6,6 +6,7 @@ import {
   isApiError,
   isServerOrNetworkError,
 } from '../api/errors'
+import { formatMoney } from '../lib/money'
 
 // Keys built from the backend's `code` and `type` are not known at compile time.
 type DynamicT = (key: string, options?: Record<string, unknown>) => string
@@ -57,6 +58,12 @@ export function apiErrorText(error: unknown, t: TFunction = i18n.t): string {
   if (!error.code || !i18n.exists(key)) return error.detail
 
   const values = interpolationValues(error.params, t)
+  if (error.code === 'paid_exceeds_total' && typeof values.total === 'number') {
+    values.total = formatMoney(values.total)
+  }
+  if (error.code === 'payment_exceeds_debt' && typeof values.debt === 'number') {
+    values.debt = formatMoney(values.debt)
+  }
   if (SHORTAGE_CODES.has(error.code)) values.items = shortageItems(error.params, t)
   // "document" picks a variant: errors.duplicate_line_sale, falling back to the plain key.
   if (typeof values.document === 'string') values.context = values.document

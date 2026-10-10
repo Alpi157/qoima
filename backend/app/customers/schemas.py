@@ -39,8 +39,30 @@ class CustomerOut(BaseModel):
     phone: str | None
     note: str | None
     created_at: datetime
+    debt: int
 
 
 class CustomerPage(BaseModel):
     items: list[CustomerOut]
+    total: int
+
+
+class CustomerDebtsPage(CustomerPage):
+    total_debt: int
+    debtors_count: int
+
+
+class LedgerItem(BaseModel):
+    kind: str
+    id: int
+    number: int
+    occurred_at: datetime
+    amount: int
+    paid_at_sale: int | None
+    debt_change: int
+    debt_after: int
+
+
+class LedgerPage(BaseModel):
+    items: list[LedgerItem]
     total: int

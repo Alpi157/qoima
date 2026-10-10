@@ -36,6 +36,12 @@ class ErrorCode(StrEnum):
     SALE_NOT_FOUND = "sale_not_found"
     SALE_ALREADY_CANCELLED = "sale_already_cancelled"
     SALE_REQUEST_CONFLICT = "sale_request_conflict"
+    DEBT_REQUIRES_CUSTOMER = "debt_requires_customer"
+    PAID_EXCEEDS_TOTAL = "paid_exceeds_total"
+    PAYMENT_EXCEEDS_DEBT = "payment_exceeds_debt"
+    PAYMENT_REQUEST_CONFLICT = "payment_request_conflict"
+    PAYMENT_NOT_FOUND = "payment_not_found"
+    PAYMENT_ALREADY_CANCELLED = "payment_already_cancelled"
     NOT_FOUND = "not_found"
     METHOD_NOT_ALLOWED = "method_not_allowed"
     HTTP_ERROR = "http_error"
@@ -200,6 +206,42 @@ class SaleRequestConflictError(AppError):
     code = ErrorCode.SALE_REQUEST_CONFLICT
     status_code = 409
     default_message = "Этот запрос уже использован для другой продажи"
+
+
+class DebtRequiresCustomerError(AppError):
+    code = ErrorCode.DEBT_REQUIRES_CUSTOMER
+    status_code = 422
+    default_message = "Чтобы продать в долг, выберите покупателя."
+
+
+class PaidExceedsTotalError(AppError):
+    code = ErrorCode.PAID_EXCEEDS_TOTAL
+    status_code = 422
+    default_message = "Оплата не может быть больше суммы продажи"
+
+
+class PaymentExceedsDebtError(AppError):
+    code = ErrorCode.PAYMENT_EXCEEDS_DEBT
+    status_code = 409
+    default_message = "Оплата больше долга"
+
+
+class PaymentRequestConflictError(AppError):
+    code = ErrorCode.PAYMENT_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "Этот запрос уже использован для другой оплаты"
+
+
+class PaymentNotFoundError(AppError):
+    code = ErrorCode.PAYMENT_NOT_FOUND
+    status_code = 404
+    default_message = "Оплата не найдена"
+
+
+class PaymentAlreadyCancelledError(AppError):
+    code = ErrorCode.PAYMENT_ALREADY_CANCELLED
+    status_code = 409
+    default_message = "Оплата уже отменена"
 
 
 class FieldErrorOut(BaseModel):

@@ -2,6 +2,7 @@ import i18n from 'i18next'
 import { describe, expect, it } from 'vitest'
 
 import { ApiError, networkError } from '../api/errors'
+import { formatMoney } from '../lib/money'
 import { fieldError } from '../test/fixtures'
 import { onlyKazakh } from '../test/i18n'
 import { apiErrorText, fieldErrorText } from './errorText'
@@ -51,6 +52,21 @@ describe('apiErrorText', () => {
       product_ids: [3, 7],
     })
     expect(apiErrorText(missing)).toBe('Товар не найден: 3, 7')
+  })
+
+  it('formats debt error amounts as tenge', () => {
+    const sale = new ApiError(422, 'detail', {}, 'paid_exceeds_total', {
+      total: 1250000,
+      paid: 1300000,
+    })
+    expect(apiErrorText(sale)).toBe(
+      `Оплата не может быть больше суммы продажи (${formatMoney(1250000)}).`,
+    )
+    const payment = new ApiError(409, 'detail', {}, 'payment_exceeds_debt', {
+      debt: -5000,
+      amount: 1000,
+    })
+    expect(apiErrorText(payment)).toBe(`Оплата больше долга. Текущий долг: ${formatMoney(-5000)}.`)
   })
 
   it('picks the variant by params.document', () => {

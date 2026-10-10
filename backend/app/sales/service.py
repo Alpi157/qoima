@@ -13,8 +13,10 @@ from app.catalog.service import load_line_products
 from app.customers.models import Customer
 from app.db_utils import local_date_range
 from app.errors import (
+    DebtRequiresCustomerError,
     DocumentCustomerNotFoundError,
     MissingPriceError,
+    PaidExceedsTotalError,
     SaleAlreadyCancelledError,
     SaleNotFoundError,
     SaleRequestConflictError,
@@ -75,7 +77,12 @@ def _existing_sale(db: Session, data: SaleCreate) -> SaleOut | None:
         for line in data.lines
     ]
     # Counter, not sorted(): a missing price is None and does not compare with int.
-    if sale.customer_id != data.customer_id or Counter(map(tuple, stored)) != Counter(requested):
+    paid = sale.total if data.paid_amount is None else data.paid_amount
+    if (
+        sale.customer_id != data.customer_id
+        or Counter(map(tuple, stored)) != Counter(requested)
+        or sale.paid_at_sale != paid
+    ):
         raise SaleRequestConflictError()
     return get_sale(db, sale.id)
 
@@ -88,8 +95,12 @@ def _is_request_id_conflict(exc: IntegrityError) -> bool:
 
 
 def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
-    if data.customer_id is not None and db.get(Customer, data.customer_id) is None:
-        raise DocumentCustomerNotFoundError()
+    if data.customer_id is not None:
+        customer = db.execute(
+            select(Customer).where(Customer.id == data.customer_id).with_for_update()
+        ).scalar_one_or_none()
+        if customer is None:
+            raise DocumentCustomerNotFoundError()
 
     products = load_line_products(db, [line.product_id for line in data.lines], "sale")
     prices = []
@@ -111,12 +122,19 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         )
         for line, price in zip(data.lines, prices, strict=True)
     ]
+    total = sum(line.line_total for line in sale_lines)
+    paid = total if data.paid_amount is None else data.paid_amount
+    if paid > total:
+        raise PaidExceedsTotalError(params={"total": total, "paid": paid})
+    if paid < total and data.customer_id is None:
+        raise DebtRequiresCustomerError()
     sale = Sale(
         number=next_number(db, DOC_TYPE),
         request_id=data.request_id,
         customer_id=data.customer_id,
         note=data.note,
-        total=sum(line.line_total for line in sale_lines),
+        total=total,
+        paid_at_sale=paid,
         created_by=user_id,
     )
     if data.sold_at is not None:
@@ -213,6 +231,8 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
         created_at=sale.created_at,
         lines=lines,
         total=sale.total,
+        paid_at_sale=sale.paid_at_sale,
+        debt_at_sale=sale.total - sale.paid_at_sale,
     )
 
 
@@ -262,6 +282,8 @@ def list_sales(
             totals.c.lines_count,
             totals.c.total_qty,
             Sale.total,
+            Sale.paid_at_sale,
+            (Sale.total - Sale.paid_at_sale).label("debt_at_sale"),
         )
         .join(totals, totals.c.sale_id == Sale.id)
         .outerjoin(Customer, Customer.id == Sale.customer_id)
@@ -275,6 +297,11 @@ def list_sales(
 
 
 def cancel_sale(db: Session, sale_id: int, reason: str, user_id: int) -> SaleOut:
+    customer_id = db.scalar(select(Sale.customer_id).where(Sale.id == sale_id))
+    if customer_id is not None:
+        db.execute(
+            select(Customer.id).where(Customer.id == customer_id).with_for_update()
+        ).scalar_one()
     sale = db.execute(
         select(Sale)
         .where(Sale.id == sale_id)

@@ -17,6 +17,8 @@ const POSTED: SaleListItem = {
   lines_count: 2,
   total_qty: 3,
   total: 3750000,
+  paid_at_sale: 3750000,
+  debt_at_sale: 0,
 }
 const CANCELLED: SaleListItem = { ...POSTED, id: 8, number: 20, status: 'cancelled' }
 

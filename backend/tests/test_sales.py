@@ -149,6 +149,61 @@ def test_sale_without_customer(auth_client: TestClient, products: tuple[Product,
     body = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
     assert body["customer"] is None
     assert body["note"] is None
+    assert body["paid_at_sale"] == body["total"]
+    assert body["debt_at_sale"] == 0
+
+
+def test_partial_and_zero_paid_sale(
+    auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
+) -> None:
+    oc, _ = products
+    customer = create_customer(db_session)
+    partial = _post(
+        auth_client, [{"product_id": oc.id, "qty": 1}], customer_id=customer.id, paid_amount=50_000
+    )
+    zero = _post(
+        auth_client, [{"product_id": oc.id, "qty": 1}], customer_id=customer.id, paid_amount=0
+    )
+    assert (partial["paid_at_sale"], partial["debt_at_sale"]) == (50_000, 200_000)
+    assert (zero["paid_at_sale"], zero["debt_at_sale"]) == (0, 250_000)
+    assert auth_client.get(f"/api/customers/{customer.id}").json()["debt"] == 450_000
+
+
+def test_paid_exceeds_total_and_customer_required(
+    auth_client: TestClient, products: tuple[Product, Product]
+) -> None:
+    oc, _ = products
+    over = auth_client.post(
+        "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], paid_amount=250_001)
+    )
+    assert over.status_code == 422
+    assert over.json()["code"] == "paid_exceeds_total"
+    assert over.json()["params"] == {"total": 250_000, "paid": 250_001}
+    no_customer = auth_client.post(
+        "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], paid_amount=0)
+    )
+    assert no_customer.status_code == 422
+    assert no_customer.json()["code"] == "debt_requires_customer"
+
+
+def test_request_id_compares_final_paid_amount(
+    auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
+) -> None:
+    oc, _ = products
+    customer = create_customer(db_session)
+    request_id = str(uuid.uuid4())
+    payload = {
+        "request_id": request_id,
+        "customer_id": customer.id,
+        "lines": [{"product_id": oc.id, "qty": 1}],
+    }
+    first = auth_client.post("/api/sales", json=payload)
+    assert first.status_code == 201
+    same = auth_client.post("/api/sales", json={**payload, "paid_amount": 250_000})
+    assert same.status_code == 200 and same.json() == first.json()
+    different = auth_client.post("/api/sales", json={**payload, "paid_amount": 0})
+    assert different.status_code == 409
+    assert different.json()["code"] == "sale_request_conflict"
 
 
 def test_sale_number_grows(auth_client: TestClient, products: tuple[Product, Product]) -> None:
@@ -572,6 +627,8 @@ def test_list_sales(
         "lines_count": 2,
         "total_qty": 5,
         "total": 500_300,
+        "paid_at_sale": 500_300,
+        "debt_at_sale": 0,
     }
     assert body["items"][0]["customer_name"] is None
 

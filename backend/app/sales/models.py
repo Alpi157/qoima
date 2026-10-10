@@ -22,6 +22,10 @@ class Sale(Base):
     __tablename__ = "sales"
     __table_args__ = (
         CheckConstraint("total >= 0", name="total_non_negative"),
+        CheckConstraint("paid_at_sale >= 0 AND paid_at_sale <= total", name="paid_at_sale_range"),
+        CheckConstraint(
+            "paid_at_sale = total OR customer_id IS NOT NULL", name="debt_requires_customer"
+        ),
         CheckConstraint("status IN ('posted', 'cancelled')", name="status_valid"),
         CheckConstraint(
             "(status = 'cancelled') = (cancelled_at IS NOT NULL)", name="cancelled_consistent"
@@ -39,6 +43,7 @@ class Sale(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     total: Mapped[int] = mapped_column(BigInteger)
+    paid_at_sale: Mapped[int] = mapped_column(BigInteger)
     note: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, server_default=text("'posted'"))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
