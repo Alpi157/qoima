@@ -5,6 +5,7 @@ import type { Receipt } from '../pages/receipts/api'
 import type { Sale } from '../pages/sales/api'
 import type { BusinessSettings } from '../pages/settings/api'
 import type { Payment } from '../pages/payments/api'
+import type { DebtAdjustment } from '../pages/debtAdjustments/api'
 import type { ReturnDocument } from '../pages/returns/api'
 
 export function makeReturn(overrides: Partial<ReturnDocument> = {}): ReturnDocument {
@@ -213,6 +214,25 @@ export function makeReportSummary(
     defect_loss: 0,
     received: { cash: 100000, card: 10000, total: 110000 },
     days: [{ date: '2026-09-27', revenue: 120000, profit: 40000 }],
+    ...overrides,
+  }
+}
+
+export function makeDebtAdjustment(overrides: Partial<DebtAdjustment> = {}): DebtAdjustment {
+  return {
+    id: 4,
+    number: 10,
+    request_id: '11111111-1111-4111-8111-111111111111',
+    customer: { id: 7, name: 'Ержан', phone: null },
+    adjusted_at: '2026-09-27T09:00:00Z',
+    amount: 100000,
+    reason: 'Начальный остаток',
+    status: 'posted',
+    cancelled_at: null,
+    cancelled_by_name: null,
+    cancel_reason: null,
+    created_by_name: 'Владелец',
+    created_at: '2026-09-27T09:00:00Z',
     ...overrides,
   }
 }

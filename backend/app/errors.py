@@ -38,6 +38,10 @@ class ErrorCode(StrEnum):
     SALE_REQUEST_CONFLICT = "sale_request_conflict"
     DEBT_REQUIRES_CUSTOMER = "debt_requires_customer"
     PAID_EXCEEDS_TOTAL = "paid_exceeds_total"
+    DEBT_ADJUSTMENT_EXCEEDS_DEBT = "debt_adjustment_exceeds_debt"
+    DEBT_ADJUSTMENT_REQUEST_CONFLICT = "debt_adjustment_request_conflict"
+    DEBT_ADJUSTMENT_NOT_FOUND = "debt_adjustment_not_found"
+    DEBT_ADJUSTMENT_ALREADY_CANCELLED = "debt_adjustment_already_cancelled"
     PAYMENT_EXCEEDS_DEBT = "payment_exceeds_debt"
     PAYMENT_REQUEST_CONFLICT = "payment_request_conflict"
     PAYMENT_NOT_FOUND = "payment_not_found"
@@ -228,6 +232,30 @@ class PaidExceedsTotalError(AppError):
     default_message = "Оплата не может быть больше суммы продажи"
 
 
+class DebtAdjustmentExceedsDebtError(AppError):
+    code = ErrorCode.DEBT_ADJUSTMENT_EXCEEDS_DEBT
+    status_code = 409
+    default_message = "Нельзя уменьшить больше текущего долга"
+
+
+class DebtAdjustmentRequestConflictError(AppError):
+    code = ErrorCode.DEBT_ADJUSTMENT_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "Этот запрос уже использован для другого исправления долга"
+
+
+class DebtAdjustmentNotFoundError(AppError):
+    code = ErrorCode.DEBT_ADJUSTMENT_NOT_FOUND
+    status_code = 404
+    default_message = "Исправление долга не найдено"
+
+
+class DebtAdjustmentAlreadyCancelledError(AppError):
+    code = ErrorCode.DEBT_ADJUSTMENT_ALREADY_CANCELLED
+    status_code = 409
+    default_message = "Исправление долга уже отменено"
+
+
 class PaymentExceedsDebtError(AppError):
     code = ErrorCode.PAYMENT_EXCEEDS_DEBT
     status_code = 409
@@ -346,6 +374,7 @@ VALIDATION_MESSAGES = {
 CUSTOM_VALIDATION_TYPES = frozenset(
     {
         "qty_zero",
+        "amount_zero",
         "iin_bin_format",
         "date_in_future",
         "null_not_allowed",

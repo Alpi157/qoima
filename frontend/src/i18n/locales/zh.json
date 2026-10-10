@@ -105,7 +105,11 @@
     "return_cancel_blocked": "无法取消退货：库存不足。 {{items}}",
     "sale_has_returns": "此销售已有退货。请先取消退货。",
     "duplicate_line_return": "商品 {{article}} 在退货中出现两次。",
-    "return_split_changed": "欠款已变化，请核对。"
+    "return_split_changed": "欠款已变化，请核对。",
+    "debt_adjustment_exceeds_debt": "减少金额不能超过欠款。当前欠款：{{debt}}。",
+    "debt_adjustment_request_conflict": "此请求已用于其他欠款调整。",
+    "debt_adjustment_not_found": "未找到欠款调整单。",
+    "debt_adjustment_already_cancelled": "欠款调整单已撤销。"
   },
   "validation": {
     "missing": "必填",
@@ -136,7 +140,8 @@
     "returned_at_before_sale": "退货日期不能早于销售日期。",
     "sale_line_not_in_sale": "此明细不属于指定的销售。",
     "date_in_future_returned_at": "退货日期不能是未来日期。",
-    "return_expected_split_pair": "预计抵扣欠款和退款金额必须同时提供。"
+    "return_expected_split_pair": "预计抵扣欠款和退款金额必须同时提供。",
+    "amount_zero": "调整金额不能为零。"
   },
   "products": {
     "movementKind": {
@@ -753,5 +758,26 @@
       "cancelled": "退货已作废"
     },
     "history": "退货"
+  },
+  "debtAdjustments": {
+    "title": "调整欠款",
+    "direction": "如何调整欠款？",
+    "increase": "增加欠款",
+    "decrease": "减少欠款",
+    "reasons": {
+      "opening": "期初余额",
+      "forgiven": "欠款已免除",
+      "mistake": "更正错误"
+    },
+    "after": "调整后欠款：{{amount}}",
+    "checkAmount": "请检查金额。是否多输入了一个零？",
+    "document": "调整单 {{number}}号",
+    "saved": "欠款调整已保存",
+    "cancel": {
+      "title": "撤销调整单 {{number}}号？",
+      "description": "调整将从结算中移除，欠款将重新计算。",
+      "confirm": "撤销调整",
+      "done": "调整单 {{number}}号已撤销"
+    }
   }
 }

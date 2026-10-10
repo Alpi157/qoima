@@ -25,6 +25,7 @@ from app.customers.schemas import (
     LedgerPage,
 )
 from app.db_utils import LIKE_ESCAPE, contains_pattern
+from app.debt_adjustments.models import CustomerDebtAdjustment
 from app.errors import CustomerNotFoundError
 from app.payments.models import CustomerPayment
 from app.returns.models import SaleReturn
@@ -57,11 +58,107 @@ def debt_source():
         .where(SaleReturn.status == "posted", SaleReturn.customer_id.is_not(None))
         .group_by(SaleReturn.customer_id)
     )
-    changes = union_all(sales, payments, returns).subquery()
+    adjustments = (
+        select(
+            CustomerDebtAdjustment.customer_id.label("customer_id"),
+            cast(func.sum(CustomerDebtAdjustment.amount), BigInteger).label("amount"),
+        )
+        .where(CustomerDebtAdjustment.status == "posted")
+        .group_by(CustomerDebtAdjustment.customer_id)
+    )
+    changes = union_all(sales, payments, returns, adjustments).subquery()
     return (
         select(changes.c.customer_id, cast(func.sum(changes.c.amount), BigInteger).label("debt"))
         .group_by(changes.c.customer_id)
         .subquery()
+    )
+
+
+def fifo_debt_source():
+    """Own return credits first, then FIFO over sales and positive adjustments."""
+    returns = (
+        select(
+            SaleReturn.sale_id,
+            func.sum(SaleReturn.debt_credit).label("own"),
+            func.sum(SaleReturn.total).label("returned_total"),
+        )
+        .where(SaleReturn.status == "posted")
+        .group_by(SaleReturn.sale_id)
+        .cte("invoice_returns")
+    )
+    debt = Sale.total - Sale.paid_at_sale
+    own = func.coalesce(returns.c.own, 0)
+    residual = (
+        select(
+            Sale.id,
+            Sale.customer_id,
+            Sale.sold_at.label("occurred_at"),
+            (debt - func.least(debt, own)).label("remaining"),
+            (own - func.least(debt, own)).label("leftover"),
+            (Sale.total - func.coalesce(returns.c.returned_total, 0)).label("net_total"),
+        )
+        .outerjoin(returns, returns.c.sale_id == Sale.id)
+        .where(Sale.status == "posted")
+        .cte("invoice_residual")
+    )
+    credits = union_all(
+        select(CustomerPayment.customer_id, CustomerPayment.amount.label("amount")).where(
+            CustomerPayment.status == "posted"
+        ),
+        select(residual.c.customer_id, residual.c.leftover).where(
+            residual.c.customer_id.is_not(None)
+        ),
+        select(CustomerDebtAdjustment.customer_id, -CustomerDebtAdjustment.amount).where(
+            CustomerDebtAdjustment.status == "posted", CustomerDebtAdjustment.amount < 0
+        ),
+    ).cte("invoice_credits")
+    pool = (
+        select(credits.c.customer_id, func.sum(credits.c.amount).label("amount"))
+        .group_by(credits.c.customer_id)
+        .cte("invoice_pool")
+    )
+    positions = union_all(
+        select(
+            literal("sale").label("kind"),
+            residual.c.id,
+            residual.c.customer_id,
+            residual.c.occurred_at,
+            residual.c.remaining,
+            residual.c.net_total,
+        ),
+        select(
+            literal("adjustment"),
+            CustomerDebtAdjustment.id,
+            CustomerDebtAdjustment.customer_id,
+            CustomerDebtAdjustment.adjusted_at,
+            CustomerDebtAdjustment.amount,
+            literal(None, type_=BigInteger),
+        ).where(CustomerDebtAdjustment.status == "posted", CustomerDebtAdjustment.amount > 0),
+    ).cte("debt_positions")
+    cumulative = func.sum(positions.c.remaining).over(
+        partition_by=positions.c.customer_id,
+        order_by=(positions.c.occurred_at, positions.c.kind, positions.c.id),
+        rows=(None, 0),
+    )
+    return (
+        select(
+            positions.c.kind,
+            positions.c.id,
+            positions.c.customer_id,
+            positions.c.net_total,
+            cast(
+                case(
+                    (positions.c.customer_id.is_(None), 0),
+                    else_=func.least(
+                        positions.c.remaining,
+                        func.greatest(0, cumulative - func.coalesce(pool.c.amount, 0)),
+                    ),
+                ),
+                BigInteger,
+            ).label("outstanding"),
+        )
+        .outerjoin(pool, pool.c.customer_id == positions.c.customer_id)
+        .subquery("debt_outstanding")
     )
 
 
@@ -240,6 +337,7 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             (Sale.total - Sale.paid_at_sale).label("debt_change"),
             literal(None, type_=BigInteger).label("refund_amount"),
             literal(None, type_=Text).label("refund_method"),
+            literal(None, type_=Text).label("reason"),
         ).where(Sale.customer_id == customer_id, Sale.status == "posted"),
         select(
             literal("payment").label("kind"),
@@ -252,6 +350,7 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             CustomerPayment.payment_method,
             (-CustomerPayment.amount).label("debt_change"),
             literal(None, type_=BigInteger),
+            literal(None, type_=Text),
             literal(None, type_=Text),
         ).where(CustomerPayment.customer_id == customer_id, CustomerPayment.status == "posted"),
         select(
@@ -266,7 +365,25 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             -SaleReturn.debt_credit,
             SaleReturn.refund_amount,
             SaleReturn.refund_method,
+            literal(None, type_=Text),
         ).where(SaleReturn.customer_id == customer_id, SaleReturn.status == "posted"),
+        select(
+            literal("adjustment"),
+            CustomerDebtAdjustment.id,
+            CustomerDebtAdjustment.number,
+            CustomerDebtAdjustment.adjusted_at,
+            CustomerDebtAdjustment.created_at,
+            CustomerDebtAdjustment.amount,
+            literal(None, type_=BigInteger),
+            literal(None, type_=Text),
+            CustomerDebtAdjustment.amount,
+            literal(None, type_=BigInteger),
+            literal(None, type_=Text),
+            CustomerDebtAdjustment.reason,
+        ).where(
+            CustomerDebtAdjustment.customer_id == customer_id,
+            CustomerDebtAdjustment.status == "posted",
+        ),
     ).subquery()
     history = select(
         entries.c.kind,
@@ -280,6 +397,7 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
         entries.c.debt_change,
         entries.c.refund_amount,
         entries.c.refund_method,
+        entries.c.reason,
         cast(
             func.sum(entries.c.debt_change).over(
                 order_by=(

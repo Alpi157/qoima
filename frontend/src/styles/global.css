@@ -201,3 +201,33 @@ body {
     animation: none !important;
   }
 }
+
+/* Keep customer balances and actions visible while the document fields scroll. */
+.q-debt-adjustment-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-debt-adjustment-body,
+.q-debt-adjustment-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.q-debt-adjustment-body {
+  overflow: hidden;
+}
+
+.q-debt-adjustment-form {
+  gap: var(--mantine-spacing-md);
+}
+
+.q-debt-adjustment-fields {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.q-debt-adjustment-form > :not(.q-debt-adjustment-fields) {
+  flex-shrink: 0;
+}

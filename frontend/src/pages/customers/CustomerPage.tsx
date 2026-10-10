@@ -29,6 +29,7 @@ import { type Customer, useCustomer } from './api'
 import { CustomerFormModal } from './CustomerFormModal'
 import { CustomerLedger } from './CustomerLedger'
 import { PaymentModal } from '../payments/PaymentModal'
+import { DebtAdjustmentModal } from '../debtAdjustments/DebtAdjustmentModal'
 
 function SaleLink({ sale }: { sale: SaleListItem }) {
   const { t } = useTranslation()
@@ -121,6 +122,7 @@ function PurchaseHistory({ customerId }: { customerId: number }) {
 function CustomerDetails({ customer }: { customer: Customer }) {
   const [editOpened, edit] = useDisclosure()
   const [paymentOpened, payment] = useDisclosure()
+  const [adjustmentOpened, adjustment] = useDisclosure()
   const { t } = useTranslation()
 
   return (
@@ -139,9 +141,14 @@ function CustomerDetails({ customer }: { customer: Customer }) {
           )
         }
         actions={
-          <Button variant="default" onClick={edit.open}>
-            {t('customers.card.edit')}
-          </Button>
+          <Group gap="sm">
+            <Button variant="default" onClick={edit.open}>
+              {t('customers.card.edit')}
+            </Button>
+            <Button variant="default" onClick={adjustment.open}>
+              {t('debtAdjustments.title')}
+            </Button>
+          </Group>
         }
       />
 
@@ -185,6 +192,11 @@ function CustomerDetails({ customer }: { customer: Customer }) {
       </Stack>
 
       <CustomerFormModal opened={editOpened} onClose={edit.close} customer={customer} />
+      <DebtAdjustmentModal
+        opened={adjustmentOpened}
+        onClose={adjustment.close}
+        customer={customer}
+      />
       <PaymentModal opened={paymentOpened} onClose={payment.close} customer={customer} />
     </PageContainer>
   )

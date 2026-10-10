@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
 import { formatMoney } from '../../lib/money'
-import { makeCustomer, makePayment, ok } from '../../test/fixtures'
+import { makeCustomer, makePayment, makeDebtAdjustment, ok } from '../../test/fixtures'
 import { postBody } from '../../test/flowApi'
 import { renderWithDataRouter } from '../../test/render'
 import { setupUser } from '../../test/user'
@@ -21,6 +21,7 @@ const SALE: LedgerItem = {
   payment_method: 'cash',
   refund_amount: null,
   refund_method: null,
+  reason: null,
   debt_change: 100000,
   debt_after: 100000,
 }
@@ -172,7 +173,11 @@ describe('CustomerPage debt and ledger', () => {
     const get = mockGet(100000, [SALE])
     get.mockImplementation(((path: string) => {
       if (path === '/api/customers/{customer_id}') return ok(makeCustomer({ debt: 100000 }))
-      if (path === '/api/customers/{customer_id}/ledger') return ok({ items: [SALE], total: 51 })
+      if (path === '/api/customers/{customer_id}/ledger')
+        return ok({
+          items: [{ ...SALE, kind: 'adjustment', reason: 'Начальный остаток' }],
+          total: 51,
+        })
       return ok({ items: [], total: 0, sum_posted: 0 })
     }) as never)
     const { router } = renderCustomer('/customers/7?page=3')
@@ -202,4 +207,78 @@ it('labels the actual partial payment in a sale and the amount of a card debt pa
   expect(rows[1].textContent).toContain('Наличные')
   expect(rows[2].textContent).toContain('Карта / Kaspi')
   expect(rows[3].textContent).not.toContain('Наличные')
+})
+
+it.each([100000, -100000])(
+  'shows adjustment %i, reason and signed change on desktop and mobile',
+  async (amount) => {
+    mockGet(50000, [
+      {
+        ...SALE,
+        kind: 'adjustment',
+        id: 4,
+        number: 10,
+        amount,
+        paid_at_sale: null,
+        payment_method: null,
+        reason: 'Начальный остаток',
+        debt_change: amount,
+      },
+    ])
+    renderCustomer()
+    const table = within(await screen.findByRole('table'))
+    expect(table.getByText('Исправление №10')).toBeTruthy()
+    expect(table.getByText('Начальный остаток')).toBeTruthy()
+    expect(table.getByText(`${amount > 0 ? '+' : '−'}1 000 ₸`)).toBeTruthy()
+    expect(screen.getAllByText('Начальный остаток')).toHaveLength(2)
+    expect(table.getByRole('button', { name: 'Отменить' })).toBeTruthy()
+  },
+)
+
+it('opens adjustments at zero debt and cancels an adjustment with the single quick reason', async () => {
+  const user = setupUser()
+  let cancelled = false
+  const item: LedgerItem = {
+    ...SALE,
+    kind: 'adjustment',
+    id: 4,
+    number: 10,
+    amount: 100000,
+    paid_at_sale: null,
+    payment_method: null,
+    reason: 'Начальный остаток',
+    debt_change: 100000,
+  }
+  const get = vi.spyOn(api, 'GET').mockImplementation(((path: string) => {
+    if (path === '/api/customers/{customer_id}')
+      return ok(makeCustomer({ debt: cancelled ? -100000 : 0 }))
+    if (path.endsWith('/ledger'))
+      return ok({ items: cancelled ? [] : [item], total: cancelled ? 0 : 1 })
+    return ok({ items: [], total: 0, sum_posted: 0 })
+  }) as never)
+  const post = vi.spyOn(api, 'POST').mockImplementation(() => {
+    cancelled = true
+    return ok(makeDebtAdjustment({ status: 'cancelled' }))
+  })
+  renderCustomer()
+  await user.click(await screen.findByRole('button', { name: 'Исправить долг' }))
+  expect(await screen.findByRole('dialog')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Отмена' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  const table = within(await screen.findByRole('table'))
+  await user.click(table.getByRole('button', { name: 'Отменить' }))
+  const dialog = within(await screen.findByRole('dialog'))
+  expect(dialog.queryByRole('button', { name: 'Неверная сумма' })).toBeNull()
+  await user.click(dialog.getByRole('button', { name: 'Ошибка ввода' }))
+  await user.click(dialog.getByRole('button', { name: 'Отменить исправление' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(post).toHaveBeenCalledWith('/api/debt-adjustments/{debt_adjustment_id}/cancel', {
+    params: { path: { debt_adjustment_id: 4 } },
+    body: { reason: 'Ошибка ввода' },
+  })
+  expect(await screen.findByText('Переплата')).toBeTruthy()
+  expect(await screen.findByText('Пока расчётов нет.')).toBeTruthy()
+  expect(
+    get.mock.calls.filter((call) => String(call[0]).endsWith('/ledger')).length,
+  ).toBeGreaterThan(1)
 })

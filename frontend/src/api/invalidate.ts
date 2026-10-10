@@ -60,3 +60,15 @@ export function useInvalidatePayments() {
     'reports',
   ])
 }
+
+/** Adjustments change customer balances and FIFO invoice statuses. */
+export function useInvalidateDebtAdjustments() {
+  return useInvalidatePrefixes([
+    'sales',
+    'sale',
+    'customer',
+    'customers',
+    'customer-debts',
+    'customer-ledger',
+  ])
+}

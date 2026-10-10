@@ -13,6 +13,7 @@ from app.catalog import router as catalog_router
 from app.config import Settings, get_settings
 from app.customers import router as customers_router
 from app.db import get_db
+from app.debt_adjustments import router as debt_adjustments_router
 from app.errors import ErrorOut, register_exception_handlers
 from app.inventory import router as inventory_router
 from app.payments import router as payments_router
@@ -54,6 +55,7 @@ protected_api.include_router(customers_router.router)
 protected_api.include_router(receipts_router.router)
 protected_api.include_router(sales_router.router)
 protected_api.include_router(payments_router.router)
+protected_api.include_router(debt_adjustments_router.router)
 protected_api.include_router(inventory_router.router)
 protected_api.include_router(settings_router.router)
 protected_api.include_router(reports_router.router)

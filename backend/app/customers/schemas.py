@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -53,7 +53,7 @@ class CustomerDebtsPage(CustomerPage):
 
 
 class LedgerItem(BaseModel):
-    kind: str
+    kind: Literal["sale", "payment", "return", "adjustment"]
     id: int
     number: int
     occurred_at: datetime
@@ -62,6 +62,7 @@ class LedgerItem(BaseModel):
     payment_method: PaymentMethod | None
     refund_amount: int | None
     refund_method: PaymentMethod | None
+    reason: str | None
     debt_change: int
     debt_after: int
 

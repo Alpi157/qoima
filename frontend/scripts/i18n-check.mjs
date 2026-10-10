@@ -27,6 +27,7 @@ const SECTIONS = [
   'customers',
   'debts',
   'payments',
+  'debtAdjustments',
   'receipts',
   'returns',
   'sales',

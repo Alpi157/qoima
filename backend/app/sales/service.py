@@ -4,7 +4,7 @@ from datetime import date
 
 from fastapi.exceptions import RequestValidationError
 from psycopg.errors import UniqueViolation
-from sqlalchemy import BigInteger, ColumnElement, case, cast, func, literal, select, union_all
+from sqlalchemy import BigInteger, ColumnElement, case, cast, func, literal, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
@@ -12,6 +12,7 @@ from app.auth.models import User
 from app.catalog.models import Product
 from app.catalog.service import load_line_products
 from app.customers.models import Customer
+from app.customers.service import fifo_debt_source
 from app.db_utils import local_date_range
 from app.errors import (
     DebtRequiresCustomerError,
@@ -25,7 +26,6 @@ from app.errors import (
 )
 from app.inventory.service import MovementIn, post_movements
 from app.numbering import next_number
-from app.payments.models import CustomerPayment
 from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
 from app.sales.schemas import (
@@ -210,81 +210,21 @@ Canceller = aliased(User)
 
 
 def _payment_source():
-    """Own return credits first, then FIFO over the remaining invoice debts."""
-    returns = (
-        select(
-            SaleReturn.sale_id,
-            func.sum(SaleReturn.debt_credit).label("own"),
-            func.sum(SaleReturn.total).label("returned_total"),
-        )
-        .where(SaleReturn.status == "posted")
-        .group_by(SaleReturn.sale_id)
-        .cte("invoice_returns")
-    )
-    debt = Sale.total - Sale.paid_at_sale
-    own = func.coalesce(returns.c.own, 0)
-    residual = (
-        select(
-            Sale.id,
-            Sale.customer_id,
-            Sale.sold_at,
-            (debt - func.least(debt, own)).label("remaining"),
-            (own - func.least(debt, own)).label("leftover"),
-            (Sale.total - func.coalesce(returns.c.returned_total, 0)).label("net_total"),
-        )
-        .outerjoin(returns, returns.c.sale_id == Sale.id)
-        .where(Sale.status == "posted")
-        .cte("invoice_residual")
-    )
-    credits = union_all(
-        select(CustomerPayment.customer_id, CustomerPayment.amount.label("amount")).where(
-            CustomerPayment.status == "posted"
-        ),
-        select(residual.c.customer_id, residual.c.leftover).where(
-            residual.c.customer_id.is_not(None)
-        ),
-    ).cte("invoice_credits")
-    pool = (
-        select(credits.c.customer_id, func.sum(credits.c.amount).label("amount"))
-        .group_by(credits.c.customer_id)
-        .cte("invoice_pool")
-    )
-    cumulative = func.sum(residual.c.remaining).over(
-        partition_by=residual.c.customer_id,
-        order_by=(residual.c.sold_at, residual.c.id),
-        rows=(None, 0),
-    )
-    outstanding = (
-        select(
-            residual.c.id,
-            residual.c.net_total,
-            cast(
-                case(
-                    (residual.c.customer_id.is_(None), 0),
-                    else_=func.least(
-                        residual.c.remaining,
-                        func.greatest(0, cumulative - func.coalesce(pool.c.amount, 0)),
-                    ),
-                ),
-                BigInteger,
-            ).label("outstanding"),
-        )
-        .outerjoin(pool, pool.c.customer_id == residual.c.customer_id)
-        .cte("invoice_outstanding")
-    )
+    outstanding = fifo_debt_source()
+    invoices = select(outstanding).where(outstanding.c.kind == "sale").subquery()
     return (
         select(
             Sale.id.label("sale_id"),
-            outstanding.c.outstanding,
+            invoices.c.outstanding,
             case(
                 (Sale.status == "cancelled", None),
-                (outstanding.c.net_total == 0, literal("returned")),
-                (outstanding.c.outstanding == 0, literal("paid")),
-                (outstanding.c.outstanding >= outstanding.c.net_total, literal("unpaid")),
+                (invoices.c.net_total == 0, literal("returned")),
+                (invoices.c.outstanding == 0, literal("paid")),
+                (invoices.c.outstanding >= invoices.c.net_total, literal("unpaid")),
                 else_=literal("partial"),
             ).label("payment_status"),
         )
-        .outerjoin(outstanding, outstanding.c.id == Sale.id)
+        .outerjoin(invoices, invoices.c.id == Sale.id)
         .subquery()
     )
 

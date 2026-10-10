@@ -136,7 +136,7 @@ def isolated_stock_engine():
             conn.execute(
                 text(
                     "INSERT INTO document_counters (doc_type,last_number) VALUES "
-                    "('receipt',0),('sale',0),('payment',0),('return',0)"
+                    "('receipt',0),('sale',0),('payment',0),('return',0),('debt_adjustment',0)"
                 )
             )
         yield isolated

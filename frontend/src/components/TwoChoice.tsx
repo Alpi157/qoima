@@ -16,7 +16,7 @@ export function TwoChoice<T extends string>({
 }: {
   label: string
   heading?: boolean
-  value: T
+  value: T | null
   options: readonly [Choice<T>, Choice<T>]
   onChange: (value: T) => void
 }) {

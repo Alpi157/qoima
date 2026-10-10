@@ -65,7 +65,10 @@ export function apiErrorText(error: unknown, t: TFunction = i18n.t): string {
   if (error.code === 'paid_exceeds_total' && typeof values.total === 'number') {
     values.total = formatMoney(values.total)
   }
-  if (error.code === 'payment_exceeds_debt' && typeof values.debt === 'number') {
+  if (
+    ['payment_exceeds_debt', 'debt_adjustment_exceeds_debt'].includes(error.code ?? '') &&
+    typeof values.debt === 'number'
+  ) {
     values.debt = formatMoney(values.debt)
   }
   if (SHORTAGE_CODES.has(error.code)) values.items = shortageItems(error.params, t)

@@ -440,3 +440,122 @@ test('known cost produces 200000 tenge profit for a separate product per width',
   })
   await snap(page, 'report-known-profit', w)
 })
+
+test('opening debt, payment and adjustment cancellation produce an overpayment', async ({
+  page,
+}) => {
+  const w = String(page.viewportSize()!.width)
+  await login(page)
+  await page.goto('/customers')
+  await page.getByRole('button', { name: 'Сатып алушы қосу', exact: true }).click()
+  let modal = page.getByRole('dialog')
+  const name = `Бастапқы қарыз ${w}`
+  await modal.getByRole('textbox', { name: 'Аты', exact: true }).fill(name)
+  const created = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/customers') && response.request().method() === 'POST',
+  )
+  await modal.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  const customer = (await (await created).json()) as components['schemas']['CustomerOut']
+  await page.goto(`/customers/${customer.id}`)
+  await expect(page.locator('.mantine-Notification-root')).toHaveCount(0, { timeout: 10000 })
+  await expect(page.getByText('Қарызы жоқ', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Қарызды түзету', exact: true }).click()
+  modal = page.getByRole('dialog')
+  await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeDisabled()
+  await expect(modal.getByText(/^Түзетуден кейінгі қарыз:/)).toHaveCount(0)
+  await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('50000')
+  await modal.getByRole('button', { name: 'Бастапқы қалдық', exact: true }).click()
+  await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeDisabled()
+  await modal.getByRole('button', { name: 'Қарызды көбейту', exact: true }).click()
+  await expect(
+    modal.getByText(`Түзетуден кейінгі қарыз: ${formatMoney(5000000)}`, { exact: true }),
+  ).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeInViewport({
+    ratio: 1,
+  })
+  await expect(modal.getByText(/^Қазіргі қарыз:/)).toBeInViewport({ ratio: 1 })
+  await expect(modal.getByText(/^Түзетуден кейінгі қарыз:/)).toBeInViewport({ ratio: 1 })
+  await snap(page, 'debt-adjustment-increase-modal', w, { fullPage: false })
+  await modal.getByRole('button', { name: 'Қосымша', exact: true }).click()
+  await modal.getByLabel('Күні мен уақыты', { exact: true }).scrollIntoViewIfNeeded()
+  await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeInViewport({
+    ratio: 1,
+  })
+  await snap(page, 'debt-adjustment-date-modal', w, { fullPage: false })
+  await modal.getByRole('button', { name: 'Қосымша', exact: true }).click()
+  const savedResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/debt-adjustments') && response.request().method() === 'POST',
+  )
+  await modal.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  const adjustment = (await (
+    await savedResponse
+  ).json()) as components['schemas']['DebtAdjustmentOut']
+  expect(adjustment).toMatchObject({ amount: 5000000, reason: 'Бастапқы қалдық', status: 'posted' })
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByTestId('customer-debt')).toHaveText(formatMoney(5000000))
+  await page.getByRole('button', { name: 'Төлем қабылдау', exact: true }).click()
+  modal = page.getByRole('dialog')
+  await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('20000')
+  await modal.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByTestId('customer-debt')).toHaveText(formatMoney(3000000))
+  expect(
+    (await getJson<components['schemas']['CustomerOut']>(page, `/api/customers/${customer.id}`))
+      .debt,
+  ).toBe(3000000)
+  await expect(page.locator('.mantine-Notification-root')).toHaveCount(0, { timeout: 10000 })
+  await snap(page, 'customer-adjustment-ledger', w)
+
+  await page.getByRole('button', { name: 'Қарызды түзету', exact: true }).click()
+  modal = page.getByRole('dialog')
+  await modal.getByRole('button', { name: 'Қарызды азайту', exact: true }).click()
+  await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('10000')
+  await modal.getByRole('button', { name: 'Қарыз кешірілді', exact: true }).click()
+  await expect(
+    modal.getByText(`Түзетуден кейінгі қарыз: ${formatMoney(2000000)}`, { exact: true }),
+  ).toBeVisible()
+  await snap(page, 'debt-adjustment-decrease-modal', w, { fullPage: false })
+  await modal.getByRole('button', { name: 'Қарызды көбейту', exact: true }).click()
+  await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('30000')
+  await expect(
+    modal.getByText('Соманы тексеріңіз. Артық нөл жазылған жоқ па?', { exact: true }),
+  ).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeEnabled()
+  await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeInViewport({
+    ratio: 1,
+  })
+  await expect(
+    modal.getByText('Соманы тексеріңіз. Артық нөл жазылған жоқ па?', { exact: true }),
+  ).toBeInViewport({ ratio: 1 })
+  await snap(page, 'debt-adjustment-warning-modal', w, { fullPage: false })
+  await modal.getByRole('button', { name: 'Бас тарту', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  const ledger = page.getByRole('heading', { name: 'Есеп айырысу', exact: true }).locator('..')
+  const adjustmentRow =
+    w === '1366'
+      ? ledger.getByRole('row').filter({ hasText: `Түзету №${adjustment.number}` })
+      : ledger.locator('.mantine-Card-root').filter({ hasText: `Түзету №${adjustment.number}` })
+  await adjustmentRow.getByRole('button', { name: 'Күшін жою', exact: true }).click()
+  modal = page.getByRole('dialog')
+  await modal.getByRole('button', { name: 'Қате енгізілді', exact: true }).click()
+  await snap(page, 'debt-adjustment-cancel-modal', w, { fullPage: false })
+  await modal.getByRole('button', { name: 'Түзетудің күшін жою', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByText('Артық төлем', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('customer-debt')).toHaveText(formatMoney(2000000))
+  expect(
+    (await getJson<components['schemas']['CustomerOut']>(page, `/api/customers/${customer.id}`))
+      .debt,
+  ).toBe(-2000000)
+  const history = await getJson<components['schemas']['LedgerPage']>(
+    page,
+    `/api/customers/${customer.id}/ledger`,
+  )
+  expect(history.items).toHaveLength(1)
+  expect(history.items[0]).toMatchObject({ kind: 'payment', debt_after: -2000000 })
+  await expect(page.locator('.mantine-Notification-root')).toHaveCount(0, { timeout: 10000 })
+  await snap(page, 'customer-adjustment-overpayment', w)
+})

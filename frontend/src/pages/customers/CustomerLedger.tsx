@@ -13,6 +13,7 @@ import { formatMoney } from '../../lib/money'
 import { PAGE_SIZE } from '../../lib/pagination'
 import { useListParams } from '../../lib/useListParams'
 import { useCancelPayment } from '../payments/api'
+import { useCancelDebtAdjustment } from '../debtAdjustments/api'
 import { type LedgerItem, useCustomerLedger } from './api'
 
 function formatDebtChange(value: number): string {
@@ -36,6 +37,23 @@ function PaymentCancellation({ item, onClose }: { item: LedgerItem; onClose: () 
   )
 }
 
+function AdjustmentCancellation({ item, onClose }: { item: LedgerItem; onClose: () => void }) {
+  const { t } = useTranslation()
+  const cancel = useCancelDebtAdjustment(item.id)
+  return (
+    <CancelDocumentModal
+      opened
+      onClose={onClose}
+      title={t('debtAdjustments.cancel.title', { number: item.number })}
+      description={t('debtAdjustments.cancel.description')}
+      confirmLabel={t('debtAdjustments.cancel.confirm')}
+      cancel={cancel}
+      successMessage={(saved) => t('debtAdjustments.cancel.done', { number: saved.number })}
+      quickReasons={['common.cancelDocument.quick.mistake']}
+    />
+  )
+}
+
 export function CustomerLedger({ customerId }: { customerId: number }) {
   const { t } = useTranslation()
   const { page, setPage } = useListParams('ledgerPage')
@@ -52,6 +70,13 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
       </RowLink>
     ) : item.kind === 'return' ? (
       <RowLink to={`/returns/${item.id}`}>{t('returns.title', { number: item.number })}</RowLink>
+    ) : item.kind === 'adjustment' ? (
+      <Stack gap={0}>
+        <Text>{t('debtAdjustments.document', { number: item.number })}</Text>
+        <Text size="sm" c="dimmed" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+          {item.reason}
+        </Text>
+      </Stack>
     ) : (
       <Text>{t('customers.ledger.payment', { number: item.number })}</Text>
     )
@@ -75,7 +100,7 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
     </Stack>
   )
   const action = (item: LedgerItem) =>
-    item.kind === 'payment' && (
+    (item.kind === 'payment' || item.kind === 'adjustment') && (
       <Button size="sm" variant="default" onClick={() => setCancelling(item)}>
         {t('customers.ledger.cancel')}
       </Button>
@@ -142,14 +167,21 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
                   <Text>{t('customers.ledger.after')}</Text>
                   <Text fw={600}>{formatMoney(row.debt_after)}</Text>
                 </Group>
-                {row.kind === 'payment' && <Group>{action(row)}</Group>}
+                {(row.kind === 'payment' || row.kind === 'adjustment') && (
+                  <Group>{action(row)}</Group>
+                )}
               </Stack>
             )}
           />
           <ListPagination total={query.data.total} page={page} onChange={setPage} />
         </>
       )}
-      {cancelling && <PaymentCancellation item={cancelling} onClose={() => setCancelling(null)} />}
+      {cancelling &&
+        (cancelling.kind === 'adjustment' ? (
+          <AdjustmentCancellation item={cancelling} onClose={() => setCancelling(null)} />
+        ) : (
+          <PaymentCancellation item={cancelling} onClose={() => setCancelling(null)} />
+        ))}
     </Stack>
   )
 }

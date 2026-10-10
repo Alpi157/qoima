@@ -3,6 +3,7 @@
 from app.auth.models import User, UserSession
 from app.catalog.models import Product
 from app.customers.models import Customer
+from app.debt_adjustments.models import CustomerDebtAdjustment
 from app.inventory.models import StockBalance, StockMovement, Warehouse
 from app.numbering import DocumentCounter
 from app.payments.models import CustomerPayment
@@ -15,6 +16,7 @@ __all__ = [
     "BusinessSettings",
     "Customer",
     "CustomerPayment",
+    "CustomerDebtAdjustment",
     "DocumentCounter",
     "Product",
     "Receipt",

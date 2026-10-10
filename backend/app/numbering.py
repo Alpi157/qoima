@@ -12,14 +12,15 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.db import Base
 
-NumberedDocType = Literal["receipt", "sale", "payment", "return"]
+NumberedDocType = Literal["receipt", "sale", "payment", "return", "debt_adjustment"]
 
 
 class DocumentCounter(Base):
     __tablename__ = "document_counters"
     __table_args__ = (
         CheckConstraint(
-            "doc_type IN ('receipt', 'sale', 'payment', 'return')", name="doc_type_valid"
+            "doc_type IN ('receipt', 'sale', 'payment', 'return', 'debt_adjustment')",
+            name="doc_type_valid",
         ),
         CheckConstraint("last_number >= 0", name="last_number_non_negative"),
     )
