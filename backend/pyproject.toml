@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.11",
     "pydantic-settings>=2.10",
     "argon2-cffi>=25.1.0",
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]

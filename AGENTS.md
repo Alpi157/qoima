@@ -32,6 +32,10 @@
   (язык интерфейса `LOCALE=kk|ru|zh`, по умолчанию `kk`; или
   `cd backend && uv run python -m app.cli create-user --username owner --full-name "Имя" --locale kk`)
 - Сменить пароль: `cd backend && uv run python -m app.cli set-password --username owner`
+- Импорт товаров и начальных остатков: `make import-products FILE=import/qoima-import.xlsx USER=owner`
+  (пробный прогон); для записи добавить `APPLY=1`. CLI:
+  `cd backend && uv run python -m app.cli import-products ../import/qoima-import.xlsx --user owner [--apply]`.
+  Рабочие XLSX хранить в корневой папке `import/`, исключённой из git.
 - Все тесты (backend и frontend): `make test`
 - Тесты backend: `cd backend && uv run pytest`
 - Тесты frontend (vitest): `cd frontend && npm test -- --run` (без `--run` в режиме наблюдения)
@@ -80,7 +84,9 @@
 3. Проведённые документы (приход, продажа, возврат) не редактируются и не удаляются.
    Ошибка исправляется отменой документа, отмена создаёт обратные движения.
 4. Деньги хранятся как BIGINT в тиынах (1 тенге = 100 тиынов) и передаются через API
-   целым числом тиынов. Float для денег запрещён везде. Форматирование в тенге только на фронтенде.
+   целым числом тиынов. Float для денег запрещён везде. Форматирование в тенге на фронтенде;
+   форматирование тенге на backend допустимо только в выводе CLI-команд для человека;
+   API и база всегда в тиынах.
 5. Бизнес-логика живёт только в `service.py`. Router: принять и провалидировать запрос,
    вызвать сервис, вернуть ответ.
 6. Схема базы меняется только новой миграцией Alembic. Уже закоммиченные миграции не редактировать.

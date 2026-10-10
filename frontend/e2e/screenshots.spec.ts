@@ -106,6 +106,17 @@ test('screens', async ({ page }, testInfo) => {
   ]
   for (const [name, path] of screens) {
     await page.goto(path)
+    if (name === 'sale-return') {
+      await settle(page)
+      const caption = page.getByText('Бұл сатылымда қайтару бар. Алдымен қайтарудың күшін жойыңыз.')
+      const history = page.getByRole('heading', { name: 'Қайтарулар', exact: true }).locator('..')
+      await expect(
+        history.getByText('Бұл сатылымда қайтару бар. Алдымен қайтарудың күшін жойыңыз.'),
+      ).toBeVisible()
+      expect(
+        await caption.evaluate((element) => element === element.parentElement!.lastElementChild),
+      ).toBe(true)
+    }
     await snap(page, name, width)
   }
 

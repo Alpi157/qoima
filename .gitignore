@@ -26,3 +26,6 @@ Thumbs.db
 
 # production settings (never committed)
 .env.prod
+
+# Working import files contain real business data.
+/import/

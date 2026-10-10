@@ -178,7 +178,12 @@ describe('SalePage', () => {
       }),
     )
     renderPage()
-    await screen.findByText('По этой продаже есть возврат. Сначала отмените возврат.')
+    const notice = await screen.findByText(
+      'По этой продаже есть возврат. Сначала отмените возврат.',
+    )
+    const section = screen.getByRole('heading', { name: 'Возвраты' }).parentElement!
+    expect(within(section).getByText(notice.textContent!)).toBe(notice)
+    expect(section.lastElementChild).toBe(notice)
     expect(screen.queryByRole('button', { name: 'Отменить продажу' })).toBeNull()
     expect(screen.getByRole('link', { name: '10' }).getAttribute('href')).toBe('/returns/4')
     expect(screen.getByText('Возвращено: 1')).toBeTruthy()
@@ -201,5 +206,6 @@ describe('SalePage', () => {
     )
     renderPage()
     expect(await screen.findByRole('button', { name: 'Отменить продажу' })).toBeTruthy()
+    expect(screen.queryByText('По этой продаже есть возврат. Сначала отмените возврат.')).toBeNull()
   })
 })

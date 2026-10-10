@@ -141,12 +141,6 @@ function SaleDetails({ sale }: { sale: Sale }) {
         }
       />
 
-      {sale.status === 'posted' && hasReturns && (
-        <Text size="sm" c="dimmed">
-          {t('errors.sale_has_returns')}
-        </Text>
-      )}
-
       {sale.status === 'cancelled' && (
         <CancelledNotice title={t('sales.card.cancelled')} document={sale} />
       )}
@@ -256,6 +250,11 @@ function SaleDetails({ sale }: { sale: Sale }) {
               </Stack>
             )}
           />
+          {sale.status === 'posted' && hasReturns && (
+            <Text size="sm" c="dimmed">
+              {t('errors.sale_has_returns')}
+            </Text>
+          )}
         </Stack>
       )}
 

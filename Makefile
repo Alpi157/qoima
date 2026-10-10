@@ -1,4 +1,4 @@
-.PHONY: db backend frontend migrate create-user test lint gen-api review demo screenshots
+.PHONY: db backend frontend migrate create-user import-products test lint gen-api review demo screenshots
 
 db:
 	docker compose up -d db
@@ -16,6 +16,15 @@ LOCALE ?= kk
 
 create-user:
 	cd backend && uv run python -m app.cli create-user --username "$(USERNAME)" --full-name "$(FULL_NAME)" --locale "$(LOCALE)"
+
+import-products:
+	@if [ -z "$(FILE)" ] || [ -z "$(USER)" ]; then \
+		echo 'Пробный прогон: make import-products FILE=import/qoima-import.xlsx USER=owner'; \
+		echo 'Применение: make import-products FILE=import/qoima-import.xlsx USER=owner APPLY=1'; \
+		echo 'Рабочие XLSX храните в import/ в корне проекта: папка исключена из git.'; \
+		exit 1; \
+	fi
+	cd backend && uv run python -m app.cli import-products "$(abspath $(FILE))" --user "$(USER)" $(if $(filter 1,$(APPLY)),--apply)
 
 test:
 	cd backend && uv run pytest

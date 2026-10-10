@@ -158,13 +158,19 @@ def _flush_and_commit(db: Session, article_norm: str) -> None:
     db.commit()
 
 
-def create_product(db: Session, data: ProductCreate) -> ProductOut:
+def _create_product(db: Session, data: ProductCreate) -> Product:
+    """Add a validated product. The caller owns flushing and the transaction."""
     article_norm = normalize_article(data.article)
     _ensure_article_free(db, article_norm)
 
     product = Product(**data.model_dump(), article_norm=article_norm)
     db.add(product)
-    _flush_and_commit(db, article_norm)
+    return product
+
+
+def create_product(db: Session, data: ProductCreate) -> ProductOut:
+    product = _create_product(db, data)
+    _flush_and_commit(db, product.article_norm)
     return get_product(db, product.id)
 
 

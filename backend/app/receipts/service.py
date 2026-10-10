@@ -28,7 +28,8 @@ from app.receipts.schemas import (
 DOC_TYPE = "receipt"
 
 
-def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
+def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
+    """Post a receipt without committing. The caller owns the transaction."""
     load_line_products(db, [line.product_id for line in data.lines], "receipt")
 
     receipt = Receipt(
@@ -66,6 +67,11 @@ def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
         ],
         user_id,
     )
+    return receipt
+
+
+def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
+    receipt = _post_receipt(db, data, user_id)
     db.commit()
     return get_receipt(db, receipt.id)
 
