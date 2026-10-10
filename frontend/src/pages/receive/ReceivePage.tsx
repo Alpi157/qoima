@@ -25,10 +25,11 @@ import {
   useDraft,
   useLineProducts,
 } from '../../components/flow'
-import { ChevronRightIcon, PlusIcon } from '../../components/icons'
+import { PlusIcon } from '../../components/icons'
+import { ExtraSection } from '../../components/ExtraSection'
 import { MoneyInput } from '../../components/MoneyInput'
 import { PageLoader } from '../../components/PageLoader'
-import { Card, PageContainer, PageHeader } from '../../components/ui'
+import { PageContainer, PageHeader } from '../../components/ui'
 import { apiErrorText } from '../../i18n/errorText'
 import { nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
@@ -221,90 +222,67 @@ function ReceiveFlow({ userId }: { userId: number }) {
             )
           })}
 
-          <Stack gap="md">
-            <Group>
-              <Button
-                variant="default"
-                onClick={() => change({ extrasOpen: !value.extrasOpen })}
-                aria-expanded={value.extrasOpen}
-                aria-controls="receive-extras"
-                leftSection={
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      transform: value.extrasOpen ? 'rotate(90deg)' : undefined,
-                      transition: 'transform var(--q-motion-press)',
-                    }}
-                  >
-                    <ChevronRightIcon size={20} />
-                  </span>
-                }
-              >
-                {t('receive.extras.toggle')}
-              </Button>
-            </Group>
-            {value.extrasOpen && (
-              <Card id="receive-extras">
-                <Stack gap="lg">
-                  <Stack gap="xs">
-                    <TextInput
-                      label={t('receive.extras.supplier')}
-                      value={value.supplier}
-                      onChange={(event) => change({ supplier: event.currentTarget.value })}
-                    />
-                    <Group>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => change({ supplier: t('receive.extras.initialStock') })}
-                      >
-                        {t('receive.extras.initialStock')}
-                      </Button>
-                    </Group>
-                  </Stack>
-                  <DateTimePicker
-                    label={t('receive.extras.date')}
-                    description={t('receive.extras.dateHint')}
-                    valueFormat="DD.MM.YYYY HH:mm"
-                    value={value.receivedAt}
-                    maxDate={nowLocalInput()}
-                    onChange={(receivedAt) => change({ receivedAt })}
-                    clearable
-                    styles={{ wrapper: { maxWidth: FIELD_WIDTH.date } }}
-                  />
-                  <Textarea
-                    label={t('receive.extras.note')}
-                    autosize
-                    minRows={2}
-                    value={value.note}
-                    onChange={(event) => change({ note: event.currentTarget.value })}
-                  />
-                  {views.length > 0 && (
-                    <Stack gap="md">
-                      <Text fw={600}>{t('receive.extras.costs')}</Text>
-                      {views.map(({ line, product }) => (
-                        <Group key={product.id} justify="space-between" gap="md" wrap="wrap">
-                          <Stack gap={0} miw={0} style={{ flex: '1 1 200px' }}>
-                            <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
-                              {product.article}
-                            </Text>
-                            <Text c="dimmed">{product.name}</Text>
-                          </Stack>
-                          <MoneyInput
-                            showHint={false}
-                            aria-label={t('receive.extras.costOf', { article: product.article })}
-                            value={line.cost}
-                            onChange={(cost) => changeLine(product.id, { cost })}
-                            w={FIELD_WIDTH.price}
-                          />
-                        </Group>
-                      ))}
+          <ExtraSection
+            id="receive-extras"
+            opened={value.extrasOpen}
+            onToggle={() => change({ extrasOpen: !value.extrasOpen })}
+          >
+            <Stack gap="xs">
+              <TextInput
+                label={t('receive.extras.supplier')}
+                value={value.supplier}
+                onChange={(event) => change({ supplier: event.currentTarget.value })}
+              />
+              <Group>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => change({ supplier: t('receive.extras.initialStock') })}
+                >
+                  {t('receive.extras.initialStock')}
+                </Button>
+              </Group>
+            </Stack>
+            <DateTimePicker
+              label={t('receive.extras.date')}
+              description={t('receive.extras.dateHint')}
+              valueFormat="DD.MM.YYYY HH:mm"
+              value={value.receivedAt}
+              maxDate={nowLocalInput()}
+              onChange={(receivedAt) => change({ receivedAt })}
+              clearable
+              styles={{ wrapper: { maxWidth: FIELD_WIDTH.date } }}
+            />
+            <Textarea
+              label={t('receive.extras.note')}
+              autosize
+              minRows={2}
+              value={value.note}
+              onChange={(event) => change({ note: event.currentTarget.value })}
+            />
+            {views.length > 0 && (
+              <Stack gap="md">
+                <Text fw={600}>{t('receive.extras.costs')}</Text>
+                {views.map(({ line, product }) => (
+                  <Group key={product.id} justify="space-between" gap="md" wrap="wrap">
+                    <Stack gap={0} miw={0} style={{ flex: '1 1 200px' }}>
+                      <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
+                        {product.article}
+                      </Text>
+                      <Text c="dimmed">{product.name}</Text>
                     </Stack>
-                  )}
-                </Stack>
-              </Card>
+                    <MoneyInput
+                      showHint={false}
+                      aria-label={t('receive.extras.costOf', { article: product.article })}
+                      value={line.cost}
+                      onChange={(cost) => changeLine(product.id, { cost })}
+                      w={FIELD_WIDTH.price}
+                    />
+                  </Group>
+                ))}
+              </Stack>
             )}
-          </Stack>
+          </ExtraSection>
         </Stack>
 
         <TotalsPanel

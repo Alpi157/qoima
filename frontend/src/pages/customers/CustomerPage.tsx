@@ -16,15 +16,18 @@ import {
   PageHeader,
   RowLink,
   SectionTitle,
+  Stat,
 } from '../../components/ui'
 import { formatDateTime } from '../../lib/dates'
-import { formatMoney } from '../../lib/money'
+import { formatAmount, formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { useListParams } from '../../lib/useListParams'
 import { type SaleListItem, useSales } from '../sales/api'
 import { SaleStatusBadge } from '../sales/SaleStatusBadge'
 import { type Customer, useCustomer } from './api'
 import { CustomerFormModal } from './CustomerFormModal'
+import { CustomerLedger } from './CustomerLedger'
+import { PaymentModal } from '../payments/PaymentModal'
 
 function SaleLink({ sale }: { sale: SaleListItem }) {
   const { t } = useTranslation()
@@ -108,6 +111,7 @@ function PurchaseHistory({ customerId }: { customerId: number }) {
 
 function CustomerDetails({ customer }: { customer: Customer }) {
   const [editOpened, edit] = useDisclosure()
+  const [paymentOpened, payment] = useDisclosure()
   const { t } = useTranslation()
 
   return (
@@ -125,8 +129,35 @@ function CustomerDetails({ customer }: { customer: Customer }) {
             </Group>
           )
         }
-        actions={<Button onClick={edit.open}>{t('customers.card.edit')}</Button>}
+        actions={
+          <Button variant="default" onClick={edit.open}>
+            {t('customers.card.edit')}
+          </Button>
+        }
       />
+
+      <Card>
+        <Group justify="space-between" align="center" gap="lg">
+          {customer.debt === 0 ? (
+            <Text fz="var(--q-fz-h2)" lh="var(--q-lh-h2)" fw={700}>
+              {t('customers.debt.none')}
+            </Text>
+          ) : (
+            <Stat
+              size="display"
+              label={customer.debt > 0 ? t('customers.debt.title') : t('customers.debt.overpaid')}
+              value={formatAmount(Math.abs(customer.debt))}
+              unit="₸"
+              testId="customer-debt"
+            />
+          )}
+          {customer.debt > 0 && (
+            <Button size="lg" onClick={payment.open}>
+              {t('payments.title')}
+            </Button>
+          )}
+        </Group>
+      </Card>
 
       {customer.note && (
         <Card>
@@ -135,11 +166,17 @@ function CustomerDetails({ customer }: { customer: Customer }) {
       )}
 
       <Stack gap="md">
+        <SectionTitle>{t('customers.ledger.title')}</SectionTitle>
+        <CustomerLedger customerId={customer.id} />
+      </Stack>
+
+      <Stack gap="md">
         <SectionTitle>{t('customers.purchases.title')}</SectionTitle>
         <PurchaseHistory customerId={customer.id} />
       </Stack>
 
       <CustomerFormModal opened={editOpened} onClose={edit.close} customer={customer} />
+      <PaymentModal opened={paymentOpened} onClose={payment.close} customer={customer} />
     </PageContainer>
   )
 }

@@ -11,11 +11,17 @@ import { HomePage } from './HomePage'
 
 const OWNER = { id: 1, username: 'owner', full_name: 'Арман', role: 'owner', locale: 'ru' }
 
-function mockApi(today: { total: number; sum_posted: number }) {
+function mockApi(today: { total: number; sum_posted: number }, totalDebt = 0) {
   return vi
     .spyOn(api, 'GET')
     .mockImplementation(((path: string) =>
-      ok(path === '/api/auth/me' ? OWNER : { items: [], ...today })) as never)
+      ok(
+        path === '/api/auth/me'
+          ? OWNER
+          : path === '/api/customers/debts'
+            ? { items: [], total: 0, total_debt: totalDebt, debtors_count: 0 }
+            : { items: [], ...today },
+      )) as never)
 }
 
 function renderHome() {
@@ -34,6 +40,21 @@ afterEach(() => {
 })
 
 describe('HomePage', () => {
+  it('hides the debt link at zero and requests only one item', async () => {
+    const get = mockApi({ total: 0, sum_posted: 0 })
+    renderHome()
+    await screen.findByTestId('today-sales')
+    expect(screen.queryByTestId('home-debts')).toBeNull()
+    expect(get).toHaveBeenCalledWith('/api/customers/debts', { params: { query: { limit: 1 } } })
+  })
+
+  it('links the total debt to /debts with the amount in bold', async () => {
+    mockApi({ total: 0, sum_posted: 0 }, 1234500)
+    renderHome()
+    const link = await screen.findByTestId('home-debts')
+    expect(link.getAttribute('href')).toBe('/debts')
+    expect(link.querySelector('b')?.textContent).toBe(formatMoney(1234500))
+  })
   it('greets the user by name', async () => {
     mockApi({ total: 0, sum_posted: 0 })
     renderHome()

@@ -1,9 +1,10 @@
 import { Badge } from '@mantine/core'
 import type { ReactNode } from 'react'
 
-export type StatusTone = 'posted' | 'cancelled' | 'archived'
+export type StatusTone = 'posted' | 'cancelled' | 'archived' | 'warning'
 
 const TONES: Record<StatusTone, { color: string; background: string }> = {
+  warning: { color: 'var(--q-color-warning-text)', background: 'var(--q-color-warning-bg)' },
   posted: { color: 'var(--mantine-color-green-8)', background: 'var(--mantine-color-green-0)' },
   cancelled: { color: 'var(--mantine-color-red-6)', background: 'var(--mantine-color-red-0)' },
   archived: { color: 'var(--mantine-color-gray-7)', background: 'var(--mantine-color-gray-2)' },

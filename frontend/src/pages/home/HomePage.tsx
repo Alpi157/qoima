@@ -1,6 +1,6 @@
 import './HomePage.css'
 
-import { Button, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Anchor, Button, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core'
 import type { ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -13,6 +13,23 @@ import { todayLocal } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { MORE_PATH } from '../../lib/nextPath'
 import { useSales } from '../sales/api'
+import { useDebtSummary } from '../customers/api'
+
+function HomeDebts() {
+  const debts = useDebtSummary()
+  if (debts.isPending) return <Loader size="sm" />
+  if (debts.isError) return <QueryError error={debts.error} onRetry={() => debts.refetch()} />
+  if (debts.data.total_debt === 0) return null
+  return (
+    <Anchor component={Link} to="/debts" data-testid="home-debts">
+      <Trans
+        i18nKey="home.debts"
+        values={{ amount: formatMoney(debts.data.total_debt) }}
+        components={{ b: <b /> }}
+      />
+    </Anchor>
+  )
+}
 
 interface TileProps {
   to: string
@@ -90,7 +107,10 @@ export function HomePage() {
 
       <Card>
         <Group justify="space-between" gap="md">
-          <TodaySales />
+          <Stack gap="xs">
+            <TodaySales />
+            <HomeDebts />
+          </Stack>
           <Group gap="sm">
             <Button component={Link} to="/sales" variant="default">
               {t('home.salesHistory')}

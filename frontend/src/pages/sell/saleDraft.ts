@@ -30,10 +30,22 @@ export interface SaleDraft {
   requestId: string
   lines: SaleDraftLine[]
   customer: SaleCustomerChoice
+  payment: SalePayment
+}
+
+export interface SalePayment {
+  mode: 'full' | 'debt'
+  paid: string
 }
 
 export function createSaleDraft(): SaleDraft {
-  return { version: 1, requestId: crypto.randomUUID(), lines: [], customer: null }
+  return {
+    version: 1,
+    requestId: crypto.randomUUID(),
+    lines: [],
+    customer: null,
+    payment: { mode: 'full', paid: '' },
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -64,7 +76,31 @@ export function parseSaleDraft(raw: unknown): SaleDraft | null {
   if (!isRecord(raw) || raw.version !== 1 || typeof raw.requestId !== 'string') return null
   if (!Array.isArray(raw.lines)) return null
   const lines = raw.lines.map(parseLine).filter((line) => line !== null)
-  return { version: 1, requestId: raw.requestId, lines, customer: parseCustomer(raw.customer) }
+  const customer = parseCustomer(raw.customer)
+  const payment =
+    isRecord(raw.payment) && raw.payment.mode === 'debt' && customer !== null && customer !== 'none'
+      ? {
+          mode: 'debt' as const,
+          paid: typeof raw.payment.paid === 'string' ? raw.payment.paid : '',
+        }
+      : {
+          mode: 'full' as const,
+          paid:
+            isRecord(raw.payment) && typeof raw.payment.paid === 'string' ? raw.payment.paid : '',
+        }
+  return { version: 1, requestId: raw.requestId, lines, customer, payment }
+}
+
+/** Empty partial payment means zero; malformed text remains invalid. */
+export function salePaid(payment: SalePayment, total: number): number | null {
+  return payment.mode === 'full' ? total : payment.paid.trim() === '' ? 0 : parseMoney(payment.paid)
+}
+
+export function salePaymentError(payment: SalePayment, total: number): string | null {
+  const paid = salePaid(payment, total)
+  if (paid === null) return i18n.t('common.input.moneyFormat')
+  if (paid > total) return i18n.t('sell.payment.exceedsTotal')
+  return null
 }
 
 export function isSaleDraftEmpty(draft: SaleDraft): boolean {
@@ -118,6 +154,10 @@ export function saleBody(draft: SaleDraft, lines: SaleLineView[]): SaleCreate {
   return {
     request_id: draft.requestId,
     customer_id: customer !== null && customer !== 'none' ? customer.id : null,
+    paid_amount: salePaid(
+      draft.payment,
+      lines.reduce((sum, { line, product }) => sum + (lineSum(line, product) ?? 0), 0),
+    ) as number,
     lines: lines.map(({ line, product }) => ({
       product_id: product.id,
       qty: line.qty as number,

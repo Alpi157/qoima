@@ -6,6 +6,7 @@ import { LOGIN_PATH } from './lib/nextPath'
 import {
   CustomerPage,
   CustomersPage,
+  DebtsPage,
   HomePage,
   InvoicePrintPage,
   LoginPage,
@@ -48,6 +49,7 @@ export const routes: RouteObject[] = [
           { path: 'products', element: <ProductsPage /> },
           { path: 'products/:id', element: <ProductPage /> },
           { path: 'customers', element: <CustomersPage /> },
+          { path: 'debts', element: <DebtsPage /> },
           { path: 'customers/:id', element: <CustomerPage /> },
           { path: 'receipts', element: <ReceiptsPage /> },
           { path: 'receipts/new', element: <Navigate to="/receive" replace /> },

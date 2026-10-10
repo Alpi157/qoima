@@ -14,6 +14,7 @@ import {
   useRecentCustomers,
 } from '../customers/api'
 import type { PickedCustomer } from './saleDraft'
+import { formatMoney } from '../../lib/money'
 
 function pick(customer: Customer): PickedCustomer {
   return { id: customer.id, name: customer.name, phone: customer.phone ?? null }
@@ -104,12 +105,18 @@ function NewCustomerForm({ initialText, onSaved, onCancel }: NewCustomerFormProp
 }
 
 function CustomerChoice({ customer, onPick }: { customer: Customer; onPick: () => void }) {
+  const { t } = useTranslation()
   return (
     <button type="button" className="flow-choice" onClick={onPick}>
       <UserIcon size={32} />
       <Stack gap={0} miw={0}>
         <span className="flow-choice-name">{customer.name}</span>
         {customer.phone && <Text c="dimmed">{customer.phone}</Text>}
+        {customer.debt > 0 && (
+          <Text size="sm" c="var(--q-color-warning-text)">
+            {t('sell.customer.debt', { amount: formatMoney(customer.debt) })}
+          </Text>
+        )}
       </Stack>
     </button>
   )

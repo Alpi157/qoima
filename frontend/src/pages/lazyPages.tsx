@@ -1,5 +1,9 @@
 import { lazy } from 'react'
 
+export const DebtsPage = lazy(() =>
+  import('./debts/DebtsPage').then((m) => ({ default: m.DebtsPage })),
+)
+
 // Every page is its own chunk, loaded on first visit.
 // Suspense boundaries: main.tsx (whole screen) and AppLayout (content area).
 export const CustomerPage = lazy(() =>

@@ -98,7 +98,7 @@ function SaleDetails({ sale }: { sale: Sale }) {
       <PageHeader
         back={{ to: '/sales', label: t('sales.card.back') }}
         title={t('sales.card.title', { number: sale.number, date: formatDateTime(sale.sold_at) })}
-        titleAside={<SaleStatusBadge status={sale.status} />}
+        titleAside={<SaleStatusBadge status={sale.status} debtAtSale={sale.debt_at_sale} />}
         subtitle={t('common.postedBy', {
           name: sale.created_by_name,
           date: formatDateTime(sale.created_at),
@@ -161,6 +161,12 @@ function SaleDetails({ sale }: { sale: Sale }) {
               unit="₸"
             />
           </Group>
+          {sale.debt_at_sale > 0 && (
+            <Stack gap="xs" mt="md">
+              <Text>{t('sales.card.paid', { amount: formatMoney(sale.paid_at_sale) })}</Text>
+              <Text>{t('sales.card.debt', { amount: formatMoney(sale.debt_at_sale) })}</Text>
+            </Stack>
+          )}
         </Card>
       </Stack>
 

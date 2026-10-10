@@ -43,6 +43,7 @@ function saveDraft(draft: Partial<SaleDraft>, key = SALE_KEY) {
     requestId: REQUEST_ID,
     lines: [{ productId: 1, qty: 2, price: null }],
     customer: null,
+    payment: { mode: 'full', paid: '' },
     ...draft,
   }
   localStorage.setItem(key, JSON.stringify(full))
@@ -168,6 +169,18 @@ describe('SellPage, steps in the address', () => {
 })
 
 describe('SellPage, step 2', () => {
+  it('shows positive debt both in recent customers and search results', async () => {
+    const user = setupUser()
+    const customer = { ...ERZHAN, debt: 100050 }
+    mockFlowGet({ products: PRODUCTS, recent: [customer], customers: [customer] })
+    saveDraft({})
+    renderSell('/sell?step=2')
+    expect(await screen.findByText('Долг: 1 000,50 ₸')).toBeTruthy()
+    await fill(user, screen.getByRole('searchbox'), 'Ержан')
+    await screen.findByText('Результаты поиска')
+    await screen.findByRole('button', { name: /Ержан.*Долг:/ })
+    expect(screen.getByText('Долг: 1 000,50 ₸')).toBeTruthy()
+  })
   it('shows the latest customers; picking one goes to step 3', async () => {
     const user = setupUser()
     mockFlowGet({ products: PRODUCTS, recent: [ERZHAN] })
@@ -218,6 +231,69 @@ describe('SellPage, step 2', () => {
 })
 
 describe('SellPage, step 3', () => {
+  it('disables debt without a customer and offers a link to step 2', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    saveDraft({ customer: 'none' })
+    const { router } = renderSell('/sell?step=3')
+    const debt = await screen.findByRole('button', { name: 'В долг' })
+    expect((debt as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('Для продажи в долг выберите покупателя.')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Выбрать покупателя' }))
+    expect(router.state.location.search).toBe('?step=2')
+  })
+
+  it('resets debt mode when switching to a retail customer', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    saveDraft({ customer: ERZHAN, payment: { mode: 'debt', paid: '1000' } })
+    renderSell('/sell?step=2')
+    await user.click(await screen.findByRole('button', { name: 'Продолжить без покупателя' }))
+    expect(storedDraft()?.payment).toEqual({ mode: 'full', paid: '' })
+  })
+
+  it.each([
+    ['1000,50', 100050],
+    ['', 0],
+  ])('sends debt payment %s as %i tiyn', async (paid, expected) => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeSale()))
+    saveDraft({ customer: ERZHAN })
+    renderSell('/sell?step=3')
+    await user.click(await screen.findByRole('button', { name: 'В долг' }))
+    const field = screen.getByRole('textbox', { name: 'Сколько заплатили сейчас, ₸' })
+    expect(document.activeElement).toBe(field)
+    if (paid) await fill(user, field, paid)
+    expect(
+      screen.getByText(`Останется в долг: ${expected ? '23 999,50' : '25 000'} ₸`),
+    ).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Сохранить продажу' }))
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
+    expect(postBody<SaleCreate>(post).paid_amount).toBe(expected)
+    expect(postBody<SaleCreate>(post).request_id).toBe(REQUEST_ID)
+  })
+
+  it('blocks excessive and malformed payments and keeps the typed amount in the draft', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    const post = vi.spyOn(api, 'POST')
+    saveDraft({ customer: ERZHAN })
+    renderSell('/sell?step=3')
+    await user.click(await screen.findByRole('button', { name: 'В долг' }))
+    const field = screen.getByRole('textbox', { name: 'Сколько заплатили сейчас, ₸' })
+    await fill(user, field, '25001')
+    expect(screen.getByText('Не больше суммы продажи')).toBeTruthy()
+    expect(
+      (screen.getByRole('button', { name: 'Сохранить продажу' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(storedDraft()?.payment).toEqual({ mode: 'debt', paid: '25001' })
+    await fill(user, field, '1,2,3')
+    expect(
+      (screen.getByRole('button', { name: 'Сохранить продажу' }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(post).not.toHaveBeenCalled()
+  })
   it('sends the draft request_id and an explicit unit_price in every line', async () => {
     const user = setupUser()
     mockFlowGet({ products: PRODUCTS })
@@ -237,6 +313,7 @@ describe('SellPage, step 3', () => {
     expect(postBody<SaleCreate>(post)).toEqual({
       request_id: REQUEST_ID,
       customer_id: 7,
+      paid_amount: 2640000,
       lines: [
         { product_id: 1, qty: 2, unit_price: 1250000 },
         { product_id: 2, qty: 1, unit_price: 140000 },
@@ -384,6 +461,18 @@ describe('SellPage, draft', () => {
 })
 
 describe('SellDonePage', () => {
+  it('shows the original sale debt and the fresh total customer debt', async () => {
+    const get = mockFlowGet({
+      customers: [makeCustomer({ debt: 350000 })],
+      sale: makeSale({ debt_at_sale: 60000, customer: { id: 7, name: 'Ержан', phone: null } }),
+    })
+    renderSell('/sell/done/9')
+    expect(await screen.findByText('В долг: 600 ₸')).toBeTruthy()
+    expect(await screen.findByText('Общий долг покупателя: 3 500 ₸')).toBeTruthy()
+    expect(get).toHaveBeenCalledWith('/api/customers/{customer_id}', {
+      params: { path: { customer_id: 7 } },
+    })
+  })
   it('shows the saved sale and prints with auto=1', async () => {
     mockFlowGet({
       sale: makeSale({

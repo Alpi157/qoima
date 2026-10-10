@@ -9,6 +9,7 @@ import {
   TagIcon,
   TruckIcon,
   UsersIcon,
+  WalletIcon,
 } from '../../components/icons'
 import { PageContainer, PageHeader } from '../../components/ui'
 import './MorePage.css'
@@ -16,6 +17,7 @@ import './MorePage.css'
 const SECTIONS = [
   { to: '/products', label: 'more.products', icon: <TagIcon size={28} /> },
   { to: '/customers', label: 'more.customers', icon: <UsersIcon size={28} /> },
+  { to: '/debts', label: 'more.debts', icon: <WalletIcon size={28} /> },
   { to: '/sales', label: 'more.sales', icon: <ReceiptIcon size={28} /> },
   { to: '/receipts', label: 'more.receipts', icon: <TruckIcon size={28} /> },
   { to: '/settings', label: 'more.settings', icon: <SettingsIcon size={28} /> },

@@ -3,6 +3,7 @@ import { notifications } from '@mantine/notifications'
 import type { UseMutationResult } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { ParseKeys } from 'i18next'
 
 import { isApiError, isClientError } from '../api/errors'
 import { apiErrorText, fieldErrorText } from '../i18n/errorText'
@@ -28,6 +29,7 @@ export interface CancelDocumentModalProps<T> {
   cancel: UseMutationResult<T, Error, string>
   /** Notification after a successful cancellation. */
   successMessage: (cancelled: T) => string
+  quickReasons?: readonly ParseKeys[]
 }
 
 /** Cancellation of a posted document with a required reason. */
@@ -39,6 +41,7 @@ export function CancelDocumentModal<T>({
   confirmLabel,
   cancel,
   successMessage,
+  quickReasons = QUICK_REASONS,
 }: CancelDocumentModalProps<T>) {
   const { t } = useTranslation()
   const [reason, setReason] = useState('')
@@ -92,7 +95,7 @@ export function CancelDocumentModal<T>({
             role="group"
             aria-label={t('common.cancelDocument.quickLabel')}
           >
-            {QUICK_REASONS.map((key) => (
+            {quickReasons.map((key) => (
               <Button
                 key={key}
                 size="sm"

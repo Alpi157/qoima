@@ -79,6 +79,8 @@ function mockApi() {
         return ok({ items: [MOVEMENT], total: 1 })
       case '/api/customers/{customer_id}':
         return ok(makeCustomer({ created_at: MOMENT }))
+      case '/api/customers/{customer_id}/ledger':
+        return ok({ items: [], total: 0 })
       default:
         throw new Error(`unexpected GET ${path}`)
     }

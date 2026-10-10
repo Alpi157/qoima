@@ -61,6 +61,10 @@ export function mockFlowGet(data: FlowData = {}) {
       }
       case '/api/customers/recent':
         return ok(recent)
+      case '/api/customers/{customer_id}':
+        return ok(
+          customers.find((customer) => customer.id === id) ?? { id, name: 'Ержан', debt: 0 },
+        )
       case '/api/sales/{sale_id}':
         return data.sale ? ok(data.sale) : Promise.reject(new ApiError(404, 'Продажа не найдена'))
       case '/api/receipts/{receipt_id}':

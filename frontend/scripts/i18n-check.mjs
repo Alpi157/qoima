@@ -25,6 +25,8 @@ const SECTIONS = [
   'auth',
   'products',
   'customers',
+  'debts',
+  'payments',
   'receipts',
   'sales',
   'sell',

@@ -15,6 +15,7 @@ import {
   useBackToMore,
 } from '../../components/ui'
 import { useListParams } from '../../lib/useListParams'
+import { formatMoney } from '../../lib/money'
 import { type Customer, useCustomers } from './api'
 import { CustomerFormModal } from './CustomerFormModal'
 
@@ -22,6 +23,12 @@ const customerPath = (customer: Customer) => `/customers/${customer.id}`
 
 function CustomerTable({ items }: { items: Customer[] }) {
   const { t } = useTranslation()
+  const debt = (customer: Customer) =>
+    customer.debt === 0
+      ? null
+      : customer.debt > 0
+        ? formatMoney(customer.debt)
+        : t('customers.debt.overpaidAmount', { amount: formatMoney(-customer.debt) })
   const columns: DataTableColumn<Customer>[] = [
     {
       key: 'name',
@@ -34,6 +41,7 @@ function CustomerTable({ items }: { items: Customer[] }) {
       nowrap: true,
       cell: (customer) => customer.phone,
     },
+    { key: 'debt', header: t('customers.debt.title'), numeric: true, cell: debt },
     {
       key: 'note',
       header: t('customers.list.note'),
@@ -54,6 +62,7 @@ function CustomerTable({ items }: { items: Customer[] }) {
         <Stack gap="xs">
           <Text fw={600}>{customer.name}</Text>
           {customer.phone && <Text>{customer.phone}</Text>}
+          {customer.debt !== 0 && <Text fw={600}>{debt(customer)}</Text>}
           {customer.note && (
             <Text size="sm" c="dimmed" lineClamp={2}>
               {customer.note}

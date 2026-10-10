@@ -107,6 +107,16 @@ export function ReceiptIcon(props: IconProps) {
   )
 }
 
+export function WalletIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 8V5H5a3 3 0 0 0 0 6h16v10H5a3 3 0 0 1-3-3V8" />
+      <path d="M21 12h-5v5h5" />
+      <circle cx="18" cy="14.5" r="0.5" />
+    </Icon>
+  )
+}
+
 export function TruckIcon(props: IconProps) {
   return (
     <Icon {...props}>

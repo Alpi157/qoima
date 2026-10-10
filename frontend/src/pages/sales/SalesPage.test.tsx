@@ -57,6 +57,17 @@ afterEach(() => {
 })
 
 describe('SalesPage', () => {
+  it('marks sales made with debt in both the table and mobile cards', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(
+      ok({
+        items: [{ ...POSTED, paid_at_sale: 1000000, debt_at_sale: 2750000 }],
+        total: 1,
+        sum_posted: POSTED.total,
+      }),
+    )
+    renderPage()
+    expect(await screen.findAllByText('В долг')).toHaveLength(2)
+  })
   it('shows the posted total for the period and the number of sales', async () => {
     mockSales()
     renderPage()

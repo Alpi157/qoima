@@ -4,6 +4,26 @@ import type { Product } from '../pages/products/api'
 import type { Receipt } from '../pages/receipts/api'
 import type { Sale } from '../pages/sales/api'
 import type { BusinessSettings } from '../pages/settings/api'
+import type { Payment } from '../pages/payments/api'
+
+export function makePayment(overrides: Partial<Payment> = {}): Payment {
+  return {
+    id: 3,
+    number: 8,
+    request_id: '11111111-1111-4111-8111-111111111111',
+    customer: { id: 7, name: 'Ержан', phone: null },
+    paid_at: '2026-09-27T09:00:00Z',
+    amount: 100000,
+    note: null,
+    status: 'posted',
+    cancelled_at: null,
+    cancelled_by_name: null,
+    cancel_reason: null,
+    created_by_name: 'Владелец',
+    created_at: '2026-09-27T09:00:00Z',
+    ...overrides,
+  }
+}
 
 export function makeProduct(overrides: Partial<Product> = {}): Product {
   return {

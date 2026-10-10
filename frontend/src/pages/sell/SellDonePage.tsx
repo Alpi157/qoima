@@ -1,4 +1,4 @@
-import { Button } from '@mantine/core'
+import { Anchor, Button, Loader } from '@mantine/core'
 import { Trans, useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
@@ -11,7 +11,25 @@ import { PageContainer } from '../../components/ui'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { isApiError } from '../../api/errors'
+import { apiErrorText } from '../../i18n/errorText'
 import { useSale } from '../sales/api'
+import { useCustomer } from '../customers/api'
+
+function CustomerDebt({ id }: { id: number }) {
+  const { t } = useTranslation()
+  const customer = useCustomer(id)
+  if (customer.isPending) return <Loader size="sm" />
+  if (customer.isError)
+    return (
+      <span role="alert">
+        {apiErrorText(customer.error, t)}{' '}
+        <Anchor component="button" onClick={() => customer.refetch()}>
+          {t('common.retry')}
+        </Anchor>
+      </span>
+    )
+  return <>{t('sell.done.customerDebt', { amount: formatMoney(customer.data.debt) })}</>
+}
 
 function SaleDone({ id }: { id: number }) {
   const { t } = useTranslation()
@@ -30,7 +48,7 @@ function SaleDone({ id }: { id: number }) {
     return <QueryError error={sale.error} onRetry={() => sale.refetch()} />
   }
 
-  const { number, customer, total } = sale.data
+  const { number, customer, total, debt_at_sale } = sale.data
   return (
     <PageContainer>
       <DoneScreen
@@ -50,6 +68,12 @@ function SaleDone({ id }: { id: number }) {
             values={{ amount: formatMoney(total) }}
             components={{ b: <b /> }}
           />,
+          ...(debt_at_sale > 0
+            ? [
+                t('sell.done.debt', { amount: formatMoney(debt_at_sale) }),
+                customer ? <CustomerDebt key="customer-debt" id={customer.id} /> : null,
+              ]
+            : []),
         ]}
       >
         <Button

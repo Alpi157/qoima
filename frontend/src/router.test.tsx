@@ -15,7 +15,7 @@ function mockApi() {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) => {
     if (path === '/api/auth/me') return ok(OWNER)
     if (SHORT_LISTS.has(path)) return ok([])
-    return ok({ items: [], total: 0, sum_posted: 0 })
+    return ok({ items: [], total: 0, sum_posted: 0, total_debt: 0, debtors_count: 0 })
   }) as never)
 }
 
@@ -58,7 +58,7 @@ describe('routes', () => {
     expect(await screen.findByText('Здравствуйте, Владелец!')).toBeTruthy()
   })
 
-  it.each(['/products', '/customers', '/sales', '/receipts', '/settings'])(
+  it.each(['/products', '/customers', '/debts', '/sales', '/receipts', '/settings'])(
     '%s has «Ещё» on top',
     async (path) => {
       mockApi()
@@ -104,6 +104,7 @@ describe('routes', () => {
     expect(links).toEqual([
       ['Товары', '/products'],
       ['Покупатели', '/customers'],
+      ['Долги', '/debts'],
       ['История продаж', '/sales'],
       ['История приёмов', '/receipts'],
       ['Настройки', '/settings'],

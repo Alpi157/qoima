@@ -22,6 +22,15 @@ test('screens', async ({ page }, testInfo) => {
   const customers = await getJson<ListPage<{ id: number }>>(page, '/api/customers')
   const receipts = await getJson<ListPage<{ id: number }>>(page, '/api/receipts')
   const sales = await getJson<ListPage<{ id: number; status: string }>>(page, '/api/sales')
+  const debts = await getJson<ListPage<{ id: number; debt: number }>>(page, '/api/customers/debts')
+  const debtCustomerId = debts.items.find((customer) => customer.debt > 0)!.id
+  const debtSales = await getJson<ListPage<{ id: number; debt_at_sale: number; status: string }>>(
+    page,
+    `/api/sales?customer_id=${debtCustomerId}`,
+  )
+  const debtSaleId = debtSales.items.find(
+    (sale) => sale.status === 'posted' && sale.debt_at_sale > 0,
+  )!.id
   const productId = products.items[0].id
   const customerId = customers.items[0].id
   const receiptId = receipts.items[0].id
@@ -29,16 +38,20 @@ test('screens', async ({ page }, testInfo) => {
 
   const screens: [string, string][] = [
     ['home', '/'],
+    ['home-debts', '/'],
     ['more', '/more'],
     ['stock', '/stock'],
     ['products', '/products'],
     ['product', `/products/${productId}`],
     ['customers', '/customers'],
     ['customer', `/customers/${customerId}`],
+    ['debts', '/debts'],
+    ['customer-debt-ledger', `/customers/${debtCustomerId}`],
     ['receipts', '/receipts'],
     ['receipt', `/receipts/${receiptId}`],
     ['sales', '/sales'],
     ['sale', `/sales/${saleId}`],
+    ['sale-debt', `/sales/${debtSaleId}`],
     ['settings', '/settings'],
     ['not-found', '/no-such-page'],
   ]
@@ -46,6 +59,12 @@ test('screens', async ({ page }, testInfo) => {
     await page.goto(path)
     await snap(page, name, width)
   }
+
+  await page.goto(`/customers/${debtCustomerId}`)
+  await settle(page)
+  await page.getByRole('button', { name: 'Төлем қабылдау' }).click()
+  await page.getByRole('button', { name: /Барлық қарыз:/ }).click()
+  await snap(page, 'payment-modal', width, { fullPage: false })
 
   await page.goto('/products')
   await settle(page)

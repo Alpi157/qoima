@@ -13,7 +13,10 @@ import { SalePage } from '../pages/sales/SalePage'
 import { SellPage } from '../pages/sell/SellPage'
 import { StockPage } from '../pages/stock/StockPage'
 import { ReceivePage } from '../pages/receive/ReceivePage'
-import { makeProduct, makeSale, ok } from '../test/fixtures'
+import { DebtsPage } from '../pages/debts/DebtsPage'
+import { CustomerPage } from '../pages/customers/CustomerPage'
+import { PaymentModal } from '../pages/payments/PaymentModal'
+import { makeCustomer, makeProduct, makeSale, ok } from '../test/fixtures'
 import { renderWithDataRouter, renderWithProviders } from '../test/render'
 import type { Language } from './language'
 
@@ -37,7 +40,7 @@ const SALE = makeSale({
 })
 
 const KEY =
-  /\b(common|nav|home|more|auth|products|customers|receipts|sales|settings|errors|validation|invoice)\.[A-Za-z]/
+  /\b(common|nav|home|more|auth|products|customers|debts|payments|receipts|sales|sell|receive|flow|settings|errors|validation|invoice)\.[A-Za-z]/
 const ATTRIBUTES = ['aria-label', 'placeholder', 'title', 'alt']
 
 /**
@@ -82,6 +85,32 @@ afterEach(() => {
 })
 
 describe.each<Language>(['kk', 'zh'])('pages in %s', (language) => {
+  it('debt list', async () => {
+    const customer = makeCustomer({ name: 'Customer', debt: 100000 })
+    vi.spyOn(api, 'GET').mockReturnValue(
+      ok({ items: [customer], total: 1, total_debt: 100000, debtors_count: 1 }),
+    )
+    renderWithProviders(<DebtsPage />)
+    await screen.findByRole('table')
+    expectTranslated(language)
+  })
+
+  it('customer debt and payment form', async () => {
+    const customer = makeCustomer({ name: 'Customer', debt: 100000 })
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(
+        path === '/api/customers/{customer_id}' ? customer : { items: [], total: 0, sum_posted: 0 },
+      )) as never)
+    const rendered = renderWithDataRouter([{ path: '/customers/:id', element: <CustomerPage /> }], {
+      route: '/customers/7',
+    })
+    await screen.findByRole('button', { name: i18n.t('payments.title') })
+    expectTranslated(language)
+    rendered.unmount()
+    renderWithProviders(<PaymentModal customer={customer} opened onClose={() => {}} />)
+    await screen.findByRole('textbox', { name: i18n.t('payments.amount') })
+    expectTranslated(language)
+  })
   beforeEach(async () => {
     await i18n.changeLanguage(language)
   })

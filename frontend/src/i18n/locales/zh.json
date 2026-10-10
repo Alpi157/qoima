@@ -297,7 +297,9 @@
       "cancelled": "销售单已作废",
       "customer": "客户：",
       "note": "备注：{{note}}",
-      "total": "合计"
+      "total": "合计",
+      "paid": "已付：{{amount}}",
+      "debt": "欠款：{{amount}}"
     },
     "cancel": {
       "confirm": "作废销售单",
@@ -334,7 +336,8 @@
     },
     "today_other": "今天：<b>{{count}} 笔销售</b>，共 <b>{{amount}}</b>",
     "salesHistory": "销售记录",
-    "more": "更多"
+    "more": "更多",
+    "debts": "欠款：<b>{{amount}}</b>"
   },
   "more": {
     "title": "更多",
@@ -342,7 +345,8 @@
     "customers": "客户",
     "sales": "销售记录",
     "receipts": "收货记录",
-    "settings": "设置"
+    "settings": "设置",
+    "debts": "欠款"
   },
   "auth": {
     "login": {
@@ -395,6 +399,24 @@
       "reset": "清除客户",
       "placeholder": "名称或电话",
       "create": "新建客户「{{name}}」"
+    },
+    "debt": {
+      "title": "欠款",
+      "none": "无欠款",
+      "overpaid": "多付",
+      "overpaidAmount": "多付：{{amount}}"
+    },
+    "ledger": {
+      "title": "往来账",
+      "date": "日期",
+      "document": "单据",
+      "sale": "销售单 {{number}}号",
+      "payment": "收款单 {{number}}号",
+      "amount": "金额",
+      "change": "欠款变化",
+      "after": "欠款余额",
+      "cancel": "取消",
+      "empty": "暂无往来记录。"
     }
   },
   "settings": {
@@ -485,7 +507,8 @@
       "name": "新顾客姓名",
       "phone": "电话（选填）",
       "saveAndPick": "保存并选择",
-      "back": "返回：商品"
+      "back": "返回：商品",
+      "debt": "欠款：{{amount}}"
     },
     "review": {
       "title": "请核对",
@@ -505,7 +528,19 @@
       "customer": "顾客：<b>{{name}}</b>",
       "amount": "金额：<b>{{amount}}</b>",
       "print": "打印",
-      "newSale": "新销售"
+      "newSale": "新销售",
+      "debt": "欠款：{{amount}}",
+      "customerDebt": "客户总欠款：{{amount}}"
+    },
+    "payment": {
+      "title": "付款",
+      "full": "全额付款",
+      "debt": "赊账",
+      "paidNow": "现在付了多少，₸",
+      "remaining": "欠款：{{amount}}",
+      "requiresCustomer": "赊账销售请先选择客户。",
+      "chooseCustomer": "选择客户",
+      "exceedsTotal": "不能超过销售金额"
     }
   },
   "receive": {
@@ -561,5 +596,30 @@
       "stock": "库存"
     },
     "none": "无"
+  },
+  "debts": {
+    "title": "谁欠多少？",
+    "total": "欠款总额",
+    "count": "欠款客户",
+    "customer": "客户",
+    "phone": "电话",
+    "amount": "欠款",
+    "overpaid": "多付的客户",
+    "empty": "目前没有欠款。"
+  },
+  "payments": {
+    "title": "收款",
+    "currentDebt": "当前欠款：{{amount}}",
+    "amount": "金额，₸",
+    "allDebt": "全部欠款：{{amount}}",
+    "saved": "收款已保存",
+    "positiveAmount": "请输入大于零的金额。",
+    "cancel": {
+      "title": "取消收款单 {{number}}号？",
+      "description": "收款将被取消。客户欠款将增加相同金额。",
+      "confirm": "取消收款",
+      "done": "收款单 {{number}}号已取消",
+      "wrongAmount": "金额错误"
+    }
   }
 }

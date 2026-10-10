@@ -42,6 +42,15 @@ afterEach(() => {
 const REASON_ERROR = 'Укажите причину, не короче 3 символов'
 
 describe('SalePage', () => {
+  it('shows the debt badge and the payment amounts at sale', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(
+      ok({ ...POSTED, paid_at_sale: 1000000, debt_at_sale: 2750000 }),
+    )
+    renderPage()
+    expect(await screen.findByText('В долг')).toBeTruthy()
+    expect(screen.getByText('Оплачено: 10 000 ₸')).toBeTruthy()
+    expect(screen.getByText('В долг: 27 500 ₸')).toBeTruthy()
+  })
   it('shows the sale with its customer, lines and total', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
     renderPage()

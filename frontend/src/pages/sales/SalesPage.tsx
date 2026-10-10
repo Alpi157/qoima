@@ -44,7 +44,7 @@ function SaleCard({ sale }: { sale: SaleListItem }) {
         <Text fw={600} inherit>
           {t('common.documentNumber', { number: sale.number })}
         </Text>
-        <SaleStatusBadge status={sale.status} />
+        <SaleStatusBadge status={sale.status} debtAtSale={sale.debt_at_sale} />
       </Group>
       <Text size="sm" c="dimmed">
         {formatDateTime(sale.sold_at)}
@@ -103,7 +103,7 @@ function SaleTable({ items }: { items: SaleListItem[] }) {
     {
       key: 'status',
       header: t('sales.list.status'),
-      cell: (sale) => <SaleStatusBadge status={sale.status} />,
+      cell: (sale) => <SaleStatusBadge status={sale.status} debtAtSale={sale.debt_at_sale} />,
     },
   ]
   return (

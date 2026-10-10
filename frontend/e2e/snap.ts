@@ -21,6 +21,8 @@ interface SnapOptions {
   h1?: boolean
   /** Dialogs: only the visible screen, the backdrop does not cover a full-page capture. */
   fullPage?: boolean
+  /** Focus screens keep the position set by the application. */
+  preserveScroll?: boolean
 }
 
 export async function snap(page: Page, name: string, width: string, options: SnapOptions = {}) {
@@ -37,9 +39,11 @@ export async function snap(page: Page, name: string, width: string, options: Sna
   const fullPage = options.fullPage !== false
   // A full-page capture keeps the scroll position of sticky parts (the header, the totals
   // panel of a flow): scroll to the top and let the panel stand after the lines.
-  await page.evaluate(() => window.scrollTo(0, 0))
+  if (!options.preserveScroll) await page.evaluate(() => window.scrollTo(0, 0))
   const unstick = fullPage
-    ? await page.addStyleTag({ content: '.flow-aside { position: static !important; }' })
+    ? await page.addStyleTag({
+        content: '.flow-aside, .flow-review-actions { position: static !important; }',
+      })
     : null
   await page.screenshot({
     path: `${OUT_DIR}/${name}-${width}.png`,

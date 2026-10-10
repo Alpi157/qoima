@@ -8,7 +8,7 @@ import { parsePage } from './pagination'
  * Typing a search or toggling a filter replaces the history entry and resets the page;
  * changing the page adds an entry.
  */
-export function useListParams() {
+export function useListParams(pageParam = 'page') {
   const [searchParams, setSearchParams] = useSearchParams()
 
   /** Sets several filters at once (for example both ends of a date range); null removes one. */
@@ -21,13 +21,13 @@ export function useListParams() {
             if (value) next.set(name, value)
             else next.delete(name)
           }
-          next.delete('page')
+          next.delete(pageParam)
           return next
         },
         { replace: true },
       )
     },
-    [setSearchParams],
+    [setSearchParams, pageParam],
   )
 
   const setParam = useCallback(
@@ -41,17 +41,17 @@ export function useListParams() {
     (page: number) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev)
-        if (page > 1) next.set('page', String(page))
-        else next.delete('page')
+        if (page > 1) next.set(pageParam, String(page))
+        else next.delete(pageParam)
         return next
       })
     },
-    [setSearchParams],
+    [setSearchParams, pageParam],
   )
 
   return {
     q: searchParams.get('q') ?? '',
-    page: parsePage(searchParams.get('page')),
+    page: parsePage(searchParams.get(pageParam)),
     searchParams,
     setQ,
     setPage,

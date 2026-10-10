@@ -234,6 +234,17 @@
   background: var(--q-color-receive);
 }
 
+/* Keep the sale's action visible while reviewing payment and long lists of lines. */
+.flow-review-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding: var(--q-space-16);
+  border-top: 1px solid var(--q-color-border);
+  border-radius: var(--q-radius-card);
+  background: var(--q-color-surface);
+}
+
 /* Step 3: on a phone the save button on top, full width, «back» under it. */
 @media (max-width: 48em) {
   .flow-review-actions {

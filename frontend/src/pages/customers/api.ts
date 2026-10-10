@@ -8,6 +8,44 @@ import { PAGE_SIZE, pageOffset } from '../../lib/pagination'
 export type Customer = components['schemas']['CustomerOut']
 export type CustomerCreate = components['schemas']['CustomerCreate']
 export type CustomerUpdate = components['schemas']['CustomerUpdate']
+export type CustomerDebtsPage = components['schemas']['CustomerDebtsPage']
+export type LedgerItem = components['schemas']['LedgerItem']
+
+export function useCustomerDebts(page: number) {
+  return useQuery({
+    queryKey: queryKeys.customerDebts(page),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/customers/debts', {
+          params: { query: { limit: PAGE_SIZE, offset: pageOffset(page) } },
+        }),
+      ),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useDebtSummary() {
+  return useQuery({
+    queryKey: queryKeys.debtSummary,
+    queryFn: () => unwrap(api.GET('/api/customers/debts', { params: { query: { limit: 1 } } })),
+  })
+}
+
+export function useCustomerLedger(id: number, page: number) {
+  return useQuery({
+    queryKey: queryKeys.customerLedger(id, page),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/customers/{customer_id}/ledger', {
+          params: {
+            path: { customer_id: id },
+            query: { limit: PAGE_SIZE, offset: pageOffset(page) },
+          },
+        }),
+      ),
+    placeholderData: keepPreviousData,
+  })
+}
 
 export function useCustomers(params: CustomerListParams) {
   return useQuery({

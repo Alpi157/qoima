@@ -11,6 +11,9 @@ const SALE_QUERY_PREFIXES = [
   'product',
   'product-movements',
   'customer',
+  'customers',
+  'customer-debts',
+  'customer-ledger',
 ]
 
 function useInvalidatePrefixes(prefixes: string[]) {
@@ -30,4 +33,9 @@ export function useInvalidateStock() {
 /** Refreshes sales, stock and customer queries after a sale or its cancellation. */
 export function useInvalidateSales() {
   return useInvalidatePrefixes(SALE_QUERY_PREFIXES)
+}
+
+/** Payment documents change customer balances and the home debt summary. */
+export function useInvalidatePayments() {
+  return useInvalidatePrefixes(['customer', 'customers', 'customer-debts', 'customer-ledger'])
 }

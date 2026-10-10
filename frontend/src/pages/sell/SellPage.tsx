@@ -25,11 +25,13 @@ import {
   parseSaleDraft,
   type PickedCustomer,
   saleBody,
+  salePaymentError,
   type SaleDraftLine,
 } from './saleDraft'
 import { SellStepCustomer } from './SellStepCustomer'
 import { SellStepProducts } from './SellStepProducts'
 import { RequestConflictAlert, SellStepReview } from './SellStepReview'
+import { saleTotals } from './saleTotals'
 
 type Step = 1 | 2 | 3
 
@@ -118,7 +120,12 @@ function SellFlow({ userId }: { userId: number }) {
   }
 
   const pickCustomer = (customer: PickedCustomer | 'none') => {
-    update((current) => ({ ...current, customer }))
+    update((current) => ({
+      ...current,
+      customer,
+      payment: customer === 'none' ? { mode: 'full', paid: '' } : current.payment,
+    }))
+    setSaveError(null)
     goForward(3)
   }
 
@@ -129,7 +136,7 @@ function SellFlow({ userId }: { userId: number }) {
   }
 
   const submit = () => {
-    if (post.isPending) return
+    if (post.isPending || salePaymentError(value.payment, saleTotals(views).sum)) return
     setSaveError(null)
     post.mutate(saleBody(value, views), {
       onSuccess: (sale) => {
@@ -192,6 +199,11 @@ function SellFlow({ userId }: { userId: number }) {
         <SellStepReview
           views={views}
           customer={value.customer}
+          payment={value.payment}
+          onPaymentChange={(payment) => {
+            update((current) => ({ ...current, payment }))
+            setSaveError(null)
+          }}
           onBack={() => goBack(2)}
           onSubmit={submit}
           saving={post.isPending}
