@@ -55,7 +55,7 @@ afterEach(() => {
 })
 
 describe('ReceivePage', () => {
-  it('opens collapsed extras, marks empty costs and focuses the first on save', async () => {
+  it('marks empty costs in lines and focuses the first without opening extras', async () => {
     const user = setupUser()
     const second = makeProduct({ id: 2, article: 'W712' })
     mockFlowGet({ products: [FILTER, second] })
@@ -68,7 +68,7 @@ describe('ReceivePage', () => {
     })
     renderReceive()
     await screen.findByRole('textbox', { name: 'Количество OC-90' })
-    expect(screen.queryByRole('textbox', { name: 'Закупочная цена OC-90' })).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'Закупочная цена OC-90' })).toBeTruthy()
     await user.click(submitButton())
     const input = await screen.findByRole('textbox', { name: 'Закупочная цена OC-90' })
     await waitFor(() => expect(document.activeElement).toBe(input))
@@ -76,7 +76,7 @@ describe('ReceivePage', () => {
     expect(screen.getAllByText('Укажите закупочную цену')).toHaveLength(2)
     expect(
       screen.getByRole('button', { name: 'Дополнительно' }).getAttribute('aria-expanded'),
-    ).toBe('true')
+    ).toBe('false')
     expect(post).not.toHaveBeenCalled()
     await fill(user, input, '0')
     expect(input.getAttribute('aria-invalid')).not.toBe('true')
@@ -300,4 +300,90 @@ describe('ReceiveDonePage', () => {
       '/stock',
     )
   })
+})
+
+describe('receiving costs in lines', () => {
+  it.each([90050, 0, null])(
+    'prefills last_cost %s only when adding a new line',
+    async (last_cost) => {
+      const user = setupUser()
+      mockFlowGet({ products: [makeProduct({ ...FILTER, last_cost })] })
+      renderReceive()
+      const search = await screen.findByRole('searchbox')
+      await fill(user, search, 'OC')
+      await user.keyboard('{Enter}')
+      const cost = await screen.findByRole('textbox', { name: 'Закупочная цена OC-90' })
+      expect((cost as HTMLInputElement).value).toBe(
+        last_cost === null ? '' : last_cost === 0 ? '0' : '900,50',
+      )
+      await user.clear(cost)
+      await fill(user, cost, '700')
+      await fill(user, search, 'OC')
+      await user.keyboard('{Enter}')
+      await waitFor(() =>
+        expect(storedDraft()?.lines[0]).toEqual({ productId: 1, qty: 2, cost: '700' }),
+      )
+    },
+  )
+
+  it.each(['12500', '13000'])(
+    'warns for purchase price %s without blocking saving',
+    async (cost) => {
+      const user = setupUser()
+      mockFlowGet({ products: [FILTER] })
+      saveDraft({ lines: [{ productId: 1, qty: 2, cost }] })
+      const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt()))
+      renderReceive()
+      const warning = await screen.findByText(/Не дороже ли цены продажи/)
+      const salePrice = screen.getByText(/^Цена продажи:/)
+      expect(salePrice.textContent).not.toContain('Не дороже')
+      expect(warning.tagName).toBe('P')
+      expect(salePrice.tagName).toBe('P')
+      expect(salePrice.nextElementSibling).toBe(warning)
+      expect(warning.getAttribute('style')).toContain('--q-color-warning-text')
+      expect(submitButton().disabled).toBe(false)
+      await user.click(submitButton())
+      expect(post).toHaveBeenCalled()
+    },
+  )
+
+  it('shows purchase sums and restores old lines without cost without substituting last_cost', async () => {
+    mockFlowGet({
+      products: [
+        makeProduct({ ...FILTER, last_cost: 50000 }),
+        makeProduct({ id: 2, article: 'W712' }),
+      ],
+    })
+    localStorage.setItem(
+      RECEIPT_KEY,
+      JSON.stringify({
+        version: 1,
+        lines: [
+          { productId: 1, qty: 2, cost: '900,50' },
+          { productId: 2, qty: 3 },
+        ],
+      }),
+    )
+    renderReceive()
+    expect(
+      ((await screen.findByRole('textbox', { name: 'Закупочная цена W712' })) as HTMLInputElement)
+        .value,
+    ).toBe('')
+    const lines = screen.getAllByTestId('flow-line')
+    expect(lines[0].textContent).toContain('1\u00a0801\u00a0₸')
+    expect(screen.getByTestId('receipt-total').textContent).toBe('Сумма: 1\u00a0801\u00a0₸')
+  })
+})
+
+it('adds all valid line costs to the purchase total in integer tiyn', async () => {
+  mockFlowGet({ products: [FILTER, makeProduct({ id: 2, article: 'W712' })] })
+  saveDraft({
+    lines: [
+      { productId: 1, qty: 2, cost: '900,50' },
+      { productId: 2, qty: 3, cost: '700' },
+    ],
+  })
+  renderReceive()
+  await screen.findByRole('textbox', { name: 'Закупочная цена W712' })
+  expect(screen.getByTestId('receipt-total').textContent).toBe('Сумма: 3\u00a0901\u00a0₸')
 })

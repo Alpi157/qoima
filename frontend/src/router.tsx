@@ -24,6 +24,7 @@ import {
   SellPage,
   SettingsPage,
   StockPage,
+  ReportPage,
 } from './pages/lazyPages'
 
 export const routes: RouteObject[] = [
@@ -44,6 +45,7 @@ export const routes: RouteObject[] = [
           { path: 'receive', element: <ReceivePage /> },
           { path: 'receive/done/:id', element: <ReceiveDonePage /> },
           { path: 'stock', element: <StockPage /> },
+          { path: 'report', element: <ReportPage /> },
           { path: 'sale', element: <Navigate to="/sell" replace /> },
           // Detailed sections opened from «Тағы»: their lists lead back with «Тағы».
           { path: 'products', element: <ProductsPage /> },

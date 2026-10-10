@@ -23,7 +23,7 @@ import {
 import { apiErrorText } from '../../i18n/errorText'
 import { formatDateTime } from '../../lib/dates'
 import { movementKindLabel, unitLabel } from '../../lib/labels'
-import { formatAmount } from '../../lib/money'
+import { formatAmount, formatRoundedMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { useListParams } from '../../lib/useListParams'
 import {
@@ -222,6 +222,33 @@ function ProductDetails({ product }: { product: Product }) {
           />
         </Card>
       </SimpleGrid>
+
+      <Card>
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
+          <Stat
+            label={t('products.card.avgCost')}
+            value={
+              product.avg_cost === null
+                ? t('products.card.unknown')
+                : formatRoundedMoney(product.avg_cost, false)
+            }
+            unit={product.avg_cost === null ? undefined : '₸'}
+          />
+          <Stat
+            label={t('products.card.lastCost')}
+            value={
+              product.last_cost === null
+                ? t('products.card.unknown')
+                : formatAmount(product.last_cost)
+            }
+            unit={product.last_cost === null ? undefined : '₸'}
+          />
+          <Stat
+            label={t('products.form.minQty')}
+            value={product.min_qty === null ? t('products.card.notSet') : product.min_qty}
+          />
+        </SimpleGrid>
+      </Card>
 
       {product.note && <Text style={{ whiteSpace: 'pre-wrap' }}>{product.note}</Text>}
 

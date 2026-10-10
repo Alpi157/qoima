@@ -126,6 +126,7 @@ def test_product_and_customer_numbers_sort_and_pages(auth_client, report_case):
                 "sales_count": 1,
                 "revenue": 700,
                 "profit": 200,
+                "revenue_unknown_cost": 400,
             },
             {
                 "customer_id": c1.id,
@@ -133,8 +134,16 @@ def test_product_and_customer_numbers_sort_and_pages(auth_client, report_case):
                 "sales_count": 1,
                 "revenue": 600,
                 "profit": 400,
+                "revenue_unknown_cost": 0,
             },
-            {"customer_id": None, "name": None, "sales_count": 1, "revenue": 200, "profit": 0},
+            {
+                "customer_id": None,
+                "name": None,
+                "sales_count": 1,
+                "revenue": 200,
+                "profit": 0,
+                "revenue_unknown_cost": 200,
+            },
         ],
     }
     for kind, data in [("products", products), ("customers", customers)]:
@@ -208,6 +217,16 @@ def test_query_budget(db_session, report_case):
             assert len(statements) == expected
     finally:
         event.remove(conn, "before_cursor_execute", record)
+
+
+def test_customers_unknown_cost_uses_sale_snapshots(auth_client, db_session, report_case):
+    _, product, c1, c2 = report_case
+    user = create_user(db_session)
+    # A later receipt cannot fill in missing costs of already posted sales.
+    post_movements(db_session, [MovementIn(product.id, 1, "receipt", unit_cost=100)], user.id)
+    rows = auth_client.get("/api/reports/customers", params=PERIOD).json()["items"]
+    unknown = {row["customer_id"]: row["revenue_unknown_cost"] for row in rows}
+    assert unknown == {c1.id: 0, c2.id: 400, None: 200}
 
 
 def test_cancelled_payment_excluded_and_archived_sales_retained(

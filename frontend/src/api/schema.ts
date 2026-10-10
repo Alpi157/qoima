@@ -599,6 +599,8 @@ export interface components {
             revenue: number;
             /** Profit */
             profit: number;
+            /** Revenue Unknown Cost */
+            revenue_unknown_cost: number;
         };
         /** CustomerReportPage */
         CustomerReportPage: {

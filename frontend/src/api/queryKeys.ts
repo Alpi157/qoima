@@ -2,6 +2,7 @@ export interface ProductListParams {
   q: string
   includeArchived: boolean
   page: number
+  stockState?: 'out' | 'low'
 }
 
 export interface CustomerListParams {
@@ -29,6 +30,11 @@ export interface SaleListParams {
 
 // Invalidating a prefix (for example ['products']) refreshes every list with any params.
 export const queryKeys = {
+  stockSummary: ['stock-summary'] as const,
+  reportSummary: (from: string, to: string) => ['reports', 'summary', from, to] as const,
+  reportProducts: (from: string, to: string, limit: number, page: number) =>
+    ['reports', 'products', from, to, limit, page] as const,
+  reportCustomers: (from: string, to: string) => ['reports', 'customers', from, to] as const,
   products: (params: ProductListParams) => ['products', params] as const,
   productSearch: (q: string) => ['products', 'search', q] as const,
   frequentProducts: ['products', 'frequent'] as const,

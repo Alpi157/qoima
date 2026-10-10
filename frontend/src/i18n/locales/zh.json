@@ -164,7 +164,11 @@
       "restore": "恢复显示",
       "archive": "隐藏",
       "stock": "库存",
-      "price": "价格"
+      "price": "售价",
+      "avgCost": "平均进价",
+      "lastCost": "最近进价",
+      "unknown": "未知",
+      "notSet": "未设置"
     },
     "adjust": {
       "add": "增加",
@@ -211,7 +215,10 @@
       "note": "备注",
       "saveAndAddMore": "保存并继续添加",
       "editTitle": "修改商品",
-      "newTitle": "新商品"
+      "newTitle": "新商品",
+      "minQty": "最低库存",
+      "minQtyHint": "库存不超过此数时，商品会出现在“库存不足”列表中。",
+      "minQtyError": "请输入0至2 147 483 647之间的整数"
     }
   },
   "receipts": {
@@ -340,7 +347,9 @@
     "today_other": "今天：<b>{{count}} 笔销售</b>，共 <b>{{amount}}</b>",
     "salesHistory": "销售记录",
     "more": "更多",
-    "debts": "欠款：<b>{{amount}}</b>"
+    "debts": "欠款：<b>{{amount}}</b>",
+    "out_other": "已售完：<b>{{count}} 件商品</b>",
+    "low_other": "库存不足：<b>{{count}} 件商品</b>"
   },
   "more": {
     "title": "更多",
@@ -349,7 +358,8 @@
     "sales": "销售记录",
     "receipts": "收货记录",
     "settings": "设置",
-    "debts": "欠款"
+    "debts": "欠款",
+    "report": "报表"
   },
   "auth": {
     "login": {
@@ -578,7 +588,6 @@
       "date": "日期和时间",
       "dateHint": "不填写则记录保存时间。",
       "note": "备注",
-      "costs": "进货价，₸",
       "costOf": "{{article}} 的进货价"
     },
     "done": {
@@ -586,7 +595,10 @@
       "summary": "{{kinds}} 种商品，共 {{qty}} 件。",
       "more": "继续入库",
       "stock": "库存里有什么？"
-    }
+    },
+    "cost": "进价，₸",
+    "salePrice": "售价：{{amount}}",
+    "costWarning": "是否高于售价？"
   },
   "stock": {
     "title": "库存里有什么？",
@@ -596,10 +608,17 @@
     "columns": {
       "article": "零件号",
       "name": "名称",
-      "price": "单价",
+      "price": "售价",
       "stock": "库存"
     },
-    "none": "无"
+    "kinds": "商品种类",
+    "total": "合计",
+    "costValue": "按进价",
+    "retailValue": "按售价",
+    "unknownCost": "无进价的商品：{{count}}",
+    "out": "已售完",
+    "low": "库存不足",
+    "cost": "进价"
   },
   "debts": {
     "title": "谁欠多少？",
@@ -625,5 +644,35 @@
       "done": "收款单 {{number}}号已取消",
       "wrongAmount": "金额错误"
     }
+  },
+  "paymentMethod": {
+    "question": "付款方式",
+    "cash": "现金",
+    "card": "银行卡 / Kaspi"
+  },
+  "report": {
+    "title": "报表",
+    "today": "今天",
+    "week": "本周",
+    "month": "本月",
+    "previousMonth": "上月",
+    "custom": "其他时间段",
+    "revenue": "销售额",
+    "profit": "利润",
+    "salesCount": "销售单数",
+    "unknownCost": "无进价的销售额：{{amount}}，未计入利润。",
+    "received": "收到的钱",
+    "total": "合计",
+    "debtGiven": "赊出：{{amount}}",
+    "days": "按天",
+    "date": "日期",
+    "products": "畅销商品",
+    "showAll": "显示全部",
+    "customers": "主要客户",
+    "product": "货号和名称",
+    "customer": "客户",
+    "empty": "该时间段没有销售。",
+    "partial": "部分",
+    "partialHint": "部分销售的进价未知。"
   }
 }

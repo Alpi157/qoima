@@ -316,7 +316,7 @@ Summary возвращает `revenue`, `sales_count`, `cost`, `profit`, `revenu
 
 Products возвращает `{items, total}` с `product_id, article, name, unit, qty, revenue,
 cost, profit, revenue_unknown_cost`. Customers возвращает `{items, total}` с
-`customer_id, name, sales_count, revenue, profit`; продажи без покупателя объединены
+`customer_id, name, sales_count, revenue, profit, revenue_unknown_cost`; продажи без покупателя объединены
 в одну строку с NULL id и именем. Исторические продажи архивных товаров сохраняются.
 Сортировка: revenue по убыванию, затем id по возрастанию; NULL покупателя при равенстве последним.
 Пагинация: limit по умолчанию 50, максимум 200; offset по умолчанию 0.

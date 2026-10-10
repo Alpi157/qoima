@@ -123,7 +123,8 @@ function SellFlow({ userId }: { userId: number }) {
     update((current) => ({
       ...current,
       customer,
-      payment: customer === 'none' ? { mode: 'full', paid: '' } : current.payment,
+      payment:
+        customer === 'none' ? { ...current.payment, mode: 'full', paid: '' } : current.payment,
     }))
     setSaveError(null)
     goForward(3)

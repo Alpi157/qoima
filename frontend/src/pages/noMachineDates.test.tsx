@@ -5,9 +5,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../api/client'
 import type { Language } from '../i18n/language'
-import { makeCustomer, makeProduct, makeReceipt, makeSale, ok } from '../test/fixtures'
+import {
+  makeCustomer,
+  makeProduct,
+  makeReceipt,
+  makeSale,
+  makeReportSummary,
+  ok,
+} from '../test/fixtures'
 import { renderWithDataRouter } from '../test/render'
 import { CustomerPage } from './customers/CustomerPage'
+import { ReportPage } from './report/ReportPage'
 import { ProductPage } from './products/ProductPage'
 import { ReceiptPage } from './receipts/ReceiptPage'
 import { ReceiptsPage } from './receipts/ReceiptsPage'
@@ -65,6 +73,11 @@ const MOVEMENT = {
 function mockApi() {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) => {
     switch (path) {
+      case '/api/reports/summary':
+        return ok(makeReportSummary())
+      case '/api/reports/products':
+      case '/api/reports/customers':
+        return ok({ items: [], total: 0 })
       case '/api/sales':
         return ok({ items: [SALE_ITEM], total: 1, sum_posted: 250000 })
       case '/api/sales/{sale_id}':
@@ -88,6 +101,7 @@ function mockApi() {
 }
 
 const SCREENS: [string, string, string, ReactNode][] = [
+  ['report', '/report', '/report?from=2026-09-01&to=2026-09-30', <ReportPage />],
   ['sales', '/sales', '/sales', <SalesPage />],
   ['sale', '/sales/:id', '/sales/9', <SalePage />],
   ['receipts', '/receipts', '/receipts', <ReceiptsPage />],

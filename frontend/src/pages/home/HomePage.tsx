@@ -13,6 +13,7 @@ import { todayLocal } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { MORE_PATH } from '../../lib/nextPath'
 import { useSales } from '../sales/api'
+import { useStockSummary } from '../stock/api'
 import { useDebtSummary } from '../customers/api'
 
 function HomeDebts() {
@@ -28,6 +29,34 @@ function HomeDebts() {
         components={{ b: <b /> }}
       />
     </Anchor>
+  )
+}
+
+function HomeStock() {
+  const summary = useStockSummary()
+  if (summary.isPending) return <Loader size="sm" />
+  if (summary.isError) return <QueryError error={summary.error} onRetry={() => summary.refetch()} />
+  return (
+    <>
+      {summary.data.out_of_stock_count > 0 && (
+        <Anchor component={Link} to="/stock?state=out" data-testid="home-out">
+          <Trans
+            i18nKey="home.out"
+            count={summary.data.out_of_stock_count}
+            components={{ b: <b /> }}
+          />
+        </Anchor>
+      )}
+      {summary.data.low_stock_count > 0 && (
+        <Anchor component={Link} to="/stock?state=low" data-testid="home-low">
+          <Trans
+            i18nKey="home.low"
+            count={summary.data.low_stock_count}
+            components={{ b: <b /> }}
+          />
+        </Anchor>
+      )}
+    </>
   )
 }
 
@@ -110,6 +139,7 @@ export function HomePage() {
           <Stack gap="xs">
             <TodaySales />
             <HomeDebts />
+            <HomeStock />
           </Stack>
           <Group gap="sm">
             <Button component={Link} to="/sales" variant="default">

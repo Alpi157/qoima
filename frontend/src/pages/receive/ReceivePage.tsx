@@ -34,7 +34,7 @@ import { apiErrorText } from '../../i18n/errorText'
 import { nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
 import { unitLabel } from '../../lib/labels'
-import { parseMoney } from '../../lib/money'
+import { formatMoney, parseMoney } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import { type Product, useRememberProduct } from '../products/api'
 import { usePostReceipt } from '../receipts/api'
@@ -74,14 +74,14 @@ function ReceiveFlow({ userId }: { userId: number }) {
   const costInputs = useRef(new Map<number, HTMLInputElement>())
 
   useEffect(() => {
-    if (focusCostId === null || !value.extrasOpen) return
+    if (focusCostId === null) return
     const input = costInputs.current.get(focusCostId)
     if (input) {
       input.focus()
       input.scrollIntoView?.({ block: 'center' })
       setFocusCostId(null)
     }
-  }, [focusCostId, value.extrasOpen])
+  }, [focusCostId])
 
   const change = useCallback(
     (changes: Partial<ReceiptDraft>) => {
@@ -110,7 +110,7 @@ function ReceiveFlow({ userId }: { userId: number }) {
 
   const addProduct = (product: Product) => {
     rememberProduct(product)
-    changeLines((lines) => addReceiptLine(lines, product.id))
+    changeLines((lines) => addReceiptLine(lines, product.id, product.last_cost))
     setNewArticle(null)
   }
 
@@ -118,6 +118,11 @@ function ReceiveFlow({ userId }: { userId: number }) {
   const kinds = views.length
   const pieces = views.reduce(
     (sum, { line }) => sum + (qtyError(line.qty) === null ? (line.qty as number) : 0),
+    0,
+  )
+  const purchaseTotal = views.reduce(
+    (sum, { line }) =>
+      sum + (qtyError(line.qty) === null ? (line.qty as number) * (parseMoney(line.cost) ?? 0) : 0),
     0,
   )
   const blockedReason =
@@ -138,7 +143,6 @@ function ReceiveFlow({ userId }: { userId: number }) {
     setCostsSubmitted(true)
     const missing = value.lines.find((line) => parseMoney(line.cost) === null)
     if (missing) {
-      change({ extrasOpen: true })
       setFocusCostId(missing.productId)
       return
     }
@@ -214,6 +218,8 @@ function ReceiveFlow({ userId }: { userId: number }) {
           )}
           {views.map(({ line, product }, index) => {
             const unit = unitLabel(product.unit)
+            const cost = parseMoney(line.cost)
+            const expensive = cost !== null && cost >= product.sale_price
             const qty = qtyError(line.qty) === null ? (line.qty as number) : 0
             return (
               <LineCard
@@ -224,6 +230,14 @@ function ReceiveFlow({ userId }: { userId: number }) {
                   changeLines((lines) => lines.filter((item) => item.productId !== product.id))
                 }
                 warning={warnings[index]}
+                sum={
+                  <Group justify="flex-end" align="baseline" gap="sm">
+                    <Text c="dimmed">{t('sell.sum')}</Text>
+                    <Text fz="var(--q-fz-h2)" lh="var(--q-lh-h2)" fw={700}>
+                      {cost === null || qtyError(line.qty) !== null ? '—' : formatMoney(qty * cost)}
+                    </Text>
+                  </Group>
+                }
                 hint={
                   <Text c="dimmed">
                     {t('receive.after', { stock: product.stock, after: product.stock + qty, unit })}
@@ -238,6 +252,39 @@ function ReceiveFlow({ userId }: { userId: number }) {
                     label={t('flow.qtyOf', { article: product.article })}
                     unit={unit}
                   />
+                </Stack>
+                <Stack gap="xs" miw={0}>
+                  <MoneyInput
+                    label={t('receive.cost')}
+                    required
+                    showHint={false}
+                    aria-label={t('receive.extras.costOf', { article: product.article })}
+                    ref={(input) => {
+                      if (input) costInputs.current.set(product.id, input)
+                      else costInputs.current.delete(product.id)
+                    }}
+                    error={
+                      costsSubmitted && line.cost.trim() === ''
+                        ? t('receive.warn.costRequired')
+                        : undefined
+                    }
+                    value={line.cost}
+                    onChange={(cost) => changeLine(product.id, { cost })}
+                    w={FIELD_WIDTH.date}
+                    styles={{ wrapper: { maxWidth: FIELD_WIDTH.price } }}
+                  />
+                  <Text
+                    size="sm"
+                    c={expensive ? 'var(--q-color-warning-text)' : 'dimmed'}
+                    maw={FIELD_WIDTH.date}
+                  >
+                    {t('receive.salePrice', { amount: formatMoney(product.sale_price) })}
+                  </Text>
+                  {expensive && (
+                    <Text size="sm" c="var(--q-color-warning-text)">
+                      {t('receive.costWarning')}
+                    </Text>
+                  )}
                 </Stack>
               </LineCard>
             )
@@ -281,37 +328,6 @@ function ReceiveFlow({ userId }: { userId: number }) {
               value={value.note}
               onChange={(event) => change({ note: event.currentTarget.value })}
             />
-            {views.length > 0 && (
-              <Stack gap="md">
-                <Text fw={600}>{t('receive.extras.costs')}</Text>
-                {views.map(({ line, product }) => (
-                  <Group key={product.id} justify="space-between" gap="md" wrap="wrap">
-                    <Stack gap={0} miw={0} style={{ flex: '1 1 200px' }}>
-                      <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
-                        {product.article}
-                      </Text>
-                      <Text c="dimmed">{product.name}</Text>
-                    </Stack>
-                    <MoneyInput
-                      ref={(input) => {
-                        if (input) costInputs.current.set(product.id, input)
-                        else costInputs.current.delete(product.id)
-                      }}
-                      error={
-                        costsSubmitted && line.cost.trim() === ''
-                          ? t('receive.warn.costRequired')
-                          : undefined
-                      }
-                      showHint={false}
-                      aria-label={t('receive.extras.costOf', { article: product.article })}
-                      value={line.cost}
-                      onChange={(cost) => changeLine(product.id, { cost })}
-                      w={FIELD_WIDTH.price}
-                    />
-                  </Group>
-                ))}
-              </Stack>
-            )}
           </ExtraSection>
         </Stack>
 
@@ -324,9 +340,14 @@ function ReceiveFlow({ userId }: { userId: number }) {
           error={saveError}
           onCancel={() => (value.lines.length > 0 ? setConfirmCancel(true) : cancel())}
           summary={
-            <Text>
-              <Trans i18nKey="flow.pieces" values={{ qty: pieces }} components={{ b: <b /> }} />
-            </Text>
+            <Stack gap="xs">
+              <Text>
+                <Trans i18nKey="flow.pieces" values={{ qty: pieces }} components={{ b: <b /> }} />
+              </Text>
+              <Text data-testid="receipt-total">
+                {t('sell.sum')}: <b>{formatMoney(purchaseTotal)}</b>
+              </Text>
+            </Stack>
           }
         >
           <Text>

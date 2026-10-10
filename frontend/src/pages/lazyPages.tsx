@@ -55,3 +55,7 @@ export const ReceiveDonePage = lazy(() =>
 export const StockPage = lazy(() =>
   import('./stock/StockPage').then((m) => ({ default: m.StockPage })),
 )
+
+export const ReportPage = lazy(() =>
+  import('./report/ReportPage').then((m) => ({ default: m.ReportPage })),
+)

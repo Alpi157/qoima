@@ -1,7 +1,7 @@
 import i18n from 'i18next'
 
 import { localInputToIso } from '../../lib/dates'
-import { parseMoney, validateMoneyText } from '../../lib/money'
+import { parseMoney, tiynToInput, validateMoneyText } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import type { ReceiptCreate } from '../receipts/api'
 
@@ -9,7 +9,7 @@ export interface ReceiptDraftLine {
   productId: number
   /** A number, or '' while the field is empty. */
   qty: number | string
-  /** Purchase price as typed in «Қосымша»; '' when not given. */
+  /** Purchase price as typed in the line; '' when not given. */
   cost: string
 }
 
@@ -60,9 +60,14 @@ export function isReceiptDraftEmpty(draft: ReceiptDraft): boolean {
 }
 
 /** Adding a product that is already a line raises its quantity. */
-export function addReceiptLine(lines: ReceiptDraftLine[], productId: number): ReceiptDraftLine[] {
+export function addReceiptLine(
+  lines: ReceiptDraftLine[],
+  productId: number,
+  lastCost: number | null = null,
+): ReceiptDraftLine[] {
   const existing = lines.find((line) => line.productId === productId)
-  if (!existing) return [...lines, { productId, qty: 1, cost: '' }]
+  if (!existing)
+    return [...lines, { productId, qty: 1, cost: lastCost === null ? '' : tiynToInput(lastCost) }]
   return lines.map((line) =>
     line === existing ? { ...line, qty: typeof line.qty === 'number' ? line.qty + 1 : 1 } : line,
   )

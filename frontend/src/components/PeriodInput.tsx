@@ -25,7 +25,7 @@ export interface PeriodInputProps {
 
 /** Date range filter; the first click of a range picks only its start and changes nothing yet. */
 export function PeriodInput({ from, to, onChange, withQuickRanges }: PeriodInputProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [draft, setDraft] = useState<DateRange | null>(null)
   const value: DateRange = draft ?? [from || null, to || null]
 
@@ -44,12 +44,13 @@ export function PeriodInput({ from, to, onChange, withQuickRanges }: PeriodInput
         type="range"
         label={t('common.period.label')}
         placeholder={t('common.period.all')}
-        valueFormat="DD.MM.YYYY"
+        valueFormat={i18n.language === 'zh' ? 'YYYY/MM/DD' : 'DD.MM.YYYY'}
         allowSingleDateInRange
         clearable
         value={value}
         onChange={change}
-        miw={260}
+        w="var(--q-field-date)"
+        maw="100%"
       />
       {withQuickRanges &&
         QUICK_RANGES.map(({ range, label }) => (

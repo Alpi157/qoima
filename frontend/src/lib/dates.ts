@@ -1,4 +1,4 @@
-import { currentLanguage, type Language } from '../i18n/language'
+import { currentLanguage, type Language } from '../i18n/language.js'
 
 const TIME_ZONE = 'Asia/Almaty'
 
@@ -93,7 +93,7 @@ export function dateParam(value: string | null): string {
   return value && DATE_PATTERN.test(value) ? value : ''
 }
 
-export type QuickRange = 'today' | 'week' | 'month'
+export type QuickRange = 'today' | 'week' | 'month' | 'previousMonth'
 
 /** "2026-09-27" -> the same calendar day as a UTC Date, for day arithmetic only. */
 function calendarDay(date: string): Date {
@@ -112,6 +112,13 @@ function dateString(day: Date): string {
 export function quickRange(range: QuickRange, now: Date = new Date()): [string, string] {
   const today = todayLocal(now)
   const day = calendarDay(today)
+  if (range === 'previousMonth') {
+    day.setUTCDate(1)
+    day.setUTCDate(0)
+    const end = dateString(day)
+    day.setUTCDate(1)
+    return [dateString(day), end]
+  }
   if (range === 'week') {
     // getUTCDay: Sunday is 0; step back to Monday.
     const sinceMonday = (day.getUTCDay() + 6) % 7
@@ -120,4 +127,14 @@ export function quickRange(range: QuickRange, now: Date = new Date()): [string, 
     day.setUTCDate(1)
   }
   return [dateString(day), today]
+}
+
+/** Strict calendar date validation for bounded report URLs. */
+export function isCalendarDate(value: string): boolean {
+  return DATE_PATTERN.test(value) && dateString(calendarDay(value)) === value
+}
+
+/** Inclusive calendar-day count, independent of the computer's time zone. */
+export function periodDays(from: string, to: string): number {
+  return (calendarDay(to).getTime() - calendarDay(from).getTime()) / 86400000 + 1
 }

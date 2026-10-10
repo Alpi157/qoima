@@ -2525,6 +2525,10 @@
           "profit": {
             "type": "integer",
             "title": "Profit"
+          },
+          "revenue_unknown_cost": {
+            "type": "integer",
+            "title": "Revenue Unknown Cost"
           }
         },
         "type": "object",
@@ -2533,7 +2537,8 @@
           "name",
           "sales_count",
           "revenue",
-          "profit"
+          "profit",
+          "revenue_unknown_cost"
         ],
         "title": "CustomerReportItem"
       },

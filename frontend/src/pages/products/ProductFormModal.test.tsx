@@ -81,6 +81,7 @@ describe('ProductFormModal', () => {
         unit: 'шт',
         brand: null,
         note: null,
+        min_qty: null,
       },
     })
   })
@@ -189,3 +190,24 @@ describe('ProductFormModal', () => {
     })
   })
 })
+
+it.each([0, 5, null])(
+  'sends min_qty %s in PATCH including explicit null when cleared',
+  async (min_qty) => {
+    const user = setupUser()
+    const saved = product({ min_qty: 8 })
+    const patch = mockPatch().mockReturnValue(ok(saved))
+    renderForm({ product: saved })
+    const input = screen.getByRole('textbox', { name: 'Минимальный остаток' })
+    expect((input as HTMLInputElement).value).toBe('8')
+    await user.clear(input)
+    if (min_qty !== null) await user.type(input, String(min_qty))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        '/api/products/{product_id}',
+        expect.objectContaining({ body: expect.objectContaining({ min_qty }) }),
+      ),
+    )
+  },
+)

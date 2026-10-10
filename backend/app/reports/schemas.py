@@ -49,6 +49,7 @@ class CustomerReportItem(BaseModel):
     sales_count: int
     revenue: int
     profit: int
+    revenue_unknown_cost: int
 
 
 class CustomerReportPage(BaseModel):

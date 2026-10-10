@@ -1,4 +1,4 @@
-import { Button, Group, Loader, Stack, Text } from '@mantine/core'
+import { Button, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -9,36 +9,78 @@ import { QueryError } from '../../components/QueryError'
 import { SearchInput } from '../../components/SearchInput'
 import {
   DataTable,
+  Card,
+  Stat,
+  StatusBadge,
   type DataTableColumn,
   PageContainer,
   PageHeader,
   RowLink,
 } from '../../components/ui'
 import { unitLabel } from '../../lib/labels'
-import { formatInteger, formatMoney } from '../../lib/money'
+import { formatInteger, formatMoney, formatRoundedMoney } from '../../lib/money'
 import { useListParams } from '../../lib/useListParams'
 import { type Product, useProducts } from '../products/api'
+import { useStockSummary } from './api'
 
 const productPath = (product: Product) => `/products/${product.id}`
 
 /** «10 дана», or «Жоқ» in red when there is nothing left. */
 function StockCell({ product }: { product: Product }) {
   const { t } = useTranslation()
-  if (product.stock <= 0) {
-    return (
-      <Text span inherit c="red" fw={700}>
-        {t('stock.none')}
-      </Text>
-    )
-  }
+  const state =
+    product.stock === 0
+      ? 'out'
+      : product.min_qty !== null && product.stock <= product.min_qty
+        ? 'low'
+        : null
   return (
-    <Text span inherit fw={600}>
-      {formatInteger(product.stock)} {unitLabel(product.unit)}
-    </Text>
+    <Stack gap="xs" align="flex-end">
+      <Text span inherit fw={600}>
+        {formatInteger(product.stock)} {unitLabel(product.unit)}
+      </Text>
+      {state && (
+        <StatusBadge tone="warning">
+          {state === 'out' ? t('stock.out') : t('stock.low')}
+        </StatusBadge>
+      )}
+    </Stack>
+  )
+}
+
+function StockSummary() {
+  const { t } = useTranslation()
+  const query = useStockSummary()
+  if (query.isPending) return <Loader />
+  if (query.isError) return <QueryError error={query.error} onRetry={() => query.refetch()} />
+  const data = query.data
+  return (
+    <Card>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="lg">
+        <Stat label={t('stock.kinds')} value={formatInteger(data.products_count)} />
+        <Stat label={t('stock.total')} value={formatInteger(data.total_qty)} unit={t('flow.pcs')} />
+        <Stat
+          label={t('stock.costValue')}
+          value={formatRoundedMoney(data.cost_value, false)}
+          unit="₸"
+        />
+        <Stat
+          label={t('stock.retailValue')}
+          value={formatRoundedMoney(data.retail_value, false)}
+          unit="₸"
+        />
+      </SimpleGrid>
+      {data.unknown_cost_count > 0 && (
+        <Text mt="md" size="sm" c="dimmed">
+          {t('stock.unknownCost', { count: data.unknown_cost_count })}
+        </Text>
+      )}
+    </Card>
   )
 }
 
 function StockCard({ product }: { product: Product }) {
+  const { t } = useTranslation()
   return (
     <Stack gap="xs">
       <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
@@ -49,6 +91,11 @@ function StockCard({ product }: { product: Product }) {
         <Text>{formatMoney(product.sale_price)}</Text>
         <StockCell product={product} />
       </Group>
+      {product.avg_cost !== null && (
+        <Text size="sm">
+          {t('stock.cost')}: {formatRoundedMoney(product.avg_cost)}
+        </Text>
+      )}
     </Stack>
   )
 }
@@ -56,8 +103,11 @@ function StockCard({ product }: { product: Product }) {
 /** /stock «Қоймада не бар?»: what is in stock, found by article or name. */
 export function StockPage() {
   const { t } = useTranslation()
-  const { q, page, setQ, setPage } = useListParams()
-  const products = useProducts({ q, includeArchived: false, page })
+  const { q, page, setQ, setPage, searchParams, setParam } = useListParams()
+  const rawState = searchParams.get('state')
+  const stockState = rawState === 'out' || rawState === 'low' ? rawState : undefined
+  const products = useProducts({ q, includeArchived: false, page, stockState })
+  const summary = useStockSummary()
 
   const columns: DataTableColumn<Product>[] = [
     {
@@ -71,6 +121,12 @@ export function StockPage() {
       header: t('stock.columns.price'),
       numeric: true,
       cell: (product) => formatMoney(product.sale_price),
+    },
+    {
+      key: 'cost',
+      header: t('stock.cost'),
+      numeric: true,
+      cell: (product) => (product.avg_cost === null ? null : formatRoundedMoney(product.avg_cost)),
     },
     {
       key: 'stock',
@@ -91,6 +147,25 @@ export function StockPage() {
         }
       />
 
+      <StockSummary />
+      {summary.data && (
+        <Group gap="md">
+          <Button
+            variant={stockState === 'out' ? 'light' : 'default'}
+            aria-pressed={stockState === 'out'}
+            onClick={() => setParam('state', stockState === 'out' ? null : 'out')}
+          >
+            {t('stock.out')} ({formatInteger(summary.data.out_of_stock_count)})
+          </Button>
+          <Button
+            variant={stockState === 'low' ? 'light' : 'default'}
+            aria-pressed={stockState === 'low'}
+            onClick={() => setParam('state', stockState === 'low' ? null : 'low')}
+          >
+            {t('stock.low')} ({formatInteger(summary.data.low_stock_count)})
+          </Button>
+        </Group>
+      )}
       <SearchInput
         value={q}
         onSearch={setQ}
@@ -107,7 +182,7 @@ export function StockPage() {
       ) : products.isError ? (
         <QueryError error={products.error} onRetry={() => products.refetch()} />
       ) : products.data.items.length === 0 && page === 1 ? (
-        <EmptyState text={q ? t('common.nothingFound') : t('products.list.empty')} />
+        <EmptyState text={q || stockState ? t('common.nothingFound') : t('products.list.empty')} />
       ) : (
         <Stack gap="md">
           <Text c="dimmed" size="sm">

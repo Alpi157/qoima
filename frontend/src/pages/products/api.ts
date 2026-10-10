@@ -27,6 +27,7 @@ export function useProducts(params: ProductListParams) {
             query: {
               q: params.q || undefined,
               include_archived: params.includeArchived,
+              stock_state: params.stockState,
               limit: PAGE_SIZE,
               offset: pageOffset(params.page),
             },
@@ -133,6 +134,8 @@ function useInvalidateProduct() {
   return (product: Product) => {
     void queryClient.invalidateQueries({ queryKey: ['products'] })
     void queryClient.invalidateQueries({ queryKey: queryKeys.product(product.id) })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.stockSummary })
+    void queryClient.invalidateQueries({ queryKey: ['reports'] })
   }
 }
 

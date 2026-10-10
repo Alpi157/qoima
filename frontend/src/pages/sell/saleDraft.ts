@@ -1,5 +1,6 @@
 import i18n from 'i18next'
 
+import type { PaymentMethod } from '../../components/PaymentMethodChoice'
 import { unitLabel } from '../../lib/labels'
 import { parseMoney, tiynToInput } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
@@ -36,6 +37,7 @@ export interface SaleDraft {
 export interface SalePayment {
   mode: 'full' | 'debt'
   paid: string
+  method: PaymentMethod
 }
 
 export function createSaleDraft(): SaleDraft {
@@ -44,7 +46,7 @@ export function createSaleDraft(): SaleDraft {
     requestId: crypto.randomUUID(),
     lines: [],
     customer: null,
-    payment: { mode: 'full', paid: '' },
+    payment: { mode: 'full', paid: '', method: 'cash' },
   }
 }
 
@@ -88,7 +90,8 @@ export function parseSaleDraft(raw: unknown): SaleDraft | null {
           paid:
             isRecord(raw.payment) && typeof raw.payment.paid === 'string' ? raw.payment.paid : '',
         }
-  return { version: 1, requestId: raw.requestId, lines, customer, payment }
+  const method = isRecord(raw.payment) && raw.payment.method === 'card' ? 'card' : 'cash'
+  return { version: 1, requestId: raw.requestId, lines, customer, payment: { ...payment, method } }
 }
 
 /** Empty partial payment means zero; malformed text remains invalid. */
@@ -151,13 +154,15 @@ export interface SaleLineView {
 /** Request body: every line carries its price, even when it equals the product's price. */
 export function saleBody(draft: SaleDraft, lines: SaleLineView[]): SaleCreate {
   const customer = draft.customer
+  const paid = salePaid(
+    draft.payment,
+    lines.reduce((sum, { line, product }) => sum + (lineSum(line, product) ?? 0), 0),
+  ) as number
   return {
     request_id: draft.requestId,
     customer_id: customer !== null && customer !== 'none' ? customer.id : null,
-    paid_amount: salePaid(
-      draft.payment,
-      lines.reduce((sum, { line, product }) => sum + (lineSum(line, product) ?? 0), 0),
-    ) as number,
+    paid_amount: paid,
+    payment_method: paid > 0 ? draft.payment.method : null,
     lines: lines.map(({ line, product }) => ({
       product_id: product.id,
       qty: line.qty as number,

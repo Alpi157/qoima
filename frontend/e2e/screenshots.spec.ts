@@ -39,8 +39,12 @@ test('screens', async ({ page }, testInfo) => {
   const screens: [string, string][] = [
     ['home', '/'],
     ['home-debts', '/'],
+    ['home-stock', '/'],
     ['more', '/more'],
     ['stock', '/stock'],
+    ['stock-low', '/stock?state=low'],
+    ['report-month', '/report'],
+    ['report-empty', '/report?from=2099-01-01&to=2099-01-31'],
     ['products', '/products'],
     ['product', `/products/${productId}`],
     ['customers', '/customers'],

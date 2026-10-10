@@ -32,6 +32,8 @@ const SECTIONS = [
   'sell',
   'receive',
   'stock',
+  'paymentMethod',
+  'report',
   'flow',
   'settings',
   'errors',

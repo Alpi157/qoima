@@ -15,6 +15,7 @@ import { PageContainer, PageHeader } from '../../components/ui'
 import './MorePage.css'
 
 const SECTIONS = [
+  { to: '/report', label: 'more.report', icon: <ReceiptIcon size={28} /> },
   { to: '/products', label: 'more.products', icon: <TagIcon size={28} /> },
   { to: '/customers', label: 'more.customers', icon: <UsersIcon size={28} /> },
   { to: '/debts', label: 'more.debts', icon: <WalletIcon size={28} /> },

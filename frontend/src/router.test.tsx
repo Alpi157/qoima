@@ -2,7 +2,15 @@ import { screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from './api/client'
-import { makeCustomer, makeProduct, makeReceipt, makeSale, ok } from './test/fixtures'
+import {
+  makeCustomer,
+  makeProduct,
+  makeReceipt,
+  makeSale,
+  makeStockSummary,
+  makeReportSummary,
+  ok,
+} from './test/fixtures'
 import { renderWithDataRouter } from './test/render'
 import { routes } from './router'
 
@@ -14,6 +22,8 @@ const SHORT_LISTS = new Set(['/api/products/frequent', '/api/customers/recent'])
 function mockApi() {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) => {
     if (path === '/api/auth/me') return ok(OWNER)
+    if (path === '/api/stock/summary') return ok(makeStockSummary())
+    if (path === '/api/reports/summary') return ok(makeReportSummary({ sales_count: 0 }))
     if (SHORT_LISTS.has(path)) return ok([])
     return ok({ items: [], total: 0, sum_posted: 0, total_debt: 0, debtors_count: 0 })
   }) as never)
@@ -58,7 +68,7 @@ describe('routes', () => {
     expect(await screen.findByText('Здравствуйте, Владелец!')).toBeTruthy()
   })
 
-  it.each(['/products', '/customers', '/debts', '/sales', '/receipts', '/settings'])(
+  it.each(['/products', '/customers', '/debts', '/sales', '/receipts', '/settings', '/report'])(
     '%s has «Ещё» on top',
     async (path) => {
       mockApi()
@@ -102,6 +112,7 @@ describe('routes', () => {
     const nav = await screen.findByRole('navigation', { name: 'Ещё' })
     const links = [...nav.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')])
     expect(links).toEqual([
+      ['Отчёт', '/report'],
       ['Товары', '/products'],
       ['Покупатели', '/customers'],
       ['Долги', '/debts'],

@@ -7,7 +7,7 @@ describe('sale draft payment compatibility', () => {
     const draft = parseSaleDraft({ version: 1, requestId: 'existing', lines: [], customer: 'none' })
     expect(draft?.version).toBe(1)
     expect(draft?.requestId).toBe('existing')
-    expect(draft?.payment).toEqual({ mode: 'full', paid: '' })
+    expect(draft?.payment).toEqual({ mode: 'full', paid: '', method: 'cash' })
   })
 
   it('restores debt text with a customer but resets debt without a customer', () => {
@@ -16,7 +16,7 @@ describe('sale draft payment compatibility', () => {
       requestId: 'existing',
       lines: [],
       customer: { id: 7, name: 'Ержан' },
-      payment: { mode: 'debt', paid: '12,50' },
+      payment: { mode: 'debt', paid: '12,50', method: 'cash' },
     }
     expect(parseSaleDraft(raw)?.payment).toEqual(raw.payment)
     expect(parseSaleDraft({ ...raw, customer: 'none' })?.payment.mode).toBe('full')

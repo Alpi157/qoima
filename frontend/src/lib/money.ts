@@ -22,6 +22,15 @@ export function formatMoney(tiyn: number): string {
   return `${formatAmount(tiyn)}${NBSP}₸`
 }
 
+/** Calculated amounts in whole tenge, half up by magnitude, using integer arithmetic. */
+export function formatRoundedMoney(tiyn: number, withCurrency = true): string {
+  const value = BigInt(tiyn)
+  const magnitude = value < 0n ? -value : value
+  const tenge = (magnitude + 50n) / 100n
+  const sign = value < 0n && tenge !== 0n ? '-' : ''
+  return `${sign}${groupThousands(String(tenge))}${withCurrency ? `${NBSP}₸` : ''}`
+}
+
 /** 1250 -> "1 250": a whole number such as a quantity, thousands grouped. */
 export function formatInteger(value: number): string {
   const sign = value < 0 ? '-' : ''

@@ -4,6 +4,7 @@ import {
   formatAmount,
   formatInteger,
   formatMoney,
+  formatRoundedMoney,
   parseMoney,
   tiynToInput,
   validateMoneyText,
@@ -12,6 +13,35 @@ import {
 const NBSP = '\u00a0'
 
 const MONEY_INPUT_ERROR = 'Введите сумму, например 12500'
+
+describe('formatRoundedMoney', () => {
+  it.each([
+    [0, '0'],
+    [1, '0'],
+    [49, '0'],
+    [50, '1'],
+    [51, '1'],
+    [99, '1'],
+    [100, '1'],
+    [149, '1'],
+    [150, '2'],
+    [648750, `6${NBSP}488`],
+    [6940881, `69${NBSP}409`],
+    [99950, `1${NBSP}000`],
+    [-1, '0'],
+    [-49, '0'],
+    [-50, '-1'],
+    [-51, '-1'],
+    [-149, '-1'],
+    [-150, '-2'],
+    [-648750, `-6${NBSP}488`],
+    [Number.MAX_SAFE_INTEGER, `90${NBSP}071${NBSP}992${NBSP}547${NBSP}410`],
+    [-Number.MAX_SAFE_INTEGER, `-90${NBSP}071${NBSP}992${NBSP}547${NBSP}410`],
+  ])('%i tiyn -> %j tenge', (tiyn, expected) => {
+    expect(formatRoundedMoney(tiyn)).toBe(`${expected}${NBSP}₸`)
+    expect(formatRoundedMoney(tiyn, false)).toBe(expected)
+  })
+})
 
 describe('formatMoney', () => {
   it.each([

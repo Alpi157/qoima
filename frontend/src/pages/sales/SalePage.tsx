@@ -7,6 +7,7 @@ import { isApiError } from '../../api/errors'
 import { CancelDocumentModal } from '../../components/CancelDocumentModal'
 import { CancelledNotice } from '../../components/CancelledNotice'
 import { NotFoundState } from '../../components/NotFoundState'
+import { PaymentMethodText } from '../../components/PaymentMethodChoice'
 import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
 import {
@@ -161,10 +162,15 @@ function SaleDetails({ sale }: { sale: Sale }) {
               unit="₸"
             />
           </Group>
-          {sale.debt_at_sale > 0 && (
+          {(sale.paid_at_sale > 0 || sale.debt_at_sale > 0) && (
             <Stack gap="xs" mt="md">
-              <Text>{t('sales.card.paid', { amount: formatMoney(sale.paid_at_sale) })}</Text>
-              <Text>{t('sales.card.debt', { amount: formatMoney(sale.debt_at_sale) })}</Text>
+              <Group gap="xs">
+                <Text>{t('sales.card.paid', { amount: formatMoney(sale.paid_at_sale) })}</Text>
+                <PaymentMethodText method={sale.payment_method} />
+              </Group>
+              {sale.debt_at_sale > 0 && (
+                <Text>{t('sales.card.debt', { amount: formatMoney(sale.debt_at_sale) })}</Text>
+              )}
             </Stack>
           )}
         </Card>

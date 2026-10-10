@@ -194,6 +194,7 @@ def customers(
             func.count(source.c.sale_id.distinct()).label("sales_count"),
             func.sum(source.c.revenue).label("revenue"),
             func.sum(source.c.profit).label("profit"),
+            func.sum(source.c.revenue_unknown_cost).label("revenue_unknown_cost"),
         )
         .group_by(source.c.customer_id)
         .subquery()

@@ -4,23 +4,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { todayLocal } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
-import { ok } from '../../test/fixtures'
+import { makeStockSummary, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { setupUser } from '../../test/user'
 import { HomePage } from './HomePage'
 
 const OWNER = { id: 1, username: 'owner', full_name: 'Арман', role: 'owner', locale: 'ru' }
 
-function mockApi(today: { total: number; sum_posted: number }, totalDebt = 0) {
+function mockApi(
+  today: { total: number; sum_posted: number },
+  totalDebt = 0,
+  stock = makeStockSummary(),
+) {
   return vi
     .spyOn(api, 'GET')
     .mockImplementation(((path: string) =>
       ok(
         path === '/api/auth/me'
           ? OWNER
-          : path === '/api/customers/debts'
-            ? { items: [], total: 0, total_debt: totalDebt, debtors_count: 0 }
-            : { items: [], ...today },
+          : path === '/api/stock/summary'
+            ? stock
+            : path === '/api/customers/debts'
+              ? { items: [], total: 0, total_debt: totalDebt, debtors_count: 0 }
+              : { items: [], ...today },
       )) as never)
 }
 
@@ -119,4 +125,25 @@ describe('HomePage', () => {
     expect(router.state.location.pathname).toBe('/more')
     expect(await screen.findByText('Экран «Ещё»')).toBeTruthy()
   })
+})
+
+it.each([
+  [0, 0],
+  [2, 0],
+  [0, 5],
+  [2, 5],
+])('shows only positive stock alerts (%s, %s)', async (out, low) => {
+  mockApi(
+    { total: 0, sum_posted: 0 },
+    0,
+    makeStockSummary({ out_of_stock_count: out, low_stock_count: low }),
+  )
+  renderHome()
+  await screen.findByTestId('today-sales')
+  await waitFor(() => {
+    expect(screen.queryByTestId('home-out') !== null).toBe(out > 0)
+    expect(screen.queryByTestId('home-low') !== null).toBe(low > 0)
+  })
+  if (out) expect(screen.getByTestId('home-out').getAttribute('href')).toBe('/stock?state=out')
+  if (low) expect(screen.getByTestId('home-low').getAttribute('href')).toBe('/stock?state=low')
 })

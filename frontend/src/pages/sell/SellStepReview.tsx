@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom'
 
 import { ArrowLeftIcon, CheckIcon } from '../../components/icons'
 import { MoneyInput } from '../../components/MoneyInput'
+import { PaymentMethodChoice } from '../../components/PaymentMethodChoice'
+import { TwoChoice } from '../../components/TwoChoice'
 import { Card, DataTable, PageHeader, Stat } from '../../components/ui'
 import { unitLabel } from '../../lib/labels'
 import { formatAmount, formatInteger, formatMoney } from '../../lib/money'
@@ -118,36 +120,19 @@ export function SellStepReview({
 
         <Card>
           <Stack gap="md">
-            <Text fz="var(--q-fz-h3)" lh="var(--q-lh-h3)" fw={600}>
-              {t('sell.payment.title')}
-            </Text>
-            <SimpleGrid
-              cols={{ base: 1, sm: 2 }}
-              spacing="md"
-              role="group"
-              aria-label={t('sell.payment.title')}
-            >
-              <Button
-                variant={payment.mode === 'full' ? 'light' : 'default'}
-                color="blue"
-                aria-pressed={payment.mode === 'full'}
-                onClick={() => onPaymentChange({ ...payment, mode: 'full' })}
-              >
-                {t('sell.payment.full')}
-              </Button>
-              <Button
-                variant={payment.mode === 'debt' ? 'light' : 'default'}
-                color="blue"
-                aria-pressed={payment.mode === 'debt'}
-                disabled={!hasCustomer}
-                onClick={() => {
-                  if (payment.mode === 'debt') focusPayment()
-                  else onPaymentChange({ ...payment, mode: 'debt' })
-                }}
-              >
-                {t('sell.payment.debt')}
-              </Button>
-            </SimpleGrid>
+            <TwoChoice
+              heading
+              label={t('sell.payment.title')}
+              value={payment.mode}
+              options={[
+                { value: 'full', label: t('sell.payment.full') },
+                { value: 'debt', label: t('sell.payment.debt'), disabled: !hasCustomer },
+              ]}
+              onChange={(mode) => {
+                if (mode === 'debt' && payment.mode === 'debt') focusPayment()
+                else onPaymentChange({ ...payment, mode })
+              }}
+            />
             {!hasCustomer && (
               <Stack gap="xs">
                 <Text size="sm" c="dimmed">
@@ -176,6 +161,12 @@ export function SellStepReview({
                   })}
                 </Text>
               </Stack>
+            )}
+            {(salePaid(payment, totals.sum) ?? 0) > 0 && (
+              <PaymentMethodChoice
+                value={payment.method}
+                onChange={(method) => onPaymentChange({ ...payment, method })}
+              />
             )}
           </Stack>
         </Card>

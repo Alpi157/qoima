@@ -127,3 +127,34 @@ export function fieldError(
 ): FieldError {
   return { message, type, params }
 }
+
+export function makeStockSummary(
+  overrides: Partial<import('../api/schema').components['schemas']['StockSummary']> = {},
+) {
+  return {
+    products_count: 3,
+    total_qty: 12,
+    cost_value: 600000,
+    retail_value: 900000,
+    unknown_cost_count: 0,
+    out_of_stock_count: 0,
+    low_stock_count: 0,
+    ...overrides,
+  }
+}
+
+export function makeReportSummary(
+  overrides: Partial<import('../pages/report/api').ReportSummary> = {},
+) {
+  return {
+    revenue: 120000,
+    sales_count: 1,
+    cost: 80000,
+    profit: 40000,
+    revenue_unknown_cost: 0,
+    debt_given: 10000,
+    received: { cash: 100000, card: 10000, total: 110000 },
+    days: [{ date: '2026-09-27', revenue: 120000, profit: 40000 }],
+    ...overrides,
+  }
+}

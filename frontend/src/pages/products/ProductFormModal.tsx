@@ -4,6 +4,7 @@ import {
   Collapse,
   Group,
   Modal,
+  NumberInput,
   Select,
   SimpleGrid,
   Stack,
@@ -17,6 +18,7 @@ import { notifications } from '@mantine/notifications'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { FIELD_WIDTH } from '../../lib/fieldWidths'
 import { MoneyInput } from '../../components/MoneyInput'
 import { serverFormErrors } from '../../lib/formErrors'
 import { type Unit, UNITS, unitLabel } from '../../lib/labels'
@@ -42,6 +44,7 @@ interface ProductFormValues {
   unit: string
   brand: string
   note: string
+  minQty: number | string
 }
 
 const EMPTY_VALUES: ProductFormValues = {
@@ -51,6 +54,7 @@ const EMPTY_VALUES: ProductFormValues = {
   unit: DEFAULT_UNIT,
   brand: '',
   note: '',
+  minQty: '',
 }
 
 const FIELD_MAP = {
@@ -60,6 +64,7 @@ const FIELD_MAP = {
   unit: 'unit',
   brand: 'brand',
   note: 'note',
+  min_qty: 'minQty',
 }
 
 function toFormValues(product: Product): ProductFormValues {
@@ -70,6 +75,7 @@ function toFormValues(product: Product): ProductFormValues {
     unit: product.unit,
     brand: product.brand ?? '',
     note: product.note ?? '',
+    minQty: product.min_qty ?? '',
   }
 }
 
@@ -82,6 +88,7 @@ function toBody(values: ProductFormValues): ProductCreate {
     unit: values.unit.trim(),
     brand: values.brand.trim() || null,
     note: values.note.trim() || null,
+    min_qty: values.minQty === '' ? null : Number(values.minQty),
   }
 }
 
@@ -116,6 +123,11 @@ function ProductForm({
       article: (value) => (value.trim() ? null : t('products.form.articleRequired')),
       name: (value) => (value.trim() ? null : t('products.form.nameRequired')),
       price: (value) => (value.trim() ? validateMoneyText(value) : t('common.input.priceRequired')),
+      minQty: (value) =>
+        value === '' ||
+        (Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 2147483647)
+          ? null
+          : t('products.form.minQtyError'),
       unit: (value) => (value.trim() ? null : t('products.form.unitRequired')),
     },
   })
@@ -185,6 +197,16 @@ function ProductForm({
           />
         </SimpleGrid>
 
+        <NumberInput
+          label={t('products.form.minQty')}
+          description={t('products.form.minQtyHint')}
+          allowNegative={false}
+          allowDecimal={false}
+          hideControls
+          clampBehavior="none"
+          styles={{ input: { width: FIELD_WIDTH.qty } }}
+          {...form.getInputProps('minQty')}
+        />
         <UnstyledButton onClick={toggleMore} c="blue" aria-expanded={moreOpened}>
           {moreOpened ? t('products.form.hideMore') : t('products.form.showMore')}
         </UnstyledButton>

@@ -1,0 +1,66 @@
+.report-chart {
+  display: flex;
+  height: 240px;
+  padding-bottom: var(--q-space-32);
+  position: relative;
+  margin-right: var(--q-space-64);
+  gap: var(--q-space-4);
+}
+.report-chart::before {
+  content: '';
+  position: absolute;
+  bottom: calc(var(--q-space-32) + (240px - var(--q-space-32)) * var(--report-zero));
+  width: 100%;
+  border-top: 1px solid var(--q-color-field-border);
+}
+.report-day {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.report-column {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+.report-revenue,
+.report-profit,
+.report-loss {
+  position: absolute;
+  width: 100%;
+}
+.report-revenue {
+  background: var(--q-color-receive);
+}
+.report-profit {
+  background: var(--q-color-sale);
+}
+.report-loss {
+  background: var(--q-color-warning-text);
+}
+.report-date {
+  position: absolute;
+  top: calc(100% + var(--q-space-8));
+  white-space: nowrap;
+}
+.report-legend-revenue,
+.report-legend-profit {
+  display: inline-block;
+  width: var(--q-space-16);
+  height: var(--q-space-16);
+  margin-right: var(--q-space-8);
+}
+.report-legend-revenue {
+  background: var(--q-color-receive);
+}
+.report-legend-profit {
+  background: var(--q-color-sale);
+}
+@media (max-width: 48em) {
+  .report-chart {
+    gap: 0;
+  }
+  .report-column {
+    border-right: 1px solid var(--q-color-surface);
+  }
+}

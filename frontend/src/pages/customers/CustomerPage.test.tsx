@@ -118,3 +118,18 @@ describe('CustomerPage debt and ledger', () => {
     expect(get.mock.calls.filter((call) => call[0] === '/api/sales')).toHaveLength(1)
   })
 })
+
+it('labels the actual partial payment in a sale and the amount of a card debt payment', async () => {
+  mockGet(50000, [
+    SALE,
+    { ...PAYMENT, payment_method: 'card' },
+    { ...SALE, id: 10, number: 22, paid_at_sale: 0, payment_method: null },
+  ])
+  renderCustomer()
+  const table = await screen.findByRole('table')
+  const rows = within(table).getAllByRole('row')
+  expect(rows[1].textContent).toContain(`Оплачено: ${formatMoney(50000)}`)
+  expect(rows[1].textContent).toContain('Наличные')
+  expect(rows[2].textContent).toContain('Карта / Kaspi')
+  expect(rows[3].textContent).not.toContain('Наличные')
+})

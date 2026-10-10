@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 
 import { getJson, login, settle, snap } from './snap.js'
+import { todayLocal } from '../src/lib/dates.js'
 import { formatMoney } from '../src/lib/money.js'
 
 // The sale and receiving flows of docs/design/simple-ui.md step by step, on demo data.
@@ -81,6 +82,7 @@ test('receiving', async ({ page }) => {
   await addByEnter(page, '15208-65F0E')
   await addByEnter(page, '90915-YZZE1')
   await page.getByRole('button', { name: 'Арттыру' }).first().click()
+  await page.getByRole('textbox', { name: 'IKH16TT сатып алу бағасы' }).fill('1500')
   await page.getByRole('searchbox', { name: SEARCH }).focus()
   await snap(page, 'receive-lines', w)
   await snap(page, 'receive-lines-screen', w, { fullPage: false })
@@ -93,12 +95,15 @@ test('receiving', async ({ page }) => {
   await snap(page, 'receive-new-product', w)
   await form.getByRole('button', { name: 'Бас тарту' }).click()
 
+  for (const article of ['IKH16TT', '15208-65F0E', '90915-YZZE1'])
+    await page.getByRole('textbox', { name: `${article} сатып алу бағасы` }).fill('')
   await page.getByRole('button', { name: 'Қоймаға қосу' }).click()
   const firstCost = page.getByRole('textbox', { name: 'IKH16TT сатып алу бағасы' })
   await expect(firstCost).toBeFocused()
   await expect(firstCost).toHaveAttribute('aria-invalid', 'true')
   await expect(page.getByText('Сатып алу бағасын жазыңыз', { exact: true })).toHaveCount(3)
   await snap(page, 'receive-cost-required', w, { fullPage: false, preserveScroll: true })
+  await page.getByRole('button', { name: 'Қосымша' }).click()
   await page.getByRole('textbox', { name: 'Жеткізуші' }).fill('«Автоимпорт» ЖШС')
   await page.getByRole('textbox', { name: 'IKH16TT сатып алу бағасы' }).fill('1100')
   await page.getByRole('textbox', { name: '15208-65F0E сатып алу бағасы' }).fill('1400')
@@ -236,4 +241,66 @@ test('partial payment sale and full debt payment', async ({ page }) => {
     await expect(page.getByTestId('home-debts')).toHaveText(
       `Қарыздар: ${formatMoney(summary.total_debt)}`,
     )
+})
+
+test('known cost produces 200000 tenge profit for a separate product per width', async ({
+  page,
+}) => {
+  const w = width(page)
+  const article = `COST-172B-${w}`
+  await login(page)
+  await page.goto('/receive')
+  await page.getByRole('searchbox', { name: SEARCH }).fill(article)
+  await page.getByRole('button', { name: 'Жаңа тауар ретінде қосу' }).click()
+  const form = page.getByTestId('new-product-form')
+  await form.getByRole('textbox', { name: 'Атауы' }).fill(`Пайда тексеру ${w}`)
+  await form.getByRole('textbox', { name: 'Сату бағасы, ₸' }).fill('600000')
+  const productResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/products') && response.request().method() === 'POST',
+  )
+  await form.getByRole('button', { name: 'Сақтау және қосу' }).click()
+  const product = (await (await productResponse).json()) as { id: number }
+  await page.getByRole('textbox', { name: `${article} саны` }).fill('10')
+  await page.getByRole('textbox', { name: `${article} сатып алу бағасы` }).fill('500000')
+  await page.getByRole('button', { name: 'Қоймаға қосу' }).click()
+  await expect(page.getByRole('heading', { name: 'Тауар қоймаға қосылды' })).toBeVisible()
+
+  await page.goto('/sell')
+  await addByEnter(page, article)
+  await page.getByRole('textbox', { name: `${article} саны` }).fill('2')
+  await page.getByRole('button', { name: 'Келесі: сатып алушы' }).click()
+  await page.getByRole('button', { name: 'Сатып алушысыз жалғастыру' }).click()
+  await expect(page.getByRole('button', { name: 'Қолма-қол', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  const saleResponse = page.waitForResponse(
+    (response) => response.url().endsWith('/api/sales') && response.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: 'Сатылымды сақтау' }).click()
+  expect((await (await saleResponse).json()).payment_method).toBe('cash')
+  await expect(page.getByRole('heading', { name: 'Сатылым сақталды' })).toBeVisible()
+
+  const today = todayLocal()
+  await page.goto(`/report?from=${today}&to=${today}`)
+  await settle(page)
+  const row =
+    w === '1366'
+      ? page.locator('.q-table tbody tr').filter({ hasText: article })
+      : page
+          .locator('.mantine-Card-root')
+          .filter({ has: page.getByText(article, { exact: true }) })
+          .filter({ visible: true })
+  await expect(row).toHaveCount(1)
+  await expect(row.getByText(formatMoney(20000000), { exact: true })).toBeVisible()
+  const report = await getJson<{
+    items: { product_id: number; qty: number; revenue: number; profit: number }[]
+  }>(page, `/api/reports/products?from=${today}&to=${today}&limit=10`)
+  expect(report.items.find((item) => item.product_id === product.id)).toMatchObject({
+    qty: 2,
+    revenue: 120000000,
+    profit: 20000000,
+  })
+  await snap(page, 'report-known-profit', w)
 })

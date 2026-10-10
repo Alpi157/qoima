@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../api/client'
 import { ApiError } from '../api/errors'
+import { ReportPage } from '../pages/report/ReportPage'
 import { HomePage } from '../pages/home/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { MorePage } from '../pages/more/MorePage'
@@ -16,7 +17,14 @@ import { ReceivePage } from '../pages/receive/ReceivePage'
 import { DebtsPage } from '../pages/debts/DebtsPage'
 import { CustomerPage } from '../pages/customers/CustomerPage'
 import { PaymentModal } from '../pages/payments/PaymentModal'
-import { makeCustomer, makeProduct, makeSale, ok } from '../test/fixtures'
+import {
+  makeCustomer,
+  makeProduct,
+  makeSale,
+  makeStockSummary,
+  makeReportSummary,
+  ok,
+} from '../test/fixtures'
 import { renderWithDataRouter, renderWithProviders } from '../test/render'
 import type { Language } from './language'
 
@@ -41,7 +49,7 @@ const SALE = makeSale({
 })
 
 const KEY =
-  /\b(common|nav|home|more|auth|products|customers|debts|payments|receipts|sales|sell|receive|flow|settings|errors|validation|invoice)\.[A-Za-z]/
+  /\b(common|nav|home|more|auth|products|customers|debts|payments|receipts|sales|sell|receive|flow|settings|errors|validation|invoice|stock|report|paymentMethod)\.[A-Za-z]/
 const ATTRIBUTES = ['aria-label', 'placeholder', 'title', 'alt']
 
 /**
@@ -141,7 +149,13 @@ describe.each<Language>(['kk', 'zh'])('pages in %s', (language) => {
   it('main screen', async () => {
     const owner = { id: 1, username: 'owner', full_name: 'Arman', role: 'owner', locale: language }
     vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
-      ok(path === '/api/auth/me' ? owner : { items: [], total: 2, sum_posted: 3840000 })) as never)
+      ok(
+        path === '/api/auth/me'
+          ? owner
+          : path === '/api/stock/summary'
+            ? makeStockSummary({ out_of_stock_count: 2, low_stock_count: 1 })
+            : { items: [], total: 2, sum_posted: 3840000 },
+      )) as never)
     renderWithDataRouter([{ path: '/', element: <HomePage /> }], { route: '/' })
     await screen.findByTestId('today-sales')
     expectTranslated(language)
@@ -173,10 +187,25 @@ describe.each<Language>(['kk', 'zh'])('pages in %s', (language) => {
   })
 
   it('stock, with the unit in the interface language', async () => {
-    vi.spyOn(api, 'GET').mockReturnValue(ok({ items: [PRODUCT], total: 1 }))
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(
+        path === '/api/stock/summary' ? makeStockSummary() : { items: [PRODUCT], total: 1 },
+      )) as never)
     renderWithProviders(<StockPage />, { route: '/stock' })
     expect((await screen.findAllByText('Oil filter')).length).toBeGreaterThan(0)
     expect(screen.getAllByText(`4 ${i18n.t('common.units.pcs')}`).length).toBeGreaterThan(0)
+    expectTranslated(language)
+  })
+
+  it('report', async () => {
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(
+        path === '/api/reports/summary'
+          ? makeReportSummary({ revenue_unknown_cost: 1000 })
+          : { items: [], total: 0 },
+      )) as never)
+    renderWithProviders(<ReportPage />, { route: '/report?from=2026-09-01&to=2026-09-30' })
+    await screen.findByTestId('report-profit')
     expectTranslated(language)
   })
 

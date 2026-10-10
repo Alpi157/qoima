@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { hasErrorCode, isApiError } from '../../api/errors'
 import { ExtraSection } from '../../components/ExtraSection'
 import { MoneyInput } from '../../components/MoneyInput'
+import { PaymentMethodChoice, type PaymentMethod } from '../../components/PaymentMethodChoice'
 import { apiErrorText } from '../../i18n/errorText'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
@@ -21,6 +22,7 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
   const [requestId] = useState(() => crypto.randomUUID())
   const [openedAt] = useState(() => new Date())
   const [amount, setAmount] = useState('')
+  const [method, setMethod] = useState<PaymentMethod>('cash')
   const [paidAt, setPaidAt] = useState<string | null>(() => nowLocalInput(openedAt))
   const [note, setNote] = useState('')
   const [extrasOpen, setExtrasOpen] = useState(false)
@@ -57,7 +59,7 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
         request_id: requestId,
         customer_id: customer.id,
         amount: tiyn,
-        payment_method: 'cash',
+        payment_method: method,
         paid_at: iso,
         note: note.trim() || null,
       },
@@ -151,6 +153,7 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
             {message}
           </Alert>
         )}
+        <PaymentMethodChoice value={method} onChange={setMethod} />
         <Group justify="flex-end" gap="sm" className="q-modal-actions">
           <Button variant="default" onClick={onClose} disabled={post.isPending}>
             {t('common.cancel')}

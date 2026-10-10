@@ -43,7 +43,7 @@ function saveDraft(draft: Partial<SaleDraft>, key = SALE_KEY) {
     requestId: REQUEST_ID,
     lines: [{ productId: 1, qty: 2, price: null }],
     customer: null,
-    payment: { mode: 'full', paid: '' },
+    payment: { mode: 'full', paid: '', method: 'cash' },
     ...draft,
   }
   localStorage.setItem(key, JSON.stringify(full))
@@ -246,10 +246,10 @@ describe('SellPage, step 3', () => {
   it('resets debt mode when switching to a retail customer', async () => {
     const user = setupUser()
     mockFlowGet({ products: PRODUCTS })
-    saveDraft({ customer: ERZHAN, payment: { mode: 'debt', paid: '1000' } })
+    saveDraft({ customer: ERZHAN, payment: { mode: 'debt', paid: '1000', method: 'cash' } })
     renderSell('/sell?step=2')
     await user.click(await screen.findByRole('button', { name: 'Продолжить без покупателя' }))
-    expect(storedDraft()?.payment).toEqual({ mode: 'full', paid: '' })
+    expect(storedDraft()?.payment).toEqual({ mode: 'full', paid: '', method: 'cash' })
   })
 
   it.each([
@@ -287,7 +287,7 @@ describe('SellPage, step 3', () => {
     expect(
       (screen.getByRole('button', { name: 'Сохранить продажу' }) as HTMLButtonElement).disabled,
     ).toBe(true)
-    expect(storedDraft()?.payment).toEqual({ mode: 'debt', paid: '25001' })
+    expect(storedDraft()?.payment).toEqual({ mode: 'debt', paid: '25001', method: 'cash' })
     await fill(user, field, '1,2,3')
     expect(
       (screen.getByRole('button', { name: 'Сохранить продажу' }) as HTMLButtonElement).disabled,
@@ -314,6 +314,7 @@ describe('SellPage, step 3', () => {
       request_id: REQUEST_ID,
       customer_id: 7,
       paid_amount: 2640000,
+      payment_method: 'cash',
       lines: [
         { product_id: 1, qty: 2, unit_price: 1250000 },
         { product_id: 2, qty: 1, unit_price: 140000 },
@@ -492,4 +493,58 @@ describe('SellDonePage', () => {
     )
     expect(screen.getByRole('link', { name: 'Новая продажа' }).getAttribute('href')).toBe('/sell')
   })
+})
+
+describe('sale payment method', () => {
+  it.each(['', '0', '1000'])(
+    'shows method only for positive payment and sends the correct method for %s',
+    async (paid) => {
+      const user = setupUser()
+      mockFlowGet({ products: [FILTER], customers: [ERZHAN] })
+      saveDraft({ customer: ERZHAN, payment: { mode: 'debt', paid, method: 'card' } })
+      const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeSale()))
+      renderSell('/sell?step=3')
+      await screen.findByRole('heading', { name: 'Проверьте' })
+      expect(screen.queryByRole('group', { name: 'Как заплатили?' }) !== null).toBe(paid === '1000')
+      await user.click(screen.getByRole('button', { name: 'Сохранить продажу' }))
+      expect(postBody<SaleCreate>(post).payment_method).toBe(paid === '1000' ? 'card' : null)
+    },
+  )
+
+  it('defaults old drafts to cash and retains card after returning to step 3', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: [FILTER], customers: [ERZHAN] })
+    localStorage.setItem(
+      SALE_KEY,
+      JSON.stringify({
+        version: 1,
+        requestId: 'old',
+        lines: [{ productId: FILTER.id, qty: 1, price: null }],
+        customer: ERZHAN,
+        payment: { mode: 'full', paid: '' },
+      }),
+    )
+    const rendered = renderSell('/sell?step=3')
+    const cash = await screen.findByRole('button', { name: 'Наличные' })
+    expect(cash.getAttribute('aria-pressed')).toBe('true')
+    await user.click(screen.getByRole('button', { name: 'Карта / Kaspi' }))
+    expect(storedDraft()?.payment.method).toBe('card')
+    rendered.unmount()
+    renderSell('/sell?step=3')
+    expect(
+      (await screen.findByRole('button', { name: 'Карта / Kaspi' })).getAttribute('aria-pressed'),
+    ).toBe('true')
+  })
+})
+
+it('hides payment method for a fully paid zero-total sale and sends null', async () => {
+  const user = setupUser()
+  mockFlowGet({ products: [makeProduct({ ...FILTER, sale_price: 0 })] })
+  saveDraft({ customer: 'none' })
+  const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeSale()))
+  renderSell('/sell?step=3')
+  await screen.findByRole('heading', { name: 'Проверьте' })
+  expect(screen.queryByRole('group', { name: 'Как заплатили?' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Сохранить продажу' }))
+  expect(postBody<SaleCreate>(post).payment_method).toBeNull()
 })

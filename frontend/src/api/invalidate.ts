@@ -1,10 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query'
 
 // Everything that shows stock or stock documents; a posted or cancelled document changes all of it.
-const STOCK_QUERY_PREFIXES = ['receipts', 'receipt', 'products', 'product', 'product-movements']
+const STOCK_QUERY_PREFIXES = [
+  'receipts',
+  'receipt',
+  'products',
+  'product',
+  'product-movements',
+  'stock-summary',
+]
 
 // A sale also changes the purchase history on its customer's page.
 const SALE_QUERY_PREFIXES = [
+  'reports',
+  'stock-summary',
   'sales',
   'sale',
   'products',
@@ -37,5 +46,11 @@ export function useInvalidateSales() {
 
 /** Payment documents change customer balances and the home debt summary. */
 export function useInvalidatePayments() {
-  return useInvalidatePrefixes(['customer', 'customers', 'customer-debts', 'customer-ledger'])
+  return useInvalidatePrefixes([
+    'customer',
+    'customers',
+    'customer-debts',
+    'customer-ledger',
+    'reports',
+  ])
 }

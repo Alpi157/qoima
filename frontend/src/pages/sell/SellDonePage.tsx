@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { DoneScreen } from '../../components/flow'
 import { PrintIcon } from '../../components/icons'
 import { NotFoundState } from '../../components/NotFoundState'
+import { PaymentMethodText } from '../../components/PaymentMethodChoice'
 import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
 import { PageContainer } from '../../components/ui'
@@ -48,7 +49,7 @@ function SaleDone({ id }: { id: number }) {
     return <QueryError error={sale.error} onRetry={() => sale.refetch()} />
   }
 
-  const { number, customer, total, debt_at_sale } = sale.data
+  const { number, customer, total, debt_at_sale, paid_at_sale, payment_method } = sale.data
   return (
     <PageContainer>
       <DoneScreen
@@ -68,6 +69,14 @@ function SaleDone({ id }: { id: number }) {
             values={{ amount: formatMoney(total) }}
             components={{ b: <b /> }}
           />,
+          ...(paid_at_sale > 0
+            ? [
+                <span key="paid">
+                  {t('sales.card.paid', { amount: formatMoney(paid_at_sale) })}{' '}
+                  <PaymentMethodText method={payment_method} />
+                </span>,
+              ]
+            : []),
           ...(debt_at_sale > 0
             ? [
                 t('sell.done.debt', { amount: formatMoney(debt_at_sale) }),

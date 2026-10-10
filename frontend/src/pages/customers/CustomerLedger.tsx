@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { CancelDocumentModal } from '../../components/CancelDocumentModal'
 import { ListPagination } from '../../components/ListPagination'
+import { PaymentMethodText } from '../../components/PaymentMethodChoice'
 import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
 import { DataTable, RowLink } from '../../components/ui'
@@ -52,6 +53,17 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
     ) : (
       <Text>{t('customers.ledger.payment', { number: item.number })}</Text>
     )
+  const amount = (item: LedgerItem) => (
+    <Stack gap={0}>
+      <Text>{formatMoney(item.amount)}</Text>
+      {item.kind === 'sale' && (item.paid_at_sale ?? 0) > 0 && (
+        <Text size="sm" c="dimmed">
+          {t('sales.card.paid', { amount: formatMoney(item.paid_at_sale!) })}
+        </Text>
+      )}
+      <PaymentMethodText method={item.payment_method} />
+    </Stack>
+  )
   const action = (item: LedgerItem) =>
     item.kind === 'payment' && (
       <Button size="sm" variant="default" onClick={() => setCancelling(item)}>
@@ -81,7 +93,7 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
               {
                 key: 'amount',
                 header: t('customers.ledger.amount'),
-                cell: (row) => formatMoney(row.amount),
+                cell: amount,
                 numeric: true,
               },
               {
@@ -110,7 +122,7 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
                 </Text>
                 <Group justify="space-between">
                   <Text>{t('customers.ledger.amount')}</Text>
-                  <Text fw={600}>{formatMoney(row.amount)}</Text>
+                  {amount(row)}
                 </Group>
                 <Group justify="space-between">
                   <Text>{t('customers.ledger.change')}</Text>

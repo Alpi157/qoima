@@ -89,3 +89,17 @@ describe('PaymentModal', () => {
     expect(post).not.toHaveBeenCalled()
   })
 })
+
+it('sends the chosen debt payment method and resets it when reopened', async () => {
+  const user = setupUser()
+  const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makePayment()))
+  renderWithProviders(<Harness />)
+  expect(screen.getByRole('button', { name: 'Наличные' }).getAttribute('aria-pressed')).toBe('true')
+  await user.click(screen.getByRole('button', { name: 'Карта / Kaspi' }))
+  await user.click(screen.getByRole('button', { name: /Весь долг:/ }))
+  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(postBody<PaymentCreate>(post).payment_method).toBe('card')
+  await user.click(screen.getByRole('button', { name: 'Open' }))
+  expect(screen.getByRole('button', { name: 'Наличные' }).getAttribute('aria-pressed')).toBe('true')
+})
