@@ -18,6 +18,7 @@ const SALE: LedgerItem = {
   occurred_at: '2026-09-27T09:00:00Z',
   amount: 150000,
   paid_at_sale: 50000,
+  payment_method: 'cash',
   debt_change: 100000,
   debt_after: 100000,
 }

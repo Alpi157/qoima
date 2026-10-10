@@ -34,6 +34,7 @@ class StockMovement(Base):
     __tablename__ = "stock_movements"
     __table_args__ = (
         CheckConstraint("qty <> 0", name="qty_non_zero"),
+        CheckConstraint("unit_cost >= 0", name="unit_cost_non_negative"),
         CheckConstraint(
             "kind IN (" + ", ".join(f"'{k}'" for k in MOVEMENT_KINDS) + ")",
             name="kind_valid",
@@ -46,6 +47,7 @@ class StockMovement(Base):
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
     warehouse_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("warehouses.id"))
     qty: Mapped[int] = mapped_column(Integer)
+    unit_cost: Mapped[int | None] = mapped_column(BigInteger)
     kind: Mapped[str] = mapped_column(Text)
     doc_type: Mapped[str | None] = mapped_column(Text)
     doc_id: Mapped[int | None] = mapped_column(BigInteger)
@@ -56,10 +58,14 @@ class StockMovement(Base):
 
 class StockBalance(Base):
     __tablename__ = "stock_balances"
-    __table_args__ = (CheckConstraint("qty >= 0", name="qty_non_negative"),)
+    __table_args__ = (
+        CheckConstraint("qty >= 0", name="qty_non_negative"),
+        CheckConstraint("avg_cost >= 0", name="avg_cost_non_negative"),
+    )
 
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"), primary_key=True)
     warehouse_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("warehouses.id"), primary_key=True
     )
     qty: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    avg_cost: Mapped[int | None] = mapped_column(BigInteger)

@@ -26,7 +26,7 @@ class ReceiptLineIn(BaseModel):
 
     product_id: DbId
     qty: Qty
-    unit_cost: UnitCost | None = None
+    unit_cost: UnitCost
 
 
 class ReceiptCreate(BaseModel):

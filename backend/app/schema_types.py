@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BeforeValidator, Field, StringConstraints
 from pydantic_core import PydanticCustomError
@@ -9,6 +9,7 @@ NonEmpty = StringConstraints(strip_whitespace=True, min_length=1)
 
 
 MAX_BIGINT = 2**63 - 1
+PaymentMethod = Literal["cash", "card"]
 # Id of a database row, in a path, a query or a request body. Not strict: path and query
 # values arrive as strings. The upper bound turns an oversized id into 422 instead of a DB error.
 DbId = Annotated[int, Field(ge=1, le=MAX_BIGINT)]

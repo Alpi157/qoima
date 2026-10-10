@@ -289,7 +289,15 @@ VALIDATION_MESSAGES = {
 
 # Our own error types, raised as PydanticCustomError in the schemas; the message is our text.
 CUSTOM_VALIDATION_TYPES = frozenset(
-    {"qty_zero", "iin_bin_format", "date_in_future", "null_not_allowed"}
+    {
+        "qty_zero",
+        "iin_bin_format",
+        "date_in_future",
+        "null_not_allowed",
+        "payment_method_without_payment",
+        "report_period_order",
+        "report_period_too_long",
+    }
 )
 
 

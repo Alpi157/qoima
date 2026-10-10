@@ -21,6 +21,7 @@ class CustomerPayment(Base):
     __tablename__ = "customer_payments"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
+        CheckConstraint("payment_method IN ('cash', 'card')", name="payment_method_valid"),
         CheckConstraint("status IN ('posted', 'cancelled')", name="status_valid"),
         CheckConstraint(
             "(status = 'cancelled') = (cancelled_at IS NOT NULL)", name="cancelled_consistent"
@@ -35,6 +36,7 @@ class CustomerPayment(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     amount: Mapped[int] = mapped_column(BigInteger)
+    payment_method: Mapped[str] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, server_default=text("'posted'"))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

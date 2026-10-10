@@ -8,7 +8,7 @@ HUGE_ID = 2**63
 
 def test_validation_error_format(auth_client: TestClient) -> None:
     response = auth_client.post(
-        "/api/receipts", json={"lines": [{"product_id": 1, "qty": 0}], "extra": 1}
+        "/api/receipts", json={"lines": [{"product_id": 1, "qty": 0, "unit_cost": 0}], "extra": 1}
     )
 
     assert response.status_code == 422
@@ -152,7 +152,11 @@ def test_huge_id_in_path_rejected(auth_client: TestClient, method: str, path: st
 @pytest.mark.parametrize(
     ("path", "body", "field"),
     [
-        ("/api/receipts", {"lines": [{"product_id": HUGE_ID, "qty": 1}]}, "lines.0.product_id"),
+        (
+            "/api/receipts",
+            {"lines": [{"product_id": HUGE_ID, "qty": 1, "unit_cost": 0}]},
+            "lines.0.product_id",
+        ),
         (
             "/api/sales",
             {
@@ -228,7 +232,10 @@ def test_iin_bin_error_type(auth_client: TestClient) -> None:
 def test_future_date_error_type(auth_client: TestClient) -> None:
     response = auth_client.post(
         "/api/receipts",
-        json={"lines": [{"product_id": 1, "qty": 1}], "received_at": "2999-01-01T00:00:00Z"},
+        json={
+            "lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}],
+            "received_at": "2999-01-01T00:00:00Z",
+        },
     )
     assert response.status_code == 422
     [error] = response.json()["errors"]

@@ -8,7 +8,7 @@ from sqlalchemy import text
 from tests.conftest import test_engine
 
 
-def wait_until_lock_waiting(pid: int) -> None:
+def wait_until_lock_waiting(pid: int, table: str = "customers") -> None:
     """Wait for a backend to block on a PostgreSQL lock, or fail after five seconds."""
     deadline = monotonic() + 5
     poll = Event()
@@ -25,9 +25,9 @@ def wait_until_lock_waiting(pid: int) -> None:
             if (
                 state is not None
                 and state.wait_event_type == "Lock"
-                and "FROM customers" in state.query
+                and f"FROM {table}" in state.query
                 and "FOR UPDATE" in state.query
             ):
                 return
             poll.wait(min(0.01, max(0, deadline - monotonic())))
-    raise AssertionError(f"B не ждёт блокировку покупателя (pid={pid})")
+    raise AssertionError(f"B не ждёт блокировку {table} (pid={pid})")

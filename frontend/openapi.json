@@ -221,6 +221,26 @@
             }
           },
           {
+            "name": "stock_state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "out",
+                    "low"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stock State"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -1743,6 +1763,42 @@
         }
       }
     },
+    "/api/stock/summary": {
+      "get": {
+        "tags": [
+          "stock"
+        ],
+        "summary": "Stock Summary",
+        "operationId": "stock_summary_api_stock_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockSummary"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
     "/api/stock/adjustments": {
       "post": {
         "tags": [
@@ -1939,6 +1995,226 @@
             "APIKeyCookie": []
           }
         ]
+      }
+    },
+    "/api/reports/summary": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Summary",
+        "operationId": "summary_api_reports_summary_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/products": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Products",
+        "operationId": "products_api_reports_products_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductReportPage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/customers": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Customers",
+        "operationId": "customers_api_reports_customers_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerReportPage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -2214,6 +2490,74 @@
         ],
         "title": "CustomerPage"
       },
+      "CustomerReportItem": {
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sales_count": {
+            "type": "integer",
+            "title": "Sales Count"
+          },
+          "revenue": {
+            "type": "integer",
+            "title": "Revenue"
+          },
+          "profit": {
+            "type": "integer",
+            "title": "Profit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "name",
+          "sales_count",
+          "revenue",
+          "profit"
+        ],
+        "title": "CustomerReportItem"
+      },
+      "CustomerReportPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerReportItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "CustomerReportPage"
+      },
       "CustomerUpdate": {
         "properties": {
           "name": {
@@ -2257,6 +2601,30 @@
         "additionalProperties": false,
         "type": "object",
         "title": "CustomerUpdate"
+      },
+      "DayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "revenue": {
+            "type": "integer",
+            "title": "Revenue"
+          },
+          "profit": {
+            "type": "integer",
+            "title": "Profit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "revenue",
+          "profit"
+        ],
+        "title": "DayOut"
       },
       "ErrorCode": {
         "type": "string",
@@ -2399,6 +2767,21 @@
             ],
             "title": "Paid At Sale"
           },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
           "debt_change": {
             "type": "integer",
             "title": "Debt Change"
@@ -2416,6 +2799,7 @@
           "occurred_at",
           "amount",
           "paid_at_sale",
+          "payment_method",
           "debt_change",
           "debt_after"
         ],
@@ -2603,6 +2987,15 @@
             "minimum": 1.0,
             "title": "Amount"
           },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card"
+            ],
+            "title": "Payment Method",
+            "default": "cash"
+          },
           "paid_at": {
             "anyOf": [
               {
@@ -2694,6 +3087,14 @@
             "type": "integer",
             "title": "Amount"
           },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card"
+            ],
+            "title": "Payment Method"
+          },
           "note": {
             "anyOf": [
               {
@@ -2765,6 +3166,7 @@
           "customer",
           "paid_at",
           "amount",
+          "payment_method",
           "note",
           "status",
           "cancelled_at",
@@ -2839,6 +3241,19 @@
             "maximum": 100000000000.0,
             "minimum": 0.0,
             "title": "Sale Price"
+          },
+          "min_qty": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2147483647.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Qty"
           },
           "note": {
             "anyOf": [
@@ -2927,6 +3342,39 @@
           "stock": {
             "type": "integer",
             "title": "Stock"
+          },
+          "min_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Qty"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cost"
+          },
+          "last_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Cost"
           }
         },
         "type": "object",
@@ -2942,7 +3390,10 @@
           "is_archived",
           "created_at",
           "updated_at",
-          "stock"
+          "stock",
+          "min_qty",
+          "avg_cost",
+          "last_cost"
         ],
         "title": "ProductOut"
       },
@@ -2966,6 +3417,80 @@
           "total"
         ],
         "title": "ProductPage"
+      },
+      "ProductReportItem": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "revenue": {
+            "type": "integer",
+            "title": "Revenue"
+          },
+          "cost": {
+            "type": "integer",
+            "title": "Cost"
+          },
+          "profit": {
+            "type": "integer",
+            "title": "Profit"
+          },
+          "revenue_unknown_cost": {
+            "type": "integer",
+            "title": "Revenue Unknown Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "revenue",
+          "cost",
+          "profit",
+          "revenue_unknown_cost"
+        ],
+        "title": "ProductReportItem"
+      },
+      "ProductReportPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductReportItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProductReportPage"
       },
       "ProductUpdate": {
         "properties": {
@@ -3032,6 +3557,19 @@
               }
             ],
             "title": "Sale Price"
+          },
+          "min_qty": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2147483647.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Qty"
           },
           "note": {
             "anyOf": [
@@ -3147,16 +3685,9 @@
             "title": "Qty"
           },
           "unit_cost": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 100000000000.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "maximum": 100000000000.0,
+            "minimum": 0.0,
             "title": "Unit Cost"
           }
         },
@@ -3164,7 +3695,8 @@
         "type": "object",
         "required": [
           "product_id",
-          "qty"
+          "qty",
+          "unit_cost"
         ],
         "title": "ReceiptLineIn"
       },
@@ -3426,6 +3958,29 @@
         ],
         "title": "ReceiptPage"
       },
+      "ReceivedOut": {
+        "properties": {
+          "cash": {
+            "type": "integer",
+            "title": "Cash"
+          },
+          "card": {
+            "type": "integer",
+            "title": "Card"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cash",
+          "card",
+          "total"
+        ],
+        "title": "ReceivedOut"
+      },
       "SaleCancel": {
         "properties": {
           "reason": {
@@ -3474,6 +4029,21 @@
               }
             ],
             "title": "Paid Amount"
+          },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
           },
           "sold_at": {
             "anyOf": [
@@ -3609,6 +4179,17 @@
             "type": "integer",
             "title": "Unit Price"
           },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          },
           "line_total": {
             "type": "integer",
             "title": "Line Total"
@@ -3622,6 +4203,7 @@
           "unit",
           "qty",
           "unit_price",
+          "unit_cost",
           "line_total"
         ],
         "title": "SaleLineOut"
@@ -3676,6 +4258,21 @@
             "type": "integer",
             "title": "Paid At Sale"
           },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
           "debt_at_sale": {
             "type": "integer",
             "title": "Debt At Sale"
@@ -3692,6 +4289,7 @@
           "total_qty",
           "total",
           "paid_at_sale",
+          "payment_method",
           "debt_at_sale"
         ],
         "title": "SaleListItem"
@@ -3803,6 +4401,21 @@
             "type": "integer",
             "title": "Paid At Sale"
           },
+          "payment_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
           "debt_at_sale": {
             "type": "integer",
             "title": "Debt At Sale"
@@ -3825,6 +4438,7 @@
           "lines",
           "total",
           "paid_at_sale",
+          "payment_method",
           "debt_at_sale"
         ],
         "title": "SaleOut"
@@ -3854,6 +4468,99 @@
           "sum_posted"
         ],
         "title": "SalePage"
+      },
+      "StockSummary": {
+        "properties": {
+          "products_count": {
+            "type": "integer",
+            "title": "Products Count"
+          },
+          "total_qty": {
+            "type": "integer",
+            "title": "Total Qty"
+          },
+          "cost_value": {
+            "type": "integer",
+            "title": "Cost Value"
+          },
+          "retail_value": {
+            "type": "integer",
+            "title": "Retail Value"
+          },
+          "unknown_cost_count": {
+            "type": "integer",
+            "title": "Unknown Cost Count"
+          },
+          "out_of_stock_count": {
+            "type": "integer",
+            "title": "Out Of Stock Count"
+          },
+          "low_stock_count": {
+            "type": "integer",
+            "title": "Low Stock Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "products_count",
+          "total_qty",
+          "cost_value",
+          "retail_value",
+          "unknown_cost_count",
+          "out_of_stock_count",
+          "low_stock_count"
+        ],
+        "title": "StockSummary"
+      },
+      "SummaryOut": {
+        "properties": {
+          "revenue": {
+            "type": "integer",
+            "title": "Revenue"
+          },
+          "sales_count": {
+            "type": "integer",
+            "title": "Sales Count"
+          },
+          "cost": {
+            "type": "integer",
+            "title": "Cost"
+          },
+          "profit": {
+            "type": "integer",
+            "title": "Profit"
+          },
+          "revenue_unknown_cost": {
+            "type": "integer",
+            "title": "Revenue Unknown Cost"
+          },
+          "debt_given": {
+            "type": "integer",
+            "title": "Debt Given"
+          },
+          "received": {
+            "$ref": "#/components/schemas/ReceivedOut"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DayOut"
+            },
+            "type": "array",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revenue",
+          "sales_count",
+          "cost",
+          "profit",
+          "revenue_unknown_cost",
+          "debt_given",
+          "received",
+          "days"
+        ],
+        "title": "SummaryOut"
       },
       "UserOut": {
         "properties": {

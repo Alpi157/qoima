@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
-from app.schema_types import MAX_BIGINT, DbId, Note, Reason, check_not_in_future
+from app.schema_types import MAX_BIGINT, DbId, Note, PaymentMethod, Reason, check_not_in_future
 
 PaymentStatus = Literal["posted", "cancelled"]
 PaymentAmount = Annotated[int, Field(strict=True, ge=1, le=MAX_BIGINT)]
@@ -16,6 +16,7 @@ class PaymentCreate(BaseModel):
     request_id: uuid.UUID
     customer_id: DbId
     amount: PaymentAmount
+    payment_method: PaymentMethod = "cash"
     paid_at: AwareDatetime | None = None
     note: Note = None
 
@@ -44,6 +45,7 @@ class PaymentOut(BaseModel):
     customer: PaymentCustomerOut
     paid_at: datetime
     amount: int
+    payment_method: PaymentMethod
     note: str | None
     status: PaymentStatus
     cancelled_at: datetime | None

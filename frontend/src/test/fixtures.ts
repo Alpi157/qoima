@@ -14,6 +14,7 @@ export function makePayment(overrides: Partial<Payment> = {}): Payment {
     customer: { id: 7, name: 'Ержан', phone: null },
     paid_at: '2026-09-27T09:00:00Z',
     amount: 100000,
+    payment_method: 'cash',
     note: null,
     status: 'posted',
     cancelled_at: null,
@@ -39,6 +40,9 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
     created_at: '2026-09-27T09:00:00Z',
     updated_at: '2026-09-27T09:00:00Z',
     stock: 0,
+    min_qty: null,
+    avg_cost: null,
+    last_cost: null,
     ...overrides,
   }
 }
@@ -97,6 +101,7 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
     lines: [],
     total: 0,
     paid_at_sale: 0,
+    payment_method: null,
     debt_at_sale: 0,
     ...overrides,
   }

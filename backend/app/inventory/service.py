@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import Select, and_, func, select, tuple_
+from sqlalchemy import Numeric, Select, and_, cast, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,13 @@ from app.inventory.models import (
     StockMovement,
     Warehouse,
 )
-from app.inventory.schemas import AdjustmentCreate, AdjustmentOut, MovementOut, MovementPage
+from app.inventory.schemas import (
+    AdjustmentCreate,
+    AdjustmentOut,
+    MovementOut,
+    MovementPage,
+    StockSummary,
+)
 from app.receipts.models import Receipt
 from app.sales.models import Sale
 
@@ -30,6 +36,44 @@ class MovementIn:
     doc_id: int | None = None
     note: str | None = None
     warehouse_id: int | None = None
+    unit_cost: int | None = None
+
+
+def round_half_up(numerator: int, denominator: int) -> int:
+    """Divide non-negative integers, rounding an exact half up without floats."""
+    if (
+        type(numerator) is not int
+        or type(denominator) is not int
+        or numerator < 0
+        or denominator <= 0
+    ):
+        raise ValueError("Expected a non-negative numerator and a positive denominator")
+    return (2 * numerator + denominator) // (2 * denominator)
+
+
+def _apply_cost(balance: StockBalance, movement: MovementIn) -> int | None:
+    """Apply one cost transition using the quantity before this movement."""
+    cost = movement.unit_cost
+    qty = balance.qty
+    if movement.qty > 0 and movement.kind != "adjustment" and cost is not None:
+        if balance.avg_cost is None or qty == 0:
+            balance.avg_cost = cost
+        else:
+            numerator = qty * balance.avg_cost + movement.qty * cost
+            denominator = qty + movement.qty
+            # Aggregate stock validation permits a temporary negative quantity.
+            # An undefined or negative average leaves the previous average intact.
+            if numerator >= 0 and denominator > 0:
+                balance.avg_cost = round_half_up(numerator, denominator)
+        return cost
+    if movement.kind == "receipt_cancel" and cost is not None:
+        remaining = qty + movement.qty
+        if remaining > 0 and balance.avg_cost is not None:
+            numerator = qty * balance.avg_cost + movement.qty * cost
+            if numerator >= 0:
+                balance.avg_cost = round_half_up(numerator, remaining)
+        return cost
+    return balance.avg_cost
 
 
 def post_movements(
@@ -44,6 +88,10 @@ def post_movements(
             raise ValueError(f"Movement qty must be a non-zero int, got {m.qty!r}")
         if m.kind not in MOVEMENT_KINDS:
             raise ValueError(f"Unknown movement kind {m.kind!r}")
+        if m.unit_cost is not None and (
+            isinstance(m.unit_cost, bool) or not isinstance(m.unit_cost, int) or m.unit_cost < 0
+        ):
+            raise ValueError("Movement unit_cost must be a non-negative int or None")
 
     main_warehouse_id: int | None = None
     if any(m.warehouse_id is None for m in movements):
@@ -89,22 +137,25 @@ def post_movements(
         )
         raise InsufficientStockError(f"Недостаточно товара. {text}", {"items": shortages})
 
-    created = [
-        StockMovement(
-            product_id=m.product_id,
-            warehouse_id=warehouse_id,
-            qty=m.qty,
-            kind=m.kind,
-            doc_type=m.doc_type,
-            doc_id=m.doc_id,
-            note=m.note,
-            created_by=user_id,
+    created = []
+    for m, warehouse_id in resolved:
+        balance = balances[(m.product_id, warehouse_id)][0]
+        unit_cost = _apply_cost(balance, m)
+        balance.qty += m.qty
+        created.append(
+            StockMovement(
+                product_id=m.product_id,
+                warehouse_id=warehouse_id,
+                qty=m.qty,
+                unit_cost=unit_cost,
+                kind=m.kind,
+                doc_type=m.doc_type,
+                doc_id=m.doc_id,
+                note=m.note,
+                created_by=user_id,
+            )
         )
-        for m, warehouse_id in resolved
-    ]
     db.add_all(created)
-    for key in keys:
-        balances[key][0].qty += deltas[key]
     db.flush()
     return created
 
@@ -177,3 +228,32 @@ def create_adjustment(db: Session, data: AdjustmentCreate, user_id: int) -> Adju
         movement=MovementOut.model_validate(row, from_attributes=True),
         stock=_product_stock(db, data.product_id),
     )
+
+
+def stock_summary(db: Session) -> StockSummary:
+    main_id = select(Warehouse.id).where(Warehouse.code == MAIN_WAREHOUSE_CODE).scalar_subquery()
+    qty = func.coalesce(StockBalance.qty, 0)
+    row = db.execute(
+        select(
+            func.count().label("products_count"),
+            func.coalesce(func.sum(qty), 0).label("total_qty"),
+            func.coalesce(func.sum(cast(qty, Numeric) * StockBalance.avg_cost), 0).label(
+                "cost_value"
+            ),
+            func.coalesce(func.sum(cast(qty, Numeric) * Product.sale_price), 0).label(
+                "retail_value"
+            ),
+            func.count()
+            .filter(and_(qty > 0, StockBalance.avg_cost.is_(None)))
+            .label("unknown_cost_count"),
+            func.count().filter(qty == 0).label("out_of_stock_count"),
+            func.count().filter(and_(qty > 0, qty <= Product.min_qty)).label("low_stock_count"),
+        )
+        .select_from(Product)
+        .outerjoin(
+            StockBalance,
+            and_(StockBalance.product_id == Product.id, StockBalance.warehouse_id == main_id),
+        )
+        .where(Product.is_archived.is_(False))
+    ).one()
+    return StockSummary.model_validate(row, from_attributes=True)

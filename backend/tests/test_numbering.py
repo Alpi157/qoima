@@ -29,7 +29,9 @@ def _sale(client: TestClient, product_id: int, qty: int) -> tuple[int, dict]:
 
 
 def _receipt(client: TestClient, product_id: int) -> tuple[int, dict]:
-    response = client.post("/api/receipts", json={"lines": [{"product_id": product_id, "qty": 1}]})
+    response = client.post(
+        "/api/receipts", json={"lines": [{"product_id": product_id, "qty": 1, "unit_cost": 0}]}
+    )
     return response.status_code, response.json()
 
 

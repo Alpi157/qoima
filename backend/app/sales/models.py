@@ -22,6 +22,10 @@ class Sale(Base):
     __tablename__ = "sales"
     __table_args__ = (
         CheckConstraint("total >= 0", name="total_non_negative"),
+        CheckConstraint("payment_method IN ('cash', 'card')", name="payment_method_valid"),
+        CheckConstraint(
+            "(paid_at_sale > 0) = (payment_method IS NOT NULL)", name="payment_method_consistent"
+        ),
         CheckConstraint("paid_at_sale >= 0 AND paid_at_sale <= total", name="paid_at_sale_range"),
         CheckConstraint(
             "paid_at_sale = total OR customer_id IS NOT NULL", name="debt_requires_customer"
@@ -44,6 +48,7 @@ class Sale(Base):
     )
     total: Mapped[int] = mapped_column(BigInteger)
     paid_at_sale: Mapped[int] = mapped_column(BigInteger)
+    payment_method: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, server_default=text("'posted'"))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -58,6 +63,7 @@ class SaleLine(Base):
     __table_args__ = (
         CheckConstraint("qty > 0", name="qty_positive"),
         CheckConstraint("unit_price >= 0", name="unit_price_non_negative"),
+        CheckConstraint("unit_cost >= 0", name="unit_cost_non_negative"),
         CheckConstraint("line_total >= 0", name="line_total_non_negative"),
         CheckConstraint("line_total = qty * unit_price", name="line_total_matches"),
     )
@@ -67,4 +73,5 @@ class SaleLine(Base):
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
     qty: Mapped[int] = mapped_column(Integer)
     unit_price: Mapped[int] = mapped_column(BigInteger)
+    unit_cost: Mapped[int | None] = mapped_column(BigInteger)
     line_total: Mapped[int] = mapped_column(BigInteger)

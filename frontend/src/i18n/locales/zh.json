@@ -119,7 +119,10 @@
     "date_in_future": "不能选择以后的日期",
     "date_in_future_received_at": "入库日期不能是以后的日期",
     "date_in_future_sold_at": "销售日期不能是以后的日期",
-    "null_not_allowed": "这些字段不能为空：{{fields}}"
+    "null_not_allowed": "这些字段不能为空：{{fields}}",
+    "payment_method_without_payment": "只有付款金额大于零时才能指定付款方式",
+    "report_period_order": "结束日期不能早于开始日期",
+    "report_period_too_long": "报表期间不能超过366天"
   },
   "products": {
     "movementKind": {
@@ -555,7 +558,8 @@
     "draftRestored": "未完成的入库已恢复。",
     "cancelText": "已选的商品将被清除。",
     "warn": {
-      "cost": "请检查进货价。"
+      "cost": "请检查进货价。",
+      "costRequired": "请填写进价"
     },
     "newProduct": {
       "title": "新商品",

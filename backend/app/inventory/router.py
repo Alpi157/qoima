@@ -5,10 +5,15 @@ from app.auth.dependencies import current_user
 from app.auth.models import User
 from app.db import get_db
 from app.inventory import service
-from app.inventory.schemas import AdjustmentCreate, AdjustmentOut, MovementPage
+from app.inventory.schemas import AdjustmentCreate, AdjustmentOut, MovementPage, StockSummary
 from app.schema_types import DbId
 
 router = APIRouter(tags=["stock"])
+
+
+@router.get("/stock/summary", response_model=StockSummary)
+def stock_summary(db: Session = Depends(get_db)) -> StockSummary:
+    return service.stock_summary(db)
 
 
 @router.post(

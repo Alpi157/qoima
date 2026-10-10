@@ -1,16 +1,17 @@
 import os
 import subprocess
+import uuid
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth.rate_limit import login_rate_limiter
 from app.config import get_settings
-from app.db import get_db
+from app.db import Base, get_db
 from app.main import app
 from tests import factories
 
@@ -104,3 +105,40 @@ def auth_client(client: TestClient, db_session: Session) -> TestClient:
     )
     assert response.status_code == 200
     return client
+
+
+@pytest.fixture
+def isolated_stock_engine():
+    """Committed stock tests in qoima_test without deleting append-only journal rows.
+
+    Each test owns a schema with the same metadata, constraints and journal trigger.
+    Dropping that schema afterwards leaves the public test schema untouched.
+    """
+    schema = f"step17_{uuid.uuid4().hex}"
+    with test_engine.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+    isolated = create_engine(
+        test_engine.url, connect_args={"options": f"-csearch_path={schema},public"}
+    )
+    try:
+        with isolated.begin() as conn:
+            Base.metadata.create_all(conn, checkfirst=False)
+            conn.execute(
+                text("""
+                CREATE TRIGGER stock_movements_append_only
+                BEFORE UPDATE OR DELETE OR TRUNCATE ON stock_movements
+                FOR EACH STATEMENT EXECUTE FUNCTION public.stock_movements_forbid_change()
+            """)
+            )
+            conn.execute(text("INSERT INTO warehouses (code,name) VALUES ('main','Основной')"))
+            conn.execute(
+                text(
+                    "INSERT INTO document_counters (doc_type,last_number) VALUES "
+                    "('receipt',0),('sale',0),('payment',0)"
+                )
+            )
+        yield isolated
+    finally:
+        isolated.dispose()
+        with test_engine.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))

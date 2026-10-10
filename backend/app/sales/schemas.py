@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from app.catalog.schemas import MAX_SALE_PRICE
-from app.schema_types import MAX_LINES, DbId, Note, Qty, Reason, check_not_in_future
+from app.schema_types import MAX_LINES, DbId, Note, PaymentMethod, Qty, Reason, check_not_in_future
 
 SaleStatus = Literal["posted", "cancelled"]
 # Money in tiyn.
@@ -28,6 +28,7 @@ class SaleCreate(BaseModel):
     request_id: uuid.UUID
     customer_id: DbId | None = None
     paid_amount: UnitPrice | None = None
+    payment_method: PaymentMethod | None = None
     sold_at: AwareDatetime | None = None
     note: Note = None
     lines: list[SaleLineIn] = Field(min_length=1, max_length=MAX_LINES)
@@ -57,6 +58,7 @@ class SaleLineOut(BaseModel):
     unit: str
     qty: int
     unit_price: int
+    unit_cost: int | None
     line_total: int
 
 
@@ -76,6 +78,7 @@ class SaleOut(BaseModel):
     lines: list[SaleLineOut]
     total: int
     paid_at_sale: int
+    payment_method: PaymentMethod | None
     debt_at_sale: int
 
 
@@ -89,6 +92,7 @@ class SaleListItem(BaseModel):
     total_qty: int
     total: int
     paid_at_sale: int
+    payment_method: PaymentMethod | None
     debt_at_sale: int
 
 

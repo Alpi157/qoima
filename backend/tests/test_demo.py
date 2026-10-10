@@ -11,8 +11,9 @@ from app.catalog import service as catalog_service
 from app.catalog.models import Product
 from app.customers.models import Customer
 from app.customers.service import current_debt
+from app.inventory.service import stock_summary
 from app.payments.models import CustomerPayment
-from app.receipts.models import Receipt
+from app.receipts.models import Receipt, ReceiptLine
 from app.sales.models import Sale, SaleLine
 from app.settings.service import get_business_settings
 
@@ -81,6 +82,30 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     payments = db_session.scalars(select(CustomerPayment)).all()
     assert len(payments) == 3
     assert sum(payment.status == "cancelled" for payment in payments) == 1
+    assert {payment.payment_method for payment in payments} == {"cash", "card"}
+    assert {sale.payment_method for sale in sales} == {"cash", "card"}
+    for line, price in db_session.execute(
+        select(ReceiptLine, Product.sale_price).join(Product, Product.id == ReceiptLine.product_id)
+    ):
+        assert line.unit_cost is not None
+        assert price * 55 <= line.unit_cost * 100 <= price * 60
+    unknown = db_session.scalar(select(Product).where(Product.article == demo.UNKNOWN_COST_ARTICLE))
+    assert catalog_service.get_product(db_session, unknown.id).avg_cost is None
+    assert (
+        db_session.scalar(
+            select(func.count())
+            .select_from(SaleLine)
+            .join(Sale)
+            .where(Sale.status == "posted", SaleLine.unit_cost.is_(None))
+        )
+        > 0
+    )
+    summary = stock_summary(db_session)
+    assert summary.low_stock_count >= 1
+    assert summary.out_of_stock_count >= 1
+    assert summary.unknown_cost_count == 1
+    changing = db_session.scalar(select(Product).where(Product.article == "IKH16TT"))
+    assert catalog_service.get_product(db_session, changing.id).avg_cost == 84000
 
 
 def test_seed_before_opening_hours_keeps_sales_in_the_past(db_session: Session) -> None:

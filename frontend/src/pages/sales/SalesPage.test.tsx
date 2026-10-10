@@ -18,6 +18,7 @@ const POSTED: SaleListItem = {
   total_qty: 3,
   total: 3750000,
   paid_at_sale: 3750000,
+  payment_method: 'cash',
   debt_at_sale: 0,
 }
 const CANCELLED: SaleListItem = { ...POSTED, id: 8, number: 20, status: 'cancelled' }
@@ -60,7 +61,9 @@ describe('SalesPage', () => {
   it('marks sales made with debt in both the table and mobile cards', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(
       ok({
-        items: [{ ...POSTED, paid_at_sale: 1000000, debt_at_sale: 2750000 }],
+        items: [
+          { ...POSTED, paid_at_sale: 1000000, payment_method: 'cash', debt_at_sale: 2750000 },
+        ],
         total: 1,
         sum_posted: POSTED.total,
       }),

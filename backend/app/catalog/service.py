@@ -2,7 +2,7 @@ from collections import Counter
 from datetime import timedelta
 from typing import Literal
 
-from sqlalchemy import ColumnElement, Select, case, false, func, literal, or_, select
+from sqlalchemy import ColumnElement, case, false, func, literal, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,8 @@ from app.errors import (
     ProductArchivedError,
     ProductNotFoundError,
 )
-from app.inventory.models import StockBalance
+from app.inventory.models import MAIN_WAREHOUSE_CODE, StockBalance, Warehouse
+from app.receipts.models import Receipt, ReceiptLine
 from app.sales.models import Sale, SaleLine
 
 ARTICLE_NORM_CONSTRAINT = "uq_products_article_norm"
@@ -40,20 +41,50 @@ def _stock_expr() -> ColumnElement[int]:
     )
 
 
-def _to_out(product: Product, stock: int) -> ProductOut:
+def _avg_cost_expr() -> ColumnElement[int]:
+    return (
+        select(StockBalance.avg_cost)
+        .join(Warehouse, Warehouse.id == StockBalance.warehouse_id)
+        .where(StockBalance.product_id == Product.id, Warehouse.code == MAIN_WAREHOUSE_CODE)
+        .correlate(Product)
+        .scalar_subquery()
+    )
+
+
+def _last_cost_expr() -> ColumnElement[int]:
+    return (
+        select(ReceiptLine.unit_cost)
+        .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
+        .where(
+            ReceiptLine.product_id == Product.id,
+            Receipt.status == "posted",
+            ReceiptLine.unit_cost.is_not(None),
+        )
+        .order_by(Receipt.received_at.desc(), ReceiptLine.id.desc())
+        .limit(1)
+        .correlate(Product)
+        .scalar_subquery()
+    )
+
+
+def _to_out(
+    product: Product, stock: int, avg_cost: int | None, last_cost: int | None
+) -> ProductOut:
     columns = {c.key: getattr(product, c.key) for c in Product.__table__.columns}
-    return ProductOut.model_validate({**columns, "stock": stock})
+    return ProductOut.model_validate(
+        {**columns, "stock": stock, "avg_cost": avg_cost, "last_cost": last_cost}
+    )
 
 
 def get_product(db: Session, product_id: int) -> ProductOut:
     row = db.execute(
-        select(Product, _stock_expr())
+        select(Product, _stock_expr(), _avg_cost_expr(), _last_cost_expr())
         .where(Product.id == product_id)
         .execution_options(populate_existing=True)
     ).one_or_none()
     if row is None:
         raise ProductNotFoundError()
-    return _to_out(row[0], row[1])
+    return _to_out(*row)
 
 
 # Document type -> the word completing «Товар X указан в … дважды».
@@ -189,11 +220,23 @@ def _search_filter_and_order(
 
 
 def search_products(
-    db: Session, q: str | None, include_archived: bool, limit: int, offset: int
+    db: Session,
+    q: str | None,
+    include_archived: bool,
+    limit: int,
+    offset: int,
+    stock_state: Literal["out", "low"] | None = None,
 ) -> ProductPage:
     conditions: list[ColumnElement[bool]] = []
-    if not include_archived:
+    if not include_archived or stock_state is not None:
         conditions.append(Product.is_archived.is_(false()))
+
+    if stock_state == "out":
+        conditions.append(_stock_expr() == 0)
+    elif stock_state == "low":
+        conditions.extend(
+            [Product.min_qty.is_not(None), _stock_expr() > 0, _stock_expr() <= Product.min_qty]
+        )
 
     order_by: list[ColumnElement[object]] = [Product.article_norm]
     if q is not None and q.strip():
@@ -202,14 +245,14 @@ def search_products(
 
     total = db.execute(select(func.count()).select_from(Product).where(*conditions)).scalar_one()
 
-    query: Select[tuple[Product, int]] = (
-        select(Product, _stock_expr())
+    query = (
+        select(Product, _stock_expr(), _avg_cost_expr(), _last_cost_expr())
         .where(*conditions)
         .order_by(*order_by)
         .limit(limit)
         .offset(offset)
     )
-    items = [_to_out(product, stock) for product, stock in db.execute(query).all()]
+    items = [_to_out(*row) for row in db.execute(query).all()]
     return ProductPage(items=items, total=total)
 
 
@@ -217,7 +260,7 @@ def frequent_products(db: Session, limit: int) -> list[ProductOut]:
     """Products by the number of posted sales over the last FREQUENT_PERIOD, then by article."""
     sale_count = func.count(Sale.id.distinct())
     query = (
-        select(Product, _stock_expr())
+        select(Product, _stock_expr(), _avg_cost_expr(), _last_cost_expr())
         .join(SaleLine, SaleLine.product_id == Product.id)
         .join(Sale, Sale.id == SaleLine.sale_id)
         .where(
@@ -229,4 +272,4 @@ def frequent_products(db: Session, limit: int) -> list[ProductOut]:
         .order_by(sale_count.desc(), Product.article_norm, Product.id)
         .limit(limit)
     )
-    return [_to_out(product, stock) for product, stock in db.execute(query).all()]
+    return [_to_out(*row) for row in db.execute(query).all()]

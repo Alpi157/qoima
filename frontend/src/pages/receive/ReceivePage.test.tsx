@@ -55,6 +55,51 @@ afterEach(() => {
 })
 
 describe('ReceivePage', () => {
+  it('opens collapsed extras, marks empty costs and focuses the first on save', async () => {
+    const user = setupUser()
+    const second = makeProduct({ id: 2, article: 'W712' })
+    mockFlowGet({ products: [FILTER, second] })
+    const post = vi.spyOn(api, 'POST')
+    saveDraft({
+      lines: [
+        { productId: 1, qty: 3, cost: '' },
+        { productId: 2, qty: 1, cost: '' },
+      ],
+    })
+    renderReceive()
+    await screen.findByRole('textbox', { name: 'Количество OC-90' })
+    expect(screen.queryByRole('textbox', { name: 'Закупочная цена OC-90' })).toBeNull()
+    await user.click(submitButton())
+    const input = await screen.findByRole('textbox', { name: 'Закупочная цена OC-90' })
+    await waitFor(() => expect(document.activeElement).toBe(input))
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getAllByText('Укажите закупочную цену')).toHaveLength(2)
+    expect(
+      screen.getByRole('button', { name: 'Дополнительно' }).getAttribute('aria-expanded'),
+    ).toBe('true')
+    expect(post).not.toHaveBeenCalled()
+    await fill(user, input, '0')
+    expect(input.getAttribute('aria-invalid')).not.toBe('true')
+    await user.click(submitButton())
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('textbox', { name: 'Закупочная цена W712' }),
+      ),
+    )
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('accepts an explicit zero purchase price from a restored draft', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: [FILTER] })
+    const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt()))
+    saveDraft({ lines: [{ productId: 1, qty: 3, cost: '0' }] })
+    renderReceive()
+    await screen.findByRole('textbox', { name: 'Количество OC-90' })
+    await user.click(submitButton())
+    expect(postBody<ReceiptCreate>(post).lines).toEqual([{ product_id: 1, qty: 3, unit_cost: 0 }])
+  })
+
   it('shows the stock before and after the receiving under a line', async () => {
     const user = setupUser()
     mockFlowGet({ products: [FILTER] })
@@ -119,11 +164,11 @@ describe('ReceivePage', () => {
     await waitFor(() => expect(article.getAttribute('aria-invalid')).toBe('true'))
   })
 
-  it('without «Дополнительно» sends no date, supplier or costs and opens the done screen', async () => {
+  it('a saved purchase price is sent even with extras collapsed', async () => {
     const user = setupUser()
     mockFlowGet({ products: [FILTER] })
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt({ id: 5 })))
-    saveDraft({})
+    saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
     const { router } = renderReceive()
 
     await screen.findByRole('textbox', { name: 'Количество OC-90' })
@@ -131,7 +176,11 @@ describe('ReceivePage', () => {
 
     expect(post.mock.calls[0][0]).toBe('/api/receipts')
     const body = postBody<ReceiptCreate>(post)
-    expect(body).toEqual({ supplier: null, note: null, lines: [{ product_id: 1, qty: 3 }] })
+    expect(body).toEqual({
+      supplier: null,
+      note: null,
+      lines: [{ product_id: 1, qty: 3, unit_cost: 90000 }],
+    })
     expect('received_at' in body).toBe(false)
     await waitFor(() => expect(router.state.location.pathname).toBe('/receive/done/5'))
     expect(storedDraft()).toBeNull()

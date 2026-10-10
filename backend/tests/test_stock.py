@@ -17,7 +17,7 @@ def _stock(db: Session, product_id: int) -> int:
 
 def _receipt(client: TestClient, product_id: int, qty: int) -> dict:
     response = client.post(
-        "/api/receipts", json={"lines": [{"product_id": product_id, "qty": qty}]}
+        "/api/receipts", json={"lines": [{"product_id": product_id, "qty": qty, "unit_cost": 0}]}
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -25,7 +25,8 @@ def _receipt(client: TestClient, product_id: int, qty: int) -> dict:
 
 def _adjust(client: TestClient, product_id: int, qty: int, reason: str = "Пересчёт") -> dict:
     response = client.post(
-        "/api/stock/adjustments", json={"product_id": product_id, "qty": qty, "reason": reason}
+        "/api/stock/adjustments",
+        json={"product_id": product_id, "qty": qty, "reason": reason},
     )
     assert response.status_code == 201, response.text
     return response.json()

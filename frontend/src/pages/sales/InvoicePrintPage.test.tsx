@@ -27,6 +27,7 @@ const SALE = makeSale({
       unit: 'шт',
       qty: 2,
       unit_price: 1250000,
+      unit_cost: null,
       line_total: 2500000,
     },
     {
@@ -36,6 +37,7 @@ const SALE = makeSale({
       unit: 'компл',
       qty: 1,
       unit_price: 180050,
+      unit_cost: null,
       line_total: 180050,
     },
   ],

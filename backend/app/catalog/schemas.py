@@ -14,6 +14,7 @@ Brand = Annotated[Annotated[str, Trimmed, Field(max_length=64)] | None, BlankToN
 Note = Annotated[Annotated[str, Trimmed, Field(max_length=1000)] | None, BlankToNone]
 # Money in tiyn; strict so that 1.5 or "100" is rejected instead of coerced.
 SalePrice = Annotated[int, Field(strict=True, ge=0, le=MAX_SALE_PRICE)]
+MinQty = Annotated[int, Field(strict=True, ge=0, le=2**31 - 1)]
 
 
 class ProductCreate(BaseModel):
@@ -24,6 +25,7 @@ class ProductCreate(BaseModel):
     brand: Brand = None
     unit: Unit = "шт"
     sale_price: SalePrice
+    min_qty: MinQty | None = None
     note: Note = None
 
 
@@ -35,6 +37,7 @@ class ProductUpdate(BaseModel):
     brand: Brand = None
     unit: Unit | None = None
     sale_price: SalePrice | None = None
+    min_qty: MinQty | None = None
     note: Note = None
     is_archived: bool | None = None
 
@@ -59,6 +62,9 @@ class ProductOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     stock: int
+    min_qty: int | None
+    avg_cost: int | None
+    last_cost: int | None
 
 
 class ProductPage(BaseModel):

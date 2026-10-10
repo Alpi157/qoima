@@ -54,7 +54,14 @@ def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
     post_movements(
         db,
         [
-            MovementIn(line.product_id, line.qty, "receipt", doc_type=DOC_TYPE, doc_id=receipt.id)
+            MovementIn(
+                line.product_id,
+                line.qty,
+                "receipt",
+                doc_type=DOC_TYPE,
+                doc_id=receipt.id,
+                unit_cost=line.unit_cost,
+            )
             for line in data.lines
         ],
         user_id,
@@ -192,6 +199,7 @@ def cancel_receipt(db: Session, receipt_id: int, reason: str, user_id: int) -> R
                     doc_type=DOC_TYPE,
                     doc_id=receipt.id,
                     note=reason,
+                    unit_cost=line.unit_cost,
                 )
                 for line in lines
             ],

@@ -93,9 +93,16 @@ test('receiving', async ({ page }) => {
   await snap(page, 'receive-new-product', w)
   await form.getByRole('button', { name: 'Бас тарту' }).click()
 
-  await page.getByRole('button', { name: 'Қосымша' }).click()
+  await page.getByRole('button', { name: 'Қоймаға қосу' }).click()
+  const firstCost = page.getByRole('textbox', { name: 'IKH16TT сатып алу бағасы' })
+  await expect(firstCost).toBeFocused()
+  await expect(firstCost).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Сатып алу бағасын жазыңыз', { exact: true })).toHaveCount(3)
+  await snap(page, 'receive-cost-required', w, { fullPage: false, preserveScroll: true })
   await page.getByRole('textbox', { name: 'Жеткізуші' }).fill('«Автоимпорт» ЖШС')
   await page.getByRole('textbox', { name: 'IKH16TT сатып алу бағасы' }).fill('1100')
+  await page.getByRole('textbox', { name: '15208-65F0E сатып алу бағасы' }).fill('1400')
+  await page.getByRole('textbox', { name: '90915-YZZE1 сатып алу бағасы' }).fill('1500')
   await snap(page, 'receive-extras', w)
 
   await page.getByRole('button', { name: 'Қоймаға қосу' }).click()

@@ -10,7 +10,7 @@ import {
   Title,
 } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
-import { type ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -34,6 +34,7 @@ import { apiErrorText } from '../../i18n/errorText'
 import { nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
 import { unitLabel } from '../../lib/labels'
+import { parseMoney } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
 import { type Product, useRememberProduct } from '../products/api'
 import { usePostReceipt } from '../receipts/api'
@@ -68,6 +69,19 @@ function ReceiveFlow({ userId }: { userId: number }) {
   const [newArticle, setNewArticle] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [saveError, setSaveError] = useState<ReactNode>(null)
+  const [costsSubmitted, setCostsSubmitted] = useState(false)
+  const [focusCostId, setFocusCostId] = useState<number | null>(null)
+  const costInputs = useRef(new Map<number, HTMLInputElement>())
+
+  useEffect(() => {
+    if (focusCostId === null || !value.extrasOpen) return
+    const input = costInputs.current.get(focusCostId)
+    if (input) {
+      input.focus()
+      input.scrollIntoView?.({ block: 'center' })
+      setFocusCostId(null)
+    }
+  }, [focusCostId, value.extrasOpen])
 
   const change = useCallback(
     (changes: Partial<ReceiptDraft>) => {
@@ -121,6 +135,13 @@ function ReceiveFlow({ userId }: { userId: number }) {
 
   const submit = () => {
     if (post.isPending || blockedReason) return
+    setCostsSubmitted(true)
+    const missing = value.lines.find((line) => parseMoney(line.cost) === null)
+    if (missing) {
+      change({ extrasOpen: true })
+      setFocusCostId(missing.productId)
+      return
+    }
     setSaveError(null)
     post.mutate(receiptBody(value), {
       onSuccess: (receipt) => {
@@ -272,6 +293,15 @@ function ReceiveFlow({ userId }: { userId: number }) {
                       <Text c="dimmed">{product.name}</Text>
                     </Stack>
                     <MoneyInput
+                      ref={(input) => {
+                        if (input) costInputs.current.set(product.id, input)
+                        else costInputs.current.delete(product.id)
+                      }}
+                      error={
+                        costsSubmitted && line.cost.trim() === ''
+                          ? t('receive.warn.costRequired')
+                          : undefined
+                      }
                       showHint={false}
                       aria-label={t('receive.extras.costOf', { article: product.article })}
                       value={line.cost}

@@ -40,6 +40,7 @@ def _payment_out(row: tuple[CustomerPayment, Customer, str, str | None]) -> Paym
         customer=PaymentCustomerOut(id=customer.id, name=customer.name, phone=customer.phone),
         paid_at=payment.paid_at,
         amount=payment.amount,
+        payment_method=payment.payment_method,
         note=payment.note,
         status=payment.status,
         cancelled_at=payment.cancelled_at,
@@ -62,6 +63,7 @@ def _existing_payment(db: Session, data: PaymentCreate) -> PaymentOut | None:
     if (
         payment.customer_id != data.customer_id
         or payment.amount != data.amount
+        or payment.payment_method != data.payment_method
         or payment.note != data.note
         or not same_time
     ):
@@ -94,6 +96,7 @@ def post_payment(db: Session, data: PaymentCreate, user_id: int) -> tuple[Paymen
             request_id=data.request_id,
             customer_id=data.customer_id,
             amount=data.amount,
+            payment_method=data.payment_method,
             note=data.note,
             created_by=user_id,
         )

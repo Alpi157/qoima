@@ -2,6 +2,7 @@ import uuid
 from collections import Counter
 from datetime import date
 
+from fastapi.exceptions import RequestValidationError
 from psycopg.errors import UniqueViolation
 from sqlalchemy import BigInteger, ColumnElement, cast, func, select
 from sqlalchemy.exc import IntegrityError
@@ -34,6 +35,7 @@ from app.sales.schemas import (
     SalePage,
     SaleStatus,
 )
+from app.schema_types import PaymentMethod
 
 DOC_TYPE = "sale"
 REQUEST_ID_CONSTRAINT = "uq_sales_request_id"
@@ -48,6 +50,21 @@ def _line_price(line: SaleLineIn, sale_price: int | None) -> int | None:
     if line.unit_price is not None:
         return line.unit_price
     return sale_price if sale_price else None
+
+
+def _payment_method(paid: int, requested: PaymentMethod | None) -> PaymentMethod | None:
+    if paid == 0 and requested is not None:
+        raise RequestValidationError(
+            [
+                {
+                    "type": "payment_method_without_payment",
+                    "loc": ("body", "payment_method"),
+                    "msg": "Способ оплаты можно указать только при оплате больше нуля",
+                    "input": requested,
+                }
+            ]
+        )
+    return (requested or "cash") if paid > 0 else None
 
 
 def _existing_sale(db: Session, data: SaleCreate) -> SaleOut | None:
@@ -78,10 +95,12 @@ def _existing_sale(db: Session, data: SaleCreate) -> SaleOut | None:
     ]
     # Counter, not sorted(): a missing price is None and does not compare with int.
     paid = sale.total if data.paid_amount is None else data.paid_amount
+    payment_method = _payment_method(paid, data.payment_method)
     if (
         sale.customer_id != data.customer_id
         or Counter(map(tuple, stored)) != Counter(requested)
         or sale.paid_at_sale != paid
+        or sale.payment_method != payment_method
     ):
         raise SaleRequestConflictError()
     return get_sale(db, sale.id)
@@ -124,6 +143,7 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
     ]
     total = sum(line.line_total for line in sale_lines)
     paid = total if data.paid_amount is None else data.paid_amount
+    payment_method = _payment_method(paid, data.payment_method)
     if paid > total:
         raise PaidExceedsTotalError(params={"total": total, "paid": paid})
     if paid < total and data.customer_id is None:
@@ -135,6 +155,7 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         note=data.note,
         total=total,
         paid_at_sale=paid,
+        payment_method=payment_method,
         created_by=user_id,
     )
     if data.sold_at is not None:
@@ -144,8 +165,7 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
 
     for line in sale_lines:
         line.sale_id = sale.id
-    db.add_all(sale_lines)
-    post_movements(
+    movements = post_movements(
         db,
         [
             MovementIn(line.product_id, -line.qty, "sale", doc_type=DOC_TYPE, doc_id=sale.id)
@@ -153,6 +173,9 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         ],
         user_id,
     )
+    for line, movement in zip(sale_lines, movements, strict=True):
+        line.unit_cost = movement.unit_cost
+    db.add_all(sale_lines)
     return sale
 
 
@@ -202,6 +225,7 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
             unit=unit,
             qty=line.qty,
             unit_price=line.unit_price,
+            unit_cost=line.unit_cost,
             line_total=line.line_total,
         )
         for line, article, name, unit in db.execute(
@@ -232,6 +256,7 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
         lines=lines,
         total=sale.total,
         paid_at_sale=sale.paid_at_sale,
+        payment_method=sale.payment_method,
         debt_at_sale=sale.total - sale.paid_at_sale,
     )
 
@@ -283,6 +308,7 @@ def list_sales(
             totals.c.total_qty,
             Sale.total,
             Sale.paid_at_sale,
+            Sale.payment_method,
             (Sale.total - Sale.paid_at_sale).label("debt_at_sale"),
         )
         .join(totals, totals.c.sale_id == Sale.id)
@@ -326,6 +352,7 @@ def cancel_sale(db: Session, sale_id: int, reason: str, user_id: int) -> SaleOut
                 doc_type=DOC_TYPE,
                 doc_id=sale.id,
                 note=reason,
+                unit_cost=line.unit_cost,
             )
             for line in lines
         ],

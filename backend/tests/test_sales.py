@@ -111,6 +111,7 @@ def test_post_sale_decreases_stock(
             "unit": "шт",
             "qty": 3,
             "unit_price": 250_000,
+            "unit_cost": None,
             "line_total": 750_000,
         },
         {
@@ -120,6 +121,7 @@ def test_post_sale_decreases_stock(
             "unit": "шт",
             "qty": 2,
             "unit_price": 99_950,
+            "unit_cost": None,
             "line_total": 199_900,
         },
     ]
@@ -628,6 +630,7 @@ def test_list_sales(
         "total_qty": 5,
         "total": 500_300,
         "paid_at_sale": 500_300,
+        "payment_method": "cash",
         "debt_at_sale": 0,
     }
     assert body["items"][0]["customer_name"] is None

@@ -47,3 +47,13 @@ class MovementPage(BaseModel):
 class AdjustmentOut(BaseModel):
     movement: MovementOut
     stock: int
+
+
+class StockSummary(BaseModel):
+    products_count: int
+    total_qty: int
+    cost_value: int
+    retail_value: int
+    unknown_cost_count: int
+    out_of_stock_count: int
+    low_stock_count: int

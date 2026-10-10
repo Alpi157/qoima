@@ -17,6 +17,7 @@ from app.errors import ErrorOut, register_exception_handlers
 from app.inventory import router as inventory_router
 from app.payments import router as payments_router
 from app.receipts import router as receipts_router
+from app.reports import router as reports_router
 from app.sales import router as sales_router
 from app.settings import router as settings_router
 
@@ -54,6 +55,7 @@ protected_api.include_router(sales_router.router)
 protected_api.include_router(payments_router.router)
 protected_api.include_router(inventory_router.router)
 protected_api.include_router(settings_router.router)
+protected_api.include_router(reports_router.router)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

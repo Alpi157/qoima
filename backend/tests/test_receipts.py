@@ -71,7 +71,7 @@ def test_post_receipt_increases_stock(
         auth_client,
         [
             {"product_id": oc.id, "qty": 10, "unit_cost": 150_000},
-            {"product_id": bosch.id, "qty": 3},
+            {"product_id": bosch.id, "qty": 3, "unit_cost": 0},
         ],
         supplier="  Начальные остатки ",
         note="",
@@ -97,7 +97,7 @@ def test_post_receipt_increases_stock(
             "article": "0986.452.041",
             "name": "Фильтр Bosch",
             "qty": 3,
-            "unit_cost": None,
+            "unit_cost": 0,
         },
     ]
     assert body["total_qty"] == 13
@@ -109,7 +109,7 @@ def test_receipt_movements_reference_the_document(
     auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    body = _post(auth_client, [{"product_id": oc.id, "qty": 2}])
+    body = _post(auth_client, [{"product_id": oc.id, "qty": 2, "unit_cost": 0}])
 
     movement = db_session.execute(
         select(StockMovement).where(StockMovement.product_id == oc.id)
@@ -124,18 +124,24 @@ def test_receipt_movements_reference_the_document(
 
 def test_receipt_number_grows(auth_client: TestClient, products: tuple[Product, Product]) -> None:
     oc, _ = products
-    first = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
-    second = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    first = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_cost": 0}])
+    second = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_cost": 0}])
     assert second["number"] > first["number"]
 
 
-def test_total_cost_is_null_without_prices(
+def test_total_cost_is_zero_for_zero_prices(
     auth_client: TestClient, products: tuple[Product, Product]
 ) -> None:
     oc, bosch = products
-    body = _post(auth_client, [{"product_id": oc.id, "qty": 2}, {"product_id": bosch.id, "qty": 5}])
+    body = _post(
+        auth_client,
+        [
+            {"product_id": oc.id, "qty": 2, "unit_cost": 0},
+            {"product_id": bosch.id, "qty": 5, "unit_cost": 0},
+        ],
+    )
     assert body["total_qty"] == 7
-    assert body["total_cost"] is None
+    assert body["total_cost"] == 0
 
 
 def test_zero_unit_cost_counts_as_price(
@@ -151,7 +157,9 @@ def test_received_at_in_the_past_is_kept(
 ) -> None:
     oc, _ = products
     body = _post(
-        auth_client, [{"product_id": oc.id, "qty": 1}], received_at="2026-01-05T10:00:00+05:00"
+        auth_client,
+        [{"product_id": oc.id, "qty": 1, "unit_cost": 0}],
+        received_at="2026-01-05T10:00:00+05:00",
     )
     assert datetime.fromisoformat(body["received_at"]) == datetime(2026, 1, 5, 5, tzinfo=UTC)
 
@@ -163,7 +171,8 @@ def test_received_at_in_the_future_rejected(
     future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
 
     response = auth_client.post(
-        "/api/receipts", json={"lines": [{"product_id": oc.id, "qty": 1}], "received_at": future}
+        "/api/receipts",
+        json={"lines": [{"product_id": oc.id, "qty": 1, "unit_cost": 0}], "received_at": future},
     )
 
     assert response.status_code == 422
@@ -175,18 +184,21 @@ def test_received_at_in_the_future_rejected(
     [
         {},
         {"lines": []},
-        {"lines": [{"product_id": 1, "qty": 1}] * 201},
-        {"lines": [{"product_id": 1, "qty": 0}]},
-        {"lines": [{"product_id": 1, "qty": 100_001}]},
-        {"lines": [{"product_id": 1, "qty": 1.5}]},
-        {"lines": [{"product_id": 1, "qty": "1"}]},
+        {"lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}] * 201},
+        {"lines": [{"product_id": 1, "qty": 0, "unit_cost": 0}]},
+        {"lines": [{"product_id": 1, "qty": 100_001, "unit_cost": 0}]},
+        {"lines": [{"product_id": 1, "qty": 1.5, "unit_cost": 0}]},
+        {"lines": [{"product_id": 1, "qty": "1", "unit_cost": 0}]},
         {"lines": [{"product_id": 1, "qty": 1, "unit_cost": -1}]},
         {"lines": [{"product_id": 1, "qty": 1, "unit_cost": 10.5}]},
-        {"lines": [{"product_id": 1, "qty": 1, "extra": 1}]},
-        {"lines": [{"product_id": 1, "qty": 1}], "status": "cancelled"},
-        {"lines": [{"product_id": 1, "qty": 1}], "supplier": "a" * 256},
-        {"lines": [{"product_id": 1, "qty": 1}], "note": "a" * 1001},
-        {"lines": [{"product_id": 1, "qty": 1}], "received_at": "2026-01-05T10:00:00"},
+        {"lines": [{"product_id": 1, "qty": 1, "extra": 1, "unit_cost": 0}]},
+        {"lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}], "status": "cancelled"},
+        {"lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}], "supplier": "a" * 256},
+        {"lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}], "note": "a" * 1001},
+        {
+            "lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}],
+            "received_at": "2026-01-05T10:00:00",
+        },
     ],
 )
 def test_post_receipt_validation(auth_client: TestClient, payload: dict[str, object]) -> None:
@@ -199,7 +211,12 @@ def test_duplicate_product_rejected(
     oc, _ = products
     response = auth_client.post(
         "/api/receipts",
-        json={"lines": [{"product_id": oc.id, "qty": 1}, {"product_id": oc.id, "qty": 2}]},
+        json={
+            "lines": [
+                {"product_id": oc.id, "qty": 1, "unit_cost": 0},
+                {"product_id": oc.id, "qty": 2, "unit_cost": 0},
+            ]
+        },
     )
     assert response.status_code == 422
     assert response.json() == {
@@ -216,7 +233,12 @@ def test_missing_product_rejected(
     oc, _ = products
     response = auth_client.post(
         "/api/receipts",
-        json={"lines": [{"product_id": oc.id, "qty": 1}, {"product_id": 999999999, "qty": 1}]},
+        json={
+            "lines": [
+                {"product_id": oc.id, "qty": 1, "unit_cost": 0},
+                {"product_id": 999999999, "qty": 1, "unit_cost": 0},
+            ]
+        },
     )
     assert response.status_code == 422
     assert response.json() == {
@@ -229,7 +251,7 @@ def test_missing_product_rejected(
 def test_archived_product_rejected(auth_client: TestClient, db_session: Session) -> None:
     product = create_product(db_session, article="ARH-1", is_archived=True)
     response = auth_client.post(
-        "/api/receipts", json={"lines": [{"product_id": product.id, "qty": 1}]}
+        "/api/receipts", json={"lines": [{"product_id": product.id, "qty": 1, "unit_cost": 0}]}
     )
     assert response.status_code == 409
     assert response.json() == {
@@ -257,11 +279,14 @@ def test_list_receipts(auth_client: TestClient, products: tuple[Product, Product
     oc, bosch = products
     old = _post(
         auth_client,
-        [{"product_id": oc.id, "qty": 2, "unit_cost": 100}, {"product_id": bosch.id, "qty": 3}],
+        [
+            {"product_id": oc.id, "qty": 2, "unit_cost": 100},
+            {"product_id": bosch.id, "qty": 3, "unit_cost": 0},
+        ],
         supplier="Поставщик",
         received_at="2026-01-05T10:00:00+05:00",
     )
-    new = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    new = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_cost": 0}])
     auth_client.post(f"/api/receipts/{new['id']}/cancel", json={"reason": "Ошибка ввода"})
 
     body = auth_client.get("/api/receipts").json()
@@ -278,7 +303,7 @@ def test_list_receipts(auth_client: TestClient, products: tuple[Product, Product
         "total_qty": 5,
         "total_cost": 200,
     }
-    assert body["items"][0]["total_cost"] is None
+    assert body["items"][0]["total_cost"] == 0
 
     posted = auth_client.get("/api/receipts", params={"status": "posted"}).json()
     assert [r["id"] for r in posted["items"]] == [old["id"]]
@@ -296,7 +321,8 @@ def test_same_received_at_sorted_by_id(
     oc, _ = products
     at = "2026-02-01T12:00:00+05:00"
     ids = [
-        _post(auth_client, [{"product_id": oc.id, "qty": 1}], received_at=at)["id"] for _ in "ab"
+        _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_cost": 0}], received_at=at)["id"]
+        for _ in "ab"
     ]
     body = auth_client.get("/api/receipts").json()
     assert [r["id"] for r in body["items"]] == ids[::-1]
@@ -323,7 +349,9 @@ def test_date_filter_uses_almaty_days(
     oc, _ = products
     # 23:30 in Almaty is 18:30 UTC of the same day.
     receipt = _post(
-        auth_client, [{"product_id": oc.id, "qty": 1}], received_at="2026-03-10T23:30:00+05:00"
+        auth_client,
+        [{"product_id": oc.id, "qty": 1, "unit_cost": 0}],
+        received_at="2026-03-10T23:30:00+05:00",
     )
 
     body = auth_client.get("/api/receipts", params=params).json()
@@ -341,7 +369,11 @@ def test_cancel_receipt_returns_stock(
 ) -> None:
     oc, bosch = products
     receipt = _post(
-        auth_client, [{"product_id": oc.id, "qty": 4}, {"product_id": bosch.id, "qty": 2}]
+        auth_client,
+        [
+            {"product_id": oc.id, "qty": 4, "unit_cost": 0},
+            {"product_id": bosch.id, "qty": 2, "unit_cost": 0},
+        ],
     )
 
     response = auth_client.post(
@@ -367,7 +399,7 @@ def test_cancelled_by_name_is_the_user_who_cancelled(
     auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 4}])
+    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 4, "unit_cost": 0}])
     assert receipt["cancelled_by_name"] is None
 
     _login_as(auth_client, db_session, "Второй")
@@ -384,7 +416,7 @@ def test_cancel_twice_rejected(
     auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 4}])
+    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 4, "unit_cost": 0}])
     url = f"/api/receipts/{receipt['id']}/cancel"
     assert auth_client.post(url, json={"reason": "Ошибка"}).status_code == 200
 
@@ -405,7 +437,11 @@ def test_cancel_after_sale_rejected(
 ) -> None:
     oc, bosch = products
     receipt = _post(
-        auth_client, [{"product_id": oc.id, "qty": 5}, {"product_id": bosch.id, "qty": 2}]
+        auth_client,
+        [
+            {"product_id": oc.id, "qty": 5, "unit_cost": 0},
+            {"product_id": bosch.id, "qty": 2, "unit_cost": 0},
+        ],
     )
     seller = create_user(db_session)
     post_movements(db_session, [MovementIn(oc.id, -3, "sale")], seller.id)
@@ -432,6 +468,6 @@ def test_cancel_requires_reason(
     auth_client: TestClient, products: tuple[Product, Product], payload: dict[str, str]
 ) -> None:
     oc, _ = products
-    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    receipt = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_cost": 0}])
     response = auth_client.post(f"/api/receipts/{receipt['id']}/cancel", json=payload)
     assert response.status_code == 422

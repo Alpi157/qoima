@@ -75,7 +75,7 @@ export function receiptLineWarning(line: ReceiptDraftLine): string | null {
   return null
 }
 
-/** Request body: optional fields only when filled in; no date means «now» on the server. */
+/** Request body after required costs have been checked; no date means now on the server. */
 export function receiptBody(draft: ReceiptDraft): ReceiptCreate {
   const receivedAt = draft.receivedAt === null ? null : localInputToIso(draft.receivedAt)
   return {
@@ -84,10 +84,11 @@ export function receiptBody(draft: ReceiptDraft): ReceiptCreate {
     ...(receivedAt !== null ? { received_at: receivedAt } : {}),
     lines: draft.lines.map((line) => {
       const cost = parseMoney(line.cost)
+      if (cost === null) throw new Error(i18n.t('receive.warn.costRequired'))
       return {
         product_id: line.productId,
         qty: line.qty as number,
-        ...(cost !== null ? { unit_cost: cost } : {}),
+        unit_cost: cost,
       }
     }),
   }

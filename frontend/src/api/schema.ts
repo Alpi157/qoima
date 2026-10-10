@@ -369,6 +369,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stock/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stock Summary */
+        get: operations["stock_summary_api_stock_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stock/adjustments": {
         parameters: {
             query?: never;
@@ -414,6 +431,57 @@ export interface paths {
         get: operations["get_settings_api_settings_get"];
         /** Update Settings */
         put: operations["update_settings_api_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_reports_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Products */
+        get: operations["products_api_reports_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customers */
+        get: operations["customers_api_reports_customers_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -519,6 +587,26 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** CustomerReportItem */
+        CustomerReportItem: {
+            /** Customer Id */
+            customer_id: number | null;
+            /** Name */
+            name: string | null;
+            /** Sales Count */
+            sales_count: number;
+            /** Revenue */
+            revenue: number;
+            /** Profit */
+            profit: number;
+        };
+        /** CustomerReportPage */
+        CustomerReportPage: {
+            /** Items */
+            items: components["schemas"]["CustomerReportItem"][];
+            /** Total */
+            total: number;
+        };
         /** CustomerUpdate */
         CustomerUpdate: {
             /** Name */
@@ -527,6 +615,18 @@ export interface components {
             phone?: string | null;
             /** Note */
             note?: string | null;
+        };
+        /** DayOut */
+        DayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Revenue */
+            revenue: number;
+            /** Profit */
+            profit: number;
         };
         /**
          * ErrorCode
@@ -585,6 +685,8 @@ export interface components {
             amount: number;
             /** Paid At Sale */
             paid_at_sale: number | null;
+            /** Payment Method */
+            payment_method: ("cash" | "card") | null;
             /** Debt Change */
             debt_change: number;
             /** Debt After */
@@ -653,6 +755,12 @@ export interface components {
             customer_id: number;
             /** Amount */
             amount: number;
+            /**
+             * Payment Method
+             * @default cash
+             * @enum {string}
+             */
+            payment_method: "cash" | "card";
             /** Paid At */
             paid_at?: string | null;
             /** Note */
@@ -686,6 +794,11 @@ export interface components {
             paid_at: string;
             /** Amount */
             amount: number;
+            /**
+             * Payment Method
+             * @enum {string}
+             */
+            payment_method: "cash" | "card";
             /** Note */
             note: string | null;
             /**
@@ -731,6 +844,8 @@ export interface components {
             unit: string;
             /** Sale Price */
             sale_price: number;
+            /** Min Qty */
+            min_qty?: number | null;
             /** Note */
             note?: string | null;
         };
@@ -766,11 +881,45 @@ export interface components {
             updated_at: string;
             /** Stock */
             stock: number;
+            /** Min Qty */
+            min_qty: number | null;
+            /** Avg Cost */
+            avg_cost: number | null;
+            /** Last Cost */
+            last_cost: number | null;
         };
         /** ProductPage */
         ProductPage: {
             /** Items */
             items: components["schemas"]["ProductOut"][];
+            /** Total */
+            total: number;
+        };
+        /** ProductReportItem */
+        ProductReportItem: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Revenue */
+            revenue: number;
+            /** Cost */
+            cost: number;
+            /** Profit */
+            profit: number;
+            /** Revenue Unknown Cost */
+            revenue_unknown_cost: number;
+        };
+        /** ProductReportPage */
+        ProductReportPage: {
+            /** Items */
+            items: components["schemas"]["ProductReportItem"][];
             /** Total */
             total: number;
         };
@@ -786,6 +935,8 @@ export interface components {
             unit?: string | null;
             /** Sale Price */
             sale_price?: number | null;
+            /** Min Qty */
+            min_qty?: number | null;
             /** Note */
             note?: string | null;
             /** Is Archived */
@@ -814,7 +965,7 @@ export interface components {
             /** Qty */
             qty: number;
             /** Unit Cost */
-            unit_cost?: number | null;
+            unit_cost: number;
         };
         /** ReceiptLineOut */
         ReceiptLineOut: {
@@ -901,6 +1052,15 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ReceivedOut */
+        ReceivedOut: {
+            /** Cash */
+            cash: number;
+            /** Card */
+            card: number;
+            /** Total */
+            total: number;
+        };
         /** SaleCancel */
         SaleCancel: {
             /** Reason */
@@ -917,6 +1077,8 @@ export interface components {
             customer_id?: number | null;
             /** Paid Amount */
             paid_amount?: number | null;
+            /** Payment Method */
+            payment_method?: ("cash" | "card") | null;
             /** Sold At */
             sold_at?: string | null;
             /** Note */
@@ -956,6 +1118,8 @@ export interface components {
             qty: number;
             /** Unit Price */
             unit_price: number;
+            /** Unit Cost */
+            unit_cost: number | null;
             /** Line Total */
             line_total: number;
         };
@@ -985,6 +1149,8 @@ export interface components {
             total: number;
             /** Paid At Sale */
             paid_at_sale: number;
+            /** Payment Method */
+            payment_method: ("cash" | "card") | null;
             /** Debt At Sale */
             debt_at_sale: number;
         };
@@ -1031,6 +1197,8 @@ export interface components {
             total: number;
             /** Paid At Sale */
             paid_at_sale: number;
+            /** Payment Method */
+            payment_method: ("cash" | "card") | null;
             /** Debt At Sale */
             debt_at_sale: number;
         };
@@ -1042,6 +1210,41 @@ export interface components {
             total: number;
             /** Sum Posted */
             sum_posted: number;
+        };
+        /** StockSummary */
+        StockSummary: {
+            /** Products Count */
+            products_count: number;
+            /** Total Qty */
+            total_qty: number;
+            /** Cost Value */
+            cost_value: number;
+            /** Retail Value */
+            retail_value: number;
+            /** Unknown Cost Count */
+            unknown_cost_count: number;
+            /** Out Of Stock Count */
+            out_of_stock_count: number;
+            /** Low Stock Count */
+            low_stock_count: number;
+        };
+        /** SummaryOut */
+        SummaryOut: {
+            /** Revenue */
+            revenue: number;
+            /** Sales Count */
+            sales_count: number;
+            /** Cost */
+            cost: number;
+            /** Profit */
+            profit: number;
+            /** Revenue Unknown Cost */
+            revenue_unknown_cost: number;
+            /** Debt Given */
+            debt_given: number;
+            received: components["schemas"]["ReceivedOut"];
+            /** Days */
+            days: components["schemas"]["DayOut"][];
         };
         /** UserOut */
         UserOut: {
@@ -1235,6 +1438,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 include_archived?: boolean;
+                stock_state?: ("out" | "low") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -2045,6 +2249,35 @@ export interface operations {
             };
         };
     };
+    stock_summary_api_stock_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockSummary"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     create_adjustment_api_stock_adjustments_post: {
         parameters: {
             query?: never;
@@ -2161,6 +2394,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BusinessSettingsOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    summary_api_reports_summary_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    products_api_reports_products_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductReportPage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    customers_api_reports_customers_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerReportPage"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

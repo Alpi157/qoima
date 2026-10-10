@@ -28,6 +28,8 @@ from app.catalog.schemas import ProductCreate, ProductUpdate
 from app.config import get_settings
 from app.customers import service as customers_service
 from app.customers.schemas import CustomerCreate
+from app.inventory.schemas import AdjustmentCreate
+from app.inventory.service import create_adjustment
 from app.payments import service as payments_service
 from app.payments.schemas import PaymentCreate
 from app.receipts import service as receipts_service
@@ -55,18 +57,19 @@ class DemoProduct:
     price_tenge: int
     initial_qty: int  # 0: never received, stays out of stock
     archived: bool = False
+    min_qty: int | None = None
 
 
 PRODUCTS = [
     DemoProduct("12686362 41-157", "Свеча зажигания", "BMW", 1800, 24),
-    DemoProduct("IKH16TT", "Свеча зажигания иридиевая", "Denso", 1500, 40),
+    DemoProduct("IKH16TT", "Свеча зажигания иридиевая", "Denso", 1500, 40, min_qty=10),
     DemoProduct("IKH20TT", "Свеча зажигания иридиевая", "Denso", 1500, 36),
     DemoProduct("IXEH22TT", "Свеча зажигания иридиевая", "Denso", 1700, 20),
     DemoProduct("L3Y2-18-110", "Свеча зажигания", "Mazda", 1300, 30),
     DemoProduct("PE5R-18-110", "Свеча зажигания", "Mazda", 1400, 28),
     DemoProduct("22401-ED815", "Свеча зажигания", "Nissan", 1200, 32),
-    DemoProduct("22401-8H515", "Свеча зажигания", "Nissan", 1250, 10),
-    DemoProduct("L3Y4-18-110", "Свеча зажигания", "Mazda", 1350, 0),
+    DemoProduct("22401-8H515", "Свеча зажигания", "Nissan", 1250, 10, min_qty=3),
+    DemoProduct("L3Y4-18-110", "Свеча зажигания", "Mazda", 1350, 0, min_qty=5),
     DemoProduct("15208-65F0E", "Фильтр масляный", "Nissan", 2400, 18),
     DemoProduct("90915-YZZE1", "Фильтр масляный", "Toyota", 2600, 22),
     DemoProduct("26300-35505", "Фильтр масляный", "Hyundai", 2200, 15),
@@ -127,10 +130,11 @@ SALES = [
 # Deliveries after the opening balance:
 # (days ago, (hour, minute), supplier, [(article, qty, unit cost in tenge)]).
 RECEIPTS = [
-    (8, (9, 30), "«Автоимпорт» ЖШС", [("IKH16TT", 10, 1100), ("15208-65F0E", 6, 1700)]),
-    (5, (16, 45), "«Жапон Авто» ЖШС", [("04465-33471", 4, 12000), ("58101-2SA70", 3, 11000)]),
-    (2, (11, 20), "«Автоимпорт» ЖШС", [("90915-YZZE1", 10, 1900), ("26300-35505", 6, 1500)]),
+    (8, (9, 30), "«Автоимпорт» ЖШС", [("IKH16TT", 10, 900), ("15208-65F0E", 6, 1400)]),
+    (5, (16, 45), "«Жапон Авто» ЖШС", [("04465-33471", 4, 9600), ("58101-2SA70", 3, 8600)]),
+    (2, (11, 20), "«Автоимпорт» ЖШС", [("90915-YZZE1", 10, 1500), ("26300-35505", 6, 1250)]),
 ]
+UNKNOWN_COST_ARTICLE = "28113-2S000"
 OPENING_SUPPLIER = "Бастапқы қалдық"
 OPENING_TIME = (11, (9, 0))
 
@@ -196,6 +200,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 name=item.name,
                 brand=item.brand,
                 sale_price=item.price_tenge * 100,
+                min_qty=item.min_qty,
             ),
         )
         product_ids[item.article] = product.id
@@ -212,10 +217,25 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
             note=OPENING_SUPPLIER,
             received_at=_local_time(now, *OPENING_TIME),
             lines=[
-                ReceiptLineIn(product_id=product_ids[item.article], qty=item.initial_qty)
+                ReceiptLineIn(
+                    product_id=product_ids[item.article],
+                    qty=item.initial_qty,
+                    unit_cost=item.price_tenge * 55,
+                )
                 for item in PRODUCTS
-                if item.initial_qty > 0
+                if item.initial_qty > 0 and item.article != UNKNOWN_COST_ARTICLE
             ],
+        ),
+        user.id,
+    )
+
+    unknown = next(item for item in PRODUCTS if item.article == UNKNOWN_COST_ARTICLE)
+    create_adjustment(
+        db,
+        AdjustmentCreate(
+            product_id=product_ids[unknown.article],
+            qty=unknown.initial_qty,
+            reason="Начальные остатки без закупочной цены",
         ),
         user.id,
     )
@@ -253,6 +273,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                     if number in debt_sale_indices
                     else None
                 ),
+                payment_method="card" if number % 2 else "cash",
                 sold_at=_local_time(now, days_ago, at),
                 lines=[
                     SaleLineIn(product_id=product_ids[article], qty=qty) for article, qty in lines
@@ -268,6 +289,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 request_id=uuid.uuid5(_REQUEST_NS, f"payment-{number}"),
                 customer_id=customer_ids[SALES[number][2]],
                 amount=amount,
+                payment_method="card" if number == 4 else "cash",
                 paid_at=_local_time(now, 1, (16, 30)),
             ),
             user.id,

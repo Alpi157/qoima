@@ -257,7 +257,12 @@ def test_debts_order_and_page_totals(
 def test_payment_database_check(db_session: Session, debt_case: tuple[int, int]) -> None:
     customer_id, _ = debt_case
     customer_payment = CustomerPayment(
-        number=1000, request_id=uuid.uuid4(), customer_id=customer_id, amount=0, created_by=1
+        number=1000,
+        request_id=uuid.uuid4(),
+        customer_id=customer_id,
+        amount=0,
+        created_by=1,
+        payment_method="cash",
     )
     nested = db_session.begin_nested()
     db_session.add(customer_payment)
@@ -324,6 +329,7 @@ def test_parallel_payments_cannot_overpay(committed_debt_case: tuple[int, int]) 
                     request_id=uuid.uuid4(),
                     customer_id=customer_id,
                     amount=70,
+                    payment_method="cash",
                     created_by=user_id,
                 )
             )

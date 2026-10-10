@@ -69,8 +69,9 @@ def test_old_sales_backfill_and_roundtrip() -> None:
                 conn.execute(
                     text(
                         "INSERT INTO sales "
-                        "(number,request_id,customer_id,total,paid_at_sale,created_by) "
-                        "VALUES (:number,:request_id,:customer_id,12345,:paid,:user_id)"
+                        "(number,request_id,customer_id,total,paid_at_sale,"
+                        "created_by,payment_method) "
+                        "VALUES (:number,:request_id,:customer_id,12345,:paid,:user_id,'cash')"
                     ),
                     {
                         "number": 9_200_000_000 + paid + (target_customer or 0),

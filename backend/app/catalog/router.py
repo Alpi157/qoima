@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
@@ -13,11 +15,12 @@ router = APIRouter(prefix="/products", tags=["products"])
 def search_products(
     q: str | None = None,
     include_archived: bool = False,
+    stock_state: Literal["out", "low"] | None = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> ProductPage:
-    return service.search_products(db, q, include_archived, limit, offset)
+    return service.search_products(db, q, include_archived, limit, offset, stock_state)
 
 
 # Declared before /{product_id}, which would otherwise take "frequent" for an id.

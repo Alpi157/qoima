@@ -57,6 +57,7 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
         request_id: requestId,
         customer_id: customer.id,
         amount: tiyn,
+        payment_method: 'cash',
         paid_at: iso,
         note: note.trim() || null,
       },

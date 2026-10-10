@@ -227,6 +227,7 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             Sale.created_at,
             Sale.total.label("amount"),
             Sale.paid_at_sale,
+            Sale.payment_method,
             (Sale.total - Sale.paid_at_sale).label("debt_change"),
         ).where(Sale.customer_id == customer_id, Sale.status == "posted"),
         select(
@@ -237,6 +238,7 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             CustomerPayment.created_at,
             CustomerPayment.amount.label("amount"),
             literal(None, type_=BigInteger).label("paid_at_sale"),
+            CustomerPayment.payment_method,
             (-CustomerPayment.amount).label("debt_change"),
         ).where(CustomerPayment.customer_id == customer_id, CustomerPayment.status == "posted"),
     ).subquery()
@@ -248,6 +250,7 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
         entries.c.created_at,
         entries.c.amount,
         entries.c.paid_at_sale,
+        entries.c.payment_method,
         entries.c.debt_change,
         cast(
             func.sum(entries.c.debt_change).over(
