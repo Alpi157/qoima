@@ -17,6 +17,7 @@ from app.reports.schemas import (
     ReceivedOut,
     SummaryOut,
 )
+from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
 
 
@@ -44,15 +45,11 @@ def _local_date(column):
 
 
 def _sales_source(date_from: date, date_to: date):
-    """Shared report facts. Step 17.3 adds signed return rows here, before aggregation.
-
-    Return rows must subtract revenue, known cost/profit and unknown-cost revenue
-    using the original sale-line snapshot. No return tables exist in step 17.2a.
-    """
+    """Signed line facts, dated by the sale or return that produced them."""
     known = SaleLine.unit_cost.is_not(None)
     revenue = cast(SaleLine.line_total, Numeric)
     cost = cast(SaleLine.qty, Numeric) * SaleLine.unit_cost
-    return (
+    sales = (
         select(
             Sale.id.label("sale_id"),
             Sale.customer_id,
@@ -63,54 +60,42 @@ def _sales_source(date_from: date, date_to: date):
             case((known, cost), else_=0).label("cost"),
             case((known, revenue - cost), else_=0).label("profit"),
             case((known, 0), else_=revenue).label("revenue_unknown_cost"),
+            literal(True).label("is_sale"),
+            literal(0).label("defect_loss"),
         )
         .join(Sale, Sale.id == SaleLine.sale_id)
         .where(Sale.status == "posted", *local_date_range(Sale.sold_at, date_from, date_to))
-        .subquery()
     )
+    known_return = SaleReturnLine.unit_cost.is_not(None)
+    good = SaleReturnLine.condition == "good"
+    return_revenue = cast(SaleReturnLine.line_total, Numeric)
+    return_cost = cast(SaleReturnLine.qty, Numeric) * SaleReturnLine.unit_cost
+    returns = (
+        select(
+            SaleReturn.sale_id,
+            SaleReturn.customer_id,
+            SaleReturnLine.product_id,
+            _local_date(SaleReturn.returned_at),
+            -SaleReturnLine.qty,
+            -return_revenue,
+            case((known_return & good, -return_cost), else_=0),
+            case((known_return, -return_revenue + case((good, return_cost), else_=0)), else_=0),
+            case((known_return, 0), else_=-return_revenue),
+            literal(False),
+            case((known_return & ~good, return_cost), else_=0),
+        )
+        .join(SaleReturn, SaleReturn.id == SaleReturnLine.return_id)
+        .where(
+            SaleReturn.status == "posted",
+            *local_date_range(SaleReturn.returned_at, date_from, date_to),
+        )
+    )
+    return union_all(sales, returns).subquery()
 
 
 def summary(db: Session, date_from: date, date_to: date) -> SummaryOut:
     validate_period(date_from, date_to)
     source = _sales_source(date_from, date_to)
-    lines = (
-        select(
-            source.c.sale_id,
-            func.sum(source.c.revenue).label("revenue"),
-            func.sum(source.c.cost).label("cost"),
-            func.sum(source.c.profit).label("profit"),
-            func.sum(source.c.revenue_unknown_cost).label("revenue_unknown_cost"),
-        )
-        .group_by(source.c.sale_id)
-        .subquery()
-    )
-    # One row per document: joining its lines cannot multiply its payment or debt.
-    sales = select(
-        _local_date(Sale.sold_at).label("date"),
-        lines.c.revenue,
-        literal(1).label("sales_count"),
-        lines.c.cost,
-        lines.c.profit,
-        lines.c.revenue_unknown_cost,
-        (Sale.total - Sale.paid_at_sale).label("debt_given"),
-        case((Sale.payment_method == "cash", Sale.paid_at_sale), else_=0).label("cash"),
-        case((Sale.payment_method == "card", Sale.paid_at_sale), else_=0).label("card"),
-    ).join(lines, lines.c.sale_id == Sale.id)
-    payments = select(
-        _local_date(CustomerPayment.paid_at).label("date"),
-        literal(0),
-        literal(0),
-        literal(0),
-        literal(0),
-        literal(0),
-        literal(0),
-        case((CustomerPayment.payment_method == "cash", CustomerPayment.amount), else_=0),
-        case((CustomerPayment.payment_method == "card", CustomerPayment.amount), else_=0),
-    ).where(
-        CustomerPayment.status == "posted",
-        *local_date_range(CustomerPayment.paid_at, date_from, date_to),
-    )
-    facts = union_all(sales, payments).subquery()
     fields = (
         "revenue",
         "sales_count",
@@ -120,7 +105,48 @@ def summary(db: Session, date_from: date, date_to: date) -> SummaryOut:
         "debt_given",
         "cash",
         "card",
+        "returns_total",
+        "returns_count",
+        "defect_loss",
     )
+    line_fields = {"revenue", "cost", "profit", "revenue_unknown_cost", "defect_loss"}
+    lines = select(
+        source.c.date,
+        *(
+            (func.sum(source.c[field]) if field in line_fields else literal(0)).label(field)
+            for field in fields
+        ),
+    ).group_by(source.c.date)
+
+    def document_facts(model, moment, **values):
+        return select(
+            _local_date(moment).label("date"),
+            *(values.get(field, literal(0)).label(field) for field in fields),
+        ).where(model.status == "posted", *local_date_range(moment, date_from, date_to))
+
+    sales = document_facts(
+        Sale,
+        Sale.sold_at,
+        sales_count=literal(1),
+        debt_given=Sale.total - Sale.paid_at_sale,
+        cash=case((Sale.payment_method == "cash", Sale.paid_at_sale), else_=0),
+        card=case((Sale.payment_method == "card", Sale.paid_at_sale), else_=0),
+    )
+    payments = document_facts(
+        CustomerPayment,
+        CustomerPayment.paid_at,
+        cash=case((CustomerPayment.payment_method == "cash", CustomerPayment.amount), else_=0),
+        card=case((CustomerPayment.payment_method == "card", CustomerPayment.amount), else_=0),
+    )
+    returns = document_facts(
+        SaleReturn,
+        SaleReturn.returned_at,
+        returns_total=SaleReturn.total,
+        returns_count=literal(1),
+        cash=case((SaleReturn.refund_method == "cash", -SaleReturn.refund_amount), else_=0),
+        card=case((SaleReturn.refund_method == "card", -SaleReturn.refund_amount), else_=0),
+    )
+    facts = union_all(lines, sales, payments, returns).subquery()
     rows = (
         db.execute(
             select(facts.c.date, *(func.sum(facts.c[field]).label(field) for field in fields))
@@ -191,7 +217,7 @@ def customers(
     grouped = (
         select(
             source.c.customer_id,
-            func.count(source.c.sale_id.distinct()).label("sales_count"),
+            func.count(source.c.sale_id.distinct()).filter(source.c.is_sale).label("sales_count"),
             func.sum(source.c.revenue).label("revenue"),
             func.sum(source.c.profit).label("profit"),
             func.sum(source.c.revenue_unknown_cost).label("revenue_unknown_cost"),

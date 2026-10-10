@@ -34,6 +34,8 @@ from app.payments import service as payments_service
 from app.payments.schemas import PaymentCreate
 from app.receipts import service as receipts_service
 from app.receipts.schemas import ReceiptCreate, ReceiptLineIn
+from app.returns import service as returns_service
+from app.returns.schemas import ReturnCreate, ReturnLineIn
 from app.sales import service as sales_service
 from app.sales.schemas import SaleCreate, SaleLineIn
 from app.settings import service as settings_service
@@ -125,6 +127,7 @@ SALES = [
         ][:11]
         + [("04465-33471", 1)],
     ),
+    (6, (10, 30), 1, [("IXEH22TT", 1)]),
 ]
 
 # Deliveries after the opening balance:
@@ -255,7 +258,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         )
 
     sale_ids: list[int] = []
-    debt_sale_indices = {0, 1, 4, 6}
+    debt_sale_indices = {0, 1, 4, 6, 15}
     for number, (days_ago, at, customer, lines) in enumerate(SALES):
         sale, _ = sales_service.post_sale(
             db,
@@ -263,7 +266,9 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 request_id=uuid.uuid5(_REQUEST_NS, f"sale-{number}"),
                 customer_id=customer_ids[customer] if customer is not None else None,
                 paid_amount=(
-                    sum(
+                    0
+                    if number == 15
+                    else sum(
                         next(item.price_tenge for item in PRODUCTS if item.article == article)
                         * qty
                         * 100
@@ -273,7 +278,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                     if number in debt_sale_indices
                     else None
                 ),
-                payment_method="card" if number % 2 else "cash",
+                payment_method=("card" if number % 2 else "cash") if number != 15 else None,
                 sold_at=_local_time(now, days_ago, at),
                 lines=[
                     SaleLineIn(product_id=product_ids[article], qty=qty) for article, qty in lines
@@ -297,6 +302,33 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         if number == 6:
             payments_service.cancel_payment(db, payment.id, "Қате төлем", user.id)
     sales_service.cancel_sale(db, sale_ids[CANCELLED_SALE_INDEX], CANCEL_REASON, user.id)
+
+    # Preserve debt, low-stock and print examples while showing every return scenario.
+    return_examples = [
+        (9, "IKH20TT", 1, "good", None, "Ішінара қайтару"),
+        (3, "L3Y2-18-110", 1, "defective", None, "Ақаулы тауар"),
+        (4, "PE5R-18-110", 1, "good", None, "Қарызды азайту"),
+        (5, "IXEH22TT", 1, "good", "card", "Картаға қайтару"),
+        (2, "90915-YZZE1", 2, "good", "cash", "Сатып алушысыз толық қайтару"),
+        (8, "90915-YZZE1", 1, "good", "cash", "Қате қайтару"),
+    ]
+    for index, (sale_index, article, qty, condition, method, note) in enumerate(return_examples):
+        sale = sales_service.get_sale(db, sale_ids[sale_index])
+        line = next(line for line in sale.lines if line.article == article)
+        document, _ = returns_service.post_return(
+            db,
+            ReturnCreate(
+                request_id=uuid.uuid5(_REQUEST_NS, f"return-{index}"),
+                sale_id=sale.id,
+                returned_at=min(sale.sold_at + timedelta(hours=2), now - timedelta(minutes=1)),
+                note=note,
+                refund_method=method,
+                lines=[ReturnLineIn(sale_line_id=line.id, qty=qty, condition=condition)],
+            ),
+            user.id,
+        )
+        if index == 5:
+            returns_service.cancel_return(db, document.id, "Қате қайтару", user.id)
 
     for item in PRODUCTS:
         if item.archived:

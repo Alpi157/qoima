@@ -42,6 +42,13 @@ class ErrorCode(StrEnum):
     PAYMENT_REQUEST_CONFLICT = "payment_request_conflict"
     PAYMENT_NOT_FOUND = "payment_not_found"
     PAYMENT_ALREADY_CANCELLED = "payment_already_cancelled"
+    SALE_NOT_POSTED = "sale_not_posted"
+    RETURN_QTY_EXCEEDS_SOLD = "return_qty_exceeds_sold"
+    RETURN_REQUEST_CONFLICT = "return_request_conflict"
+    RETURN_NOT_FOUND = "return_not_found"
+    RETURN_ALREADY_CANCELLED = "return_already_cancelled"
+    RETURN_CANCEL_BLOCKED = "return_cancel_blocked"
+    SALE_HAS_RETURNS = "sale_has_returns"
     NOT_FOUND = "not_found"
     METHOD_NOT_ALLOWED = "method_not_allowed"
     HTTP_ERROR = "http_error"
@@ -244,6 +251,47 @@ class PaymentAlreadyCancelledError(AppError):
     default_message = "Оплата уже отменена"
 
 
+class SaleNotPostedError(AppError):
+    code = ErrorCode.SALE_NOT_POSTED
+    status_code = 409
+    default_message = "Возврат возможен только по проведённой продаже"
+
+
+class ReturnQtyExceedsSoldError(AppError):
+    code = ErrorCode.RETURN_QTY_EXCEEDS_SOLD
+    status_code = 409
+
+
+class ReturnRequestConflictError(AppError):
+    code = ErrorCode.RETURN_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "Этот запрос уже использован для другого возврата"
+
+
+class ReturnNotFoundError(AppError):
+    code = ErrorCode.RETURN_NOT_FOUND
+    status_code = 404
+    default_message = "Возврат не найден"
+
+
+class ReturnAlreadyCancelledError(AppError):
+    code = ErrorCode.RETURN_ALREADY_CANCELLED
+    status_code = 409
+    default_message = "Возврат уже отменён"
+
+
+class ReturnCancelBlockedError(AppError):
+    code = ErrorCode.RETURN_CANCEL_BLOCKED
+    status_code = 409
+    default_message = "Нельзя отменить возврат: товара на складе не хватает."
+
+
+class SaleHasReturnsError(AppError):
+    code = ErrorCode.SALE_HAS_RETURNS
+    status_code = 409
+    default_message = "По этой продаже есть возврат. Сначала отмените возврат."
+
+
 class FieldErrorOut(BaseModel):
     field: str
     # Russian text, for logs and as a fallback when the frontend has no translation.
@@ -295,6 +343,9 @@ CUSTOM_VALIDATION_TYPES = frozenset(
         "date_in_future",
         "null_not_allowed",
         "payment_method_without_payment",
+        "refund_method_without_refund",
+        "returned_at_before_sale",
+        "sale_line_not_in_sale",
         "report_period_order",
         "report_period_too_long",
     }

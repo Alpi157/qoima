@@ -98,7 +98,15 @@
     "not_found": "Табылмады",
     "method_not_allowed": "Бұл әрекетке рұқсат жоқ",
     "http_error": "Сұраныс қатесі",
-    "app_error": "Сұраныс қатесі"
+    "app_error": "Сұраныс қатесі",
+    "sale_not_posted": "Тек өткізілген сатылым бойынша қайтаруға болады.",
+    "return_qty_exceeds_sold": "{{article}}: сатылды {{sold}}, бұрын қайтарылды {{returned}}. {{requested}} қайтаруға болмайды.",
+    "return_request_conflict": "Бұл сұрау басқа қайтару үшін қолданылған.",
+    "return_not_found": "Қайтару табылмады.",
+    "return_already_cancelled": "Қайтарудың күші жойылған.",
+    "return_cancel_blocked": "Қайтарудың күшін жою мүмкін емес: тауар қоймада жеткіліксіз.",
+    "sale_has_returns": "Бұл сатылымда қайтару бар. Алдымен қайтарудың күшін жойыңыз.",
+    "duplicate_line_return": "{{article}} тауары қайтаруда екі рет көрсетілген."
   },
   "validation": {
     "missing": "Міндетті түрде толтырыңыз",
@@ -124,7 +132,11 @@
     "null_not_allowed": "Бұл өрістер бос болмауы керек: {{fields}}",
     "payment_method_without_payment": "Төлем тәсілін төлем нөлден үлкен болғанда ғана таңдауға болады",
     "report_period_order": "Аяқталу күні басталу күнінен ерте болмауы керек",
-    "report_period_too_long": "Есеп кезеңі 366 күннен аспауы керек"
+    "report_period_too_long": "Есеп кезеңі 366 күннен аспауы керек",
+    "refund_method_without_refund": "Ақшаны қайтару тәсілін тек сома нөлден үлкен болғанда көрсетуге болады.",
+    "returned_at_before_sale": "Қайтару күні сатылым күнінен бұрын болмауы тиіс.",
+    "sale_line_not_in_sale": "Бұл жол көрсетілген сатылымға жатпайды.",
+    "date_in_future_returned_at": "Қайтару күні болашақта болмауы тиіс."
   },
   "products": {
     "movementKind": {

@@ -14,7 +14,9 @@ from app.customers.service import current_debt
 from app.inventory.service import stock_summary
 from app.payments.models import CustomerPayment
 from app.receipts.models import Receipt, ReceiptLine
+from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
+from app.sales.service import list_sales
 from app.settings.service import get_business_settings
 
 
@@ -83,7 +85,28 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     assert len(payments) == 3
     assert sum(payment.status == "cancelled" for payment in payments) == 1
     assert {payment.payment_method for payment in payments} == {"cash", "card"}
-    assert {sale.payment_method for sale in sales} == {"cash", "card"}
+    assert {sale.payment_method for sale in sales} == {"cash", "card", None}
+    returns = db_session.scalars(select(SaleReturn)).all()
+    assert len(returns) == 6
+    assert sum(document.status == "cancelled" for document in returns) == 1
+    assert any(document.debt_credit > 0 and document.refund_amount == 0 for document in returns)
+    assert any(
+        document.refund_method == "card" and document.debt_credit == 0 for document in returns
+    )
+    assert any(
+        document.customer_id is None and document.refund_method == "cash" for document in returns
+    )
+    assert {line.condition for line in db_session.scalars(select(SaleReturnLine))} == {
+        "good",
+        "defective",
+    }
+    page = list_sales(db_session, None, None, None, "posted", 200, 0)
+    assert {item.payment_status for item in page.items} == {"paid", "partial", "unpaid", "returned"}
+    for customer in db_session.scalars(select(Customer)):
+        invoices = list_sales(db_session, None, None, customer.id, "posted", 200, 0).items
+        assert sum(item.outstanding for item in invoices) == max(
+            current_debt(db_session, customer.id), 0
+        )
     for line, price in db_session.execute(
         select(ReceiptLine, Product.sale_price).join(Product, Product.id == ReceiptLine.product_id)
     ):

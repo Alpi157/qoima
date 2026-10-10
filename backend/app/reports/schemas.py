@@ -22,6 +22,9 @@ class SummaryOut(BaseModel):
     profit: int
     revenue_unknown_cost: int
     debt_given: int
+    returns_total: int
+    returns_count: int
+    defect_loss: int
     received: ReceivedOut
     days: list[DayOut]
 

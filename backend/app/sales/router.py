@@ -7,7 +7,14 @@ from app.auth.dependencies import current_user
 from app.auth.models import User
 from app.db import get_db
 from app.sales import service
-from app.sales.schemas import SaleCancel, SaleCreate, SaleOut, SalePage, SaleStatus
+from app.sales.schemas import (
+    SaleCancel,
+    SaleCreate,
+    SaleOut,
+    SalePage,
+    SalePaymentFilter,
+    SaleStatus,
+)
 from app.schema_types import DbId
 
 router = APIRouter(prefix="/sales", tags=["sales"])
@@ -19,11 +26,14 @@ def list_sales(
     date_to: date | None = None,
     customer_id: DbId | None = None,
     status: SaleStatus | None = None,
+    payment_status: SalePaymentFilter | None = None,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> SalePage:
-    return service.list_sales(db, date_from, date_to, customer_id, status, limit, offset)
+    return service.list_sales(
+        db, date_from, date_to, customer_id, status, limit, offset, payment_status
+    )
 
 
 @router.get("/{sale_id}", response_model=SaleOut)

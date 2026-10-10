@@ -59,6 +59,7 @@ backend/app/
 ├── receipts/        приход и его отмена
 ├── sales/           продажи и их отмена
 ├── payments/        оплаты покупателей и их отмена
+├── returns/         возвраты по строкам продаж и их отмена
 ├── reports/         отчёты по продажам и прибыли
 └── settings/        реквизиты продавца для накладной (Шаг 12)
 ```
@@ -152,11 +153,40 @@ sale_lines: `sale_id`, `product_id`, `qty` (int, check > 0), `unit_price` (bigin
 Оплата относится ко всему покупателю, а не к отдельной продаже.
 
 Долг нигде не хранится. Он равен сумме `total - paid_at_sale` проведённых продаж покупателя
-минус сумму его проведённых оплат. Отменённые документы исключаются. Отрицательное значение
+минус сумму его проведённых оплат и `debt_credit` проведённых возвратов.
+Отменённые документы исключаются. Отрицательное значение
 означает переплату и допустимо, в том числе после отмены продажи.
 
+### sale_returns и sale_return_lines (17.3a)
+
+sale_returns: `id`, `number` (bigint unique, без пропусков, счётчик `return`),
+`request_id` (uuid unique, `uq_sale_returns_request_id`), `sale_id` (FK sales, индекс),
+`customer_id` (nullable FK customers, индекс, копия из продажи), `returned_at`
+(timestamptz, индекс), `total`, `debt_credit`, `refund_amount` (bigint >= 0),
+`refund_method` (nullable text, cash/card), `note`, `status` (posted/cancelled),
+`cancelled_at`, `cancelled_by`, `cancel_reason`, `created_by`, `created_at`.
+CHECK: `debt_credit + refund_amount = total`,
+`(refund_amount > 0) = (refund_method IS NOT NULL)`,
+`customer_id IS NOT NULL OR debt_credit = 0`.
+Поля отмены следуют соглашению остальных документов.
+
+sale_return_lines: `id`, `return_id` (FK sale_returns, индекс), `sale_line_id`
+(FK sale_lines, индекс), `product_id` (FK products), `qty` (int > 0),
+`unit_price` (bigint >= 0), `line_total` (bigint, CHECK `line_total = qty * unit_price`),
+`unit_cost` (nullable bigint >= 0), `condition` (good/defective).
+Цена и себестоимость копируются из строки продажи. Строка продажи встречается
+в одном возврате не больше одного раза. Возвраты товара, позднее помещённого в архив,
+разрешены. Проведённый возврат неизменяем; исправление выполняется отменой.
+
+Одна миграция `31a7d9e602bf` после `2a7c9e41b603`. Первая команда downgrade
+блокирует таблицу возвратов и проверяет число всех документов, включая отменённые.
+Если возвраты есть, до изменений схемы выдаётся русская ошибка с их количеством
+и указанием, что откат с ними возможен только восстановлением из резервной копии
+через `deploy/restore.sh`. Схема и версия Alembic сохраняются. Без возвратов
+прежние данные сохраняются при downgrade и повторном upgrade.
+
 ### document_counters (номера документов)
-`doc_type` (text PK, check `IN ('receipt', 'sale', 'payment')`), `last_number` (bigint, check >= 0).
+`doc_type` (text PK, check `IN ('receipt', 'sale', 'payment', 'return')`), `last_number` (bigint, check >= 0).
 Одна строка на тип документа, `last_number` - последний выданный номер.
 
 Номер берёт `app/numbering.py::next_number(db, doc_type)`:
@@ -177,7 +207,7 @@ sale_lines: `sale_id`, `product_id`, `qty` (int, check > 0), `unit_price` (bigin
 | warehouse_id | fk | |
 | qty | int not null, check <> 0 | + приход, − расход |
 | unit_cost | bigint null, check >= 0 | себестоимость единицы этого движения |
-| kind | text | 'receipt', 'receipt_cancel', 'sale', 'sale_cancel', 'adjustment' |
+| kind | text | 'receipt', 'receipt_cancel', 'sale', 'sale_cancel', 'adjustment', 'return', 'return_cancel' |
 | doc_type, doc_id | text null, bigint null | ссылка на документ |
 | note | text null | причина корректировки |
 | created_by | fk users | |
@@ -251,7 +281,7 @@ API: `GET /api/settings`, `PUT /api/settings` (все поля обязател�
 - Приход с известной ценой: при `a IS NULL` или `n = 0` новая средняя равна `c`;
   иначе `round_half_up(n*a + q*c, n+q)`.
 - Приход без цены сохраняет среднюю; в движение записывается текущая средняя.
-- Отмена приёма с известной ценой: `n_next = n-q`. При `n_next = 0` или неизвестной
+- Отмена прихода с известной ценой (`receipt_cancel`, `return_cancel`): `n_next = n-q`. При `n_next = 0` или неизвестной
   средней она сохраняется. Иначе `N = n*a-q*c`; при `N < 0` средняя сохраняется,
   при `N >= 0` становится `round_half_up(N, n_next)`.
   Отмена старого приёма без цены тоже сохраняет среднюю.
@@ -263,6 +293,9 @@ API: `GET /api/settings`, `PUT /api/settings` (все поля обязател�
 `stock_movements.unit_cost` сохраняется при вставке. `sale_lines.unit_cost` берётся
 из соответствующего движения продажи и является неизменным снимком.
 Поздние приёмы и их отмены снимок продажи не пересчитывают.
+Годный возврат использует формулу прихода по исторической цене строки продажи.
+`return` и `return_cancel` сохраняют этот снимок в движениях, включая NULL;
+при неизвестной цене средняя сохраняется. Брак не создаёт движений.
 Нулевая цена известна; NULL означает, что цена неизвестна.
 
 Миграция заполняет среднюю существующих остатков средневзвешенной ценой известных
@@ -307,12 +340,15 @@ PATCH `min_qty: null` отключает порог.
 нарушения дают 422 `validation_error`. Только проведённые документы входят в расчёт.
 
 Summary возвращает `revenue`, `sales_count`, `cost`, `profit`, `revenue_unknown_cost`,
-`debt_given`, `received {cash, card, total}`, `days [{date, revenue, profit}]`.
+`debt_given`, `returns_total`, `returns_count`, `defect_loss`,
+`received {cash, card, total}`, `days [{date, revenue, profit}]`.
 `cost = sum(qty*unit_cost)` по известным снимкам, `profit` равна выручке этих же строк
 минус cost. Выручка неизвестных строк учитывается отдельно. Неизвестная цена не равна нулю.
 `debt_given = sum(total-paid_at_sale)` продаж периода.
 `received` объединяет оплаты при продаже по `sold_at` и оплаты долгов по `paid_at`;
-отменённые оплаты исключаются. Days отсортирован по возрастанию даты, содержит нулевые дни.
+минус `refund_amount` возвратов по `returned_at` и `refund_method`.
+Отменённые документы исключаются. Период только с возвратами может иметь
+отрицательные выручку и received. Days отсортирован по возрастанию даты, содержит нулевые дни.
 
 Products возвращает `{items, total}` с `product_id, article, name, unit, qty, revenue,
 cost, profit, revenue_unknown_cost`. Customers возвращает `{items, total}` с
@@ -322,30 +358,114 @@ cost, profit, revenue_unknown_cost`. Customers возвращает `{items, tot
 Пагинация: limit по умолчанию 50, максимум 200; offset по умолчанию 0.
 Каждый ответ выполняет один или два SQL-запроса данных, без N+1.
 
-Единое место добавления возвратов в 17.3: `_sales_source` в `reports/service.py`.
-Туда добавятся строки возвратов с отрицательным вкладом до агрегации выручки,
-себестоимости, прибыли и выручки с неизвестной себестоимостью.
-Для себестоимости используется исторический снимок исходной строки продажи.
+Единый источник `_sales_source` объединяет строки продаж по `sold_at` и
+отрицательные строки проведённых возвратов по `returned_at`. Возвраты уменьшают
+количество в отчёте товаров независимо от состояния товара.
+Годная строка вычитает `line_total`; при известной себестоимости также
+`qty*unit_cost` из cost и `line_total-qty*unit_cost` из profit.
+Бракованная строка вычитает `line_total` из revenue и profit по известной цене,
+не изменяя cost: расход исходной продажи сохраняется. При неизвестной цене
+оба вида возвратов вычитают `line_total` из `revenue_unknown_cost`, cost/profit не меняют.
+`defect_loss` равен сумме `qty*unit_cost` бракованных возвращённых строк с известной ценой.
+Полный годный возврат вместе с продажей даёт revenue/profit 0; полный возврат брака
+даёт revenue 0 и profit минус себестоимость продажи.
+
+Summary агрегирует финансовые строки по их собственной дате отдельно от заголовков
+документов; суммы денег не умножаются на число строк. `returns_total` и
+`returns_count` относятся к проведённым возвратам периода. `sales_count` в summary
+и customers считает только продажи периода, возвраты его не увеличивают.
+День с одним возвратом имеет sales_count 0. `debt_given` сохраняет исходное
+значение суммы `total-paid_at_sale` проведённых продаж периода.
 
 ### Отмена документа
 Продажа: статус 'cancelled', обратные движения 'sale_cancel'. Повторная отмена запрещена.
+Если есть проведённый возврат, `sale_has_returns`: сначала отменить все возвраты.
+Проверка выполняется под блокировкой строки продажи. Возврат отменяется обратными
+движениями годных строк `return_cancel`; нехватка даёт `return_cancel_blocked` с items.
+Брак не создаёт обратных движений. Повторная отмена даёт `return_already_cancelled`.
+Отмена исключает debt_credit из формулы долга автоматически.
 Приход: то же с 'receipt_cancel', но если товар уже продан и остаток уйдёт в минус, отмена запрещена
 с понятным сообщением.
 Оплата: статус 'cancelled', повторная отмена запрещена. Отмена продажи разрешена после оплаты;
 пересчитанный долг может стать отрицательным.
 
-### Блокировки долга и идемпотентность оплат
+### Блокировки долга и идемпотентность документов
 
 Операции, меняющие долг покупателя, сначала блокируют его строку `customers` через
 `SELECT ... FOR UPDATE`. Затем продажа берёт номер и блокировки остатков по возрастанию
 `product_id`, отмена продажи блокирует строку продажи и остатки, оплата берёт номер,
-отмена оплаты блокирует строку оплаты. Каждая операция завершает одну транзакцию одним commit.
+отмена оплаты блокирует строку оплаты. Возврат и его отмена блокируют покупателя исходной продажи, затем продажу,
+затем возврат при отмене и остатки по возрастанию product_id/warehouse_id.
+Новый возврат берёт номер после проверки количества и денег, до складских движений.
+При отсутствии покупателя первая блокировка приходится на продажу.
+Каждая операция завершает одну транзакцию одним commit.
 Оплата проверяет долг после блокировки покупателя. Сумма оплаты не может превысить положительный
 долг. Для повторного `request_id` сравниваются покупатель, сумма, способ оплаты и нормализованная заметка;
 явный `paid_at` сравнивается как момент времени с учётом часового пояса. Пропущенный `paid_at`
 не сравнивается, поскольку сервер назначает текущее время и повторный запрос не может его знать.
 В продаже сравниваются покупатель, итоговый `paid_at_sale`, способ оплаты и строки с разрешёнными ценами;
 заметка и дата не входят в прежний состав идемпотентности.
+
+### Проведение возврата (17.3a)
+
+POST получает request_id, sale_id, returned_at?, note?, refund_method? и
+строки {sale_line_id, qty, condition}. Не принимает цену или себестоимость.
+Продажа должна быть posted. Количество строки не больше проданного минус сумма
+возвращённого по posted-возвратам, включая брак. Ошибка `return_qty_exceeds_sold`
+содержит article, sold, returned, requested. Чужая строка даёт полевую 422
+`sale_line_not_in_sale`; повтор строки даёт `duplicate_line` с document=return.
+Дата aware, допускает прошлое и максимум одну минуту вперёд; дата раньше sold_at
+даёт 422 с типом `returned_at_before_sale`, включая дату по умолчанию.
+
+Деньги рассчитываются по текущему долгу после блокировки покупателя:
+`debt_credit = min(total, max(долг, 0))`, `refund_amount = total-debt_credit`.
+Без покупателя debt_credit 0. При положительном refund_amount пропущенный
+или NULL refund_method становится cash. При нулевом денежном возврате явный
+способ запрещён: 422 validation_error, тип `refund_method_without_refund`.
+Нельзя молча игнорировать способ, поскольку итог зависит от долга внутри транзакции.
+
+Идемпотентность возврата всегда сравнивает sale_id, набор строк
+(sale_line_id, qty, condition) без учёта порядка и note после обрезки пробелов
+по краям и преобразования пустой строки в NULL. returned_at сравнивается как
+момент времени, refund_method с сохранённым способом, только если значения заданы;
+NULL равен отсутствию. Изменение состава даёт `return_request_conflict`.
+Повтор возвращает сохранённый документ с 200, даже после отмены, без пересчёта денег.
+Проверка повтора выполняется до блокировок и повторно после их получения.
+Гонка уникального request_id обрабатывается через IntegrityError только на
+uq_sale_returns_request_id, с rollback и повторным чтением документа.
+
+### Статус оплаты накладной (17.3a)
+
+Статус и остаток не хранятся. Для каждой проведённой продажи i покупателя:
+
+```text
+d_i = total_i - paid_at_sale_i
+own_i = сумма debt_credit проведённых возвратов этой продажи
+applied_i = min(d_i, own_i); d'_i = d_i - applied_i; leftover_i = own_i - applied_i
+пул кредитов = проведённые оплаты + сумма leftover_i
+cum'_i = накопленная сумма d'_i по (sold_at, id)
+outstanding_i = min(d'_i, max(0, cum'_i - пул кредитов))
+net_total_i = total_i - сумма total проведённых возвратов этой продажи
+```
+
+payment_status: `returned`, если net_total_i = 0; иначе `paid`, если
+outstanding_i = 0; `unpaid`, если outstanding_i >= net_total_i; иначе `partial`.
+Приоритет returned применяется буквально и при изначально нулевом итоге.
+Кредит возврата сначала уменьшает долг его собственной накладной; только остаток
+входит в общий FIFO. Например A 5 000 и B 10 000 в долг: полный возврат B оставляет
+A unpaid с outstanding 5 000, а B returned с outstanding 0.
+
+Инвариант: для любого покупателя сумма outstanding_i его проведённых продаж
+равна max(долг из общей функции, 0). Отменённые продажи получают null в outstanding
+и payment_status. У проведённой продажи без покупателя outstanding 0, статус
+returned при net_total 0, иначе paid.
+
+Один SQL-источник с оконными функциями используется в деталях и списке.
+Все posted-документы участвуют независимо от дат; backdated-оплаты тоже входят
+в пул. Фильтры и пагинация применяются после расчёта. Список без N+1.
+Фильтр open включает только unpaid/partial и исключает returned.
+SaleOut.lines содержит id и returned_qty только по posted-возвратам;
+SaleOut.returns содержит id, number, returned_at, total, status всех возвратов.
 
 ## API v1
 
@@ -371,7 +491,7 @@ POST   /api/customers
 GET    /api/customers/{id}
 PATCH  /api/customers/{id}
 GET    /api/customers/debts?limit=&offset=   долг не равен нулю, итоги по всей выборке
-GET    /api/customers/{id}/ledger?limit=&offset=   продажи и оплаты, долг после каждой записи
+GET    /api/customers/{id}/ledger?limit=&offset=   продажи, оплаты и возвраты, долг после каждой записи
 
 POST   /api/receipts
 GET    /api/receipts?date_from=&date_to=&status=   даты YYYY-MM-DD по Asia/Almaty, date_to включительно
@@ -387,7 +507,7 @@ GET    /api/reports/customers?from=&to=&limit=&offset=
 POST   /api/stock/adjustments           корректировка остатка с обязательной причиной
 
 POST   /api/sales                       201 новая продажа, 200 повтор с тем же request_id
-GET    /api/sales?date_from=&date_to=&customer_id=&status=   как у приходов, плюс sum_posted
+GET    /api/sales?date_from=&date_to=&customer_id=&status=&payment_status=unpaid|partial|open   как у приходов, плюс sum_posted
 GET    /api/sales/{id}
 POST   /api/sales/{id}/cancel
 
@@ -396,12 +516,27 @@ GET    /api/payments?from=&to=&customer_id=&status=&limit=&offset=
 GET    /api/payments/{id}
 POST   /api/payments/{id}/cancel
 
+POST   /api/returns                     201 новый возврат, 200 повтор request_id
+GET    /api/returns?sale_id=&customer_id=&from=&to=&status=&limit=&offset=
+GET    /api/returns/{id}
+POST   /api/returns/{id}/cancel          {reason}
+
 GET    /api/settings                    (Шаг 12)
 PUT    /api/settings                    (Шаг 12)
 ```
 
 Id в пути, в query и в теле запроса: целое от 1 до 9223372036854775807 (тип `DbId`
 в `app/schema_types.py`). Больше или меньше - 422.
+
+Возвраты в списке отсортированы по returned_at DESC, id DESC, даты from/to
+включительны по Алматы, limit 50 по умолчанию и максимум 200. sum_posted
+считается по всей отфильтрованной выборке. Детали включают lines с товарными
+подписями, исходной ценой и себестоимостью, покупателя, sale {id,number},
+created_by_name и cancelled_by_name; элементы списка имеют те же поля без lines.
+Ledger возврата: kind=return, occurred_at=returned_at, amount=total,
+debt_change=-debt_credit, refund_amount и refund_method. В остальных видах
+refund-поля NULL, у возврата paid_at_sale/payment_method NULL. Накопление
+по occurred_at, created_at, kind, id до пагинации сохраняется.
 
 ### Формат ошибок API
 
@@ -450,9 +585,12 @@ Id в пути, в query и в теле запроса: целое от 1 до 9
 |---|---|---|
 | `qty_zero` | - | корректировка остатка на 0 |
 | `iin_bin_format` | - | ИИН/БИН не из 12 цифр |
-| `date_in_future` | - | дата прихода или продажи в будущем |
+| `date_in_future` | - | дата документа больше чем на минуту в будущем |
 | `null_not_allowed` | `fields` (список имён полей) | в PATCH поле передано как `null` |
 | `payment_method_without_payment` | - | способ оплаты при нулевой оплате продажи |
+| `refund_method_without_refund` | - | способ возврата денег при нулевой сумме |
+| `returned_at_before_sale` | - | дата возврата раньше продажи |
+| `sale_line_not_in_sale` | - | строка отсутствует или принадлежит другой продаже |
 | `report_period_order` | - | конец периода раньше начала |
 | `report_period_too_long` | - | период отчёта больше 366 дней |
 
@@ -477,12 +615,19 @@ Id в пути, в query и в теле запроса: целое от 1 до 9
 | `customer_not_found` | 404 | - | покупатель из адреса не найден |
 | `document_customer_not_found` | 422 | - | покупатель, указанный в продаже, не найден |
 | `line_product_not_found` | 422 | `product_ids` (список id) | в строках документа товар, которого нет |
-| `duplicate_line` | 422 | `article`, `document` (`receipt` или `sale`) | товар указан в документе дважды |
+| `duplicate_line` | 422 | `article`, `document` (`receipt`, `sale` или `return`) | товар указан в документе дважды |
 | `missing_price` | 422 | `article` | у строки продажи нет цены, и у товара нет цены продажи |
 | `insufficient_stock` | 409 | `items` | не хватает товара на остатке |
 | `receipt_not_found` | 404 | - | приход не найден |
 | `receipt_already_cancelled` | 409 | - | приход уже отменён |
 | `receipt_cancel_blocked` | 409 | `items` | отмена прихода увела бы остаток в минус |
+| `sale_not_posted` | 409 | - | возврат по непроведённой продаже |
+| `return_qty_exceeds_sold` | 409 | `article`, `sold`, `returned`, `requested` | возвращаемое количество превышает доступное |
+| `return_request_conflict` | 409 | - | request_id использован возвратом с другим составом |
+| `return_not_found` | 404 | - | возврат не найден |
+| `return_already_cancelled` | 409 | - | возврат уже отменён |
+| `return_cancel_blocked` | 409 | `items` | недостаточно товара для отмены годного возврата |
+| `sale_has_returns` | 409 | - | у продажи есть проведённые возвраты |
 | `sale_not_found` | 404 | - | продажа не найдена |
 | `sale_already_cancelled` | 409 | - | продажа уже отменена |
 | `sale_request_conflict` | 409 | - | `request_id` уже использован продажей с другим содержимым |

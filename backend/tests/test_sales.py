@@ -105,6 +105,8 @@ def test_post_sale_decreases_stock(
     assert body["created_by_name"] == "Тест"
     assert body["lines"] == [
         {
+            "id": body["lines"][0]["id"],
+            "returned_qty": 0,
             "product_id": oc.id,
             "article": "OC-90",
             "name": "Фильтр масляный",
@@ -115,6 +117,8 @@ def test_post_sale_decreases_stock(
             "line_total": 750_000,
         },
         {
+            "id": body["lines"][1]["id"],
+            "returned_qty": 0,
             "product_id": bosch.id,
             "article": "0986.452.041",
             "name": "Фильтр Bosch",
@@ -632,6 +636,8 @@ def test_list_sales(
         "paid_at_sale": 500_300,
         "payment_method": "cash",
         "debt_at_sale": 0,
+        "outstanding": 0,
+        "payment_status": "paid",
     }
     assert body["items"][0]["customer_name"] is None
 

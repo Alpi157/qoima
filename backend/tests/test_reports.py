@@ -77,6 +77,9 @@ def test_summary_numbers(auth_client, report_case):
         "profit": 600,
         "revenue_unknown_cost": 600,
         "debt_given": 1000,
+        "returns_total": 0,
+        "returns_count": 0,
+        "defect_loss": 0,
         "received": {"cash": 200, "card": 550, "total": 750},
         "days": [
             {"date": "2026-01-10", "revenue": 1300, "profit": 600},

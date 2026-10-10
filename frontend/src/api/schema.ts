@@ -489,6 +489,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/returns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Returns */
+        get: operations["list_returns_api_returns_get"];
+        put?: never;
+        /** Post Return */
+        post: operations["post_return_api_returns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/returns/{return_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Return */
+        get: operations["get_return_api_returns__return_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/returns/{return_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Return */
+        post: operations["cancel_return_api_returns__return_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -635,7 +687,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "missing_price" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "not_found" | "method_not_allowed" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "missing_price" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "sale_has_returns" | "not_found" | "method_not_allowed" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -689,6 +741,10 @@ export interface components {
             paid_at_sale: number | null;
             /** Payment Method */
             payment_method: ("cash" | "card") | null;
+            /** Refund Amount */
+            refund_amount: number | null;
+            /** Refund Method */
+            refund_method: ("cash" | "card") | null;
             /** Debt Change */
             debt_change: number;
             /** Debt After */
@@ -1063,6 +1119,190 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ReturnCancel */
+        ReturnCancel: {
+            /** Reason */
+            reason: string;
+        };
+        /** ReturnCreate */
+        ReturnCreate: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Sale Id */
+            sale_id: number;
+            /** Returned At */
+            returned_at?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Refund Method */
+            refund_method?: ("cash" | "card") | null;
+            /** Lines */
+            lines: components["schemas"]["ReturnLineIn"][];
+        };
+        /** ReturnCustomerOut */
+        ReturnCustomerOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+        };
+        /** ReturnLineIn */
+        ReturnLineIn: {
+            /** Sale Line Id */
+            sale_line_id: number;
+            /** Qty */
+            qty: number;
+            /**
+             * Condition
+             * @enum {string}
+             */
+            condition: "good" | "defective";
+        };
+        /** ReturnLineOut */
+        ReturnLineOut: {
+            /** Id */
+            id: number;
+            /** Sale Line Id */
+            sale_line_id: number;
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Unit Price */
+            unit_price: number;
+            /** Line Total */
+            line_total: number;
+            /** Unit Cost */
+            unit_cost: number | null;
+            /**
+             * Condition
+             * @enum {string}
+             */
+            condition: "good" | "defective";
+        };
+        /** ReturnListItem */
+        ReturnListItem: {
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            sale: components["schemas"]["ReturnSaleOut"];
+            customer: components["schemas"]["ReturnCustomerOut"] | null;
+            /**
+             * Returned At
+             * Format: date-time
+             */
+            returned_at: string;
+            /** Total */
+            total: number;
+            /** Debt Credit */
+            debt_credit: number;
+            /** Refund Amount */
+            refund_amount: number;
+            /** Refund Method */
+            refund_method: ("cash" | "card") | null;
+            /** Note */
+            note: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "posted" | "cancelled";
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancelled By Name */
+            cancelled_by_name: string | null;
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /** Created By Name */
+            created_by_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ReturnOut */
+        ReturnOut: {
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            sale: components["schemas"]["ReturnSaleOut"];
+            customer: components["schemas"]["ReturnCustomerOut"] | null;
+            /**
+             * Returned At
+             * Format: date-time
+             */
+            returned_at: string;
+            /** Total */
+            total: number;
+            /** Debt Credit */
+            debt_credit: number;
+            /** Refund Amount */
+            refund_amount: number;
+            /** Refund Method */
+            refund_method: ("cash" | "card") | null;
+            /** Note */
+            note: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "posted" | "cancelled";
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancelled By Name */
+            cancelled_by_name: string | null;
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /** Created By Name */
+            created_by_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Lines */
+            lines: components["schemas"]["ReturnLineOut"][];
+        };
+        /** ReturnPage */
+        ReturnPage: {
+            /** Items */
+            items: components["schemas"]["ReturnListItem"][];
+            /** Total */
+            total: number;
+            /** Sum Posted */
+            sum_posted: number;
+        };
+        /** ReturnSaleOut */
+        ReturnSaleOut: {
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+        };
         /** SaleCancel */
         SaleCancel: {
             /** Reason */
@@ -1108,6 +1348,10 @@ export interface components {
         };
         /** SaleLineOut */
         SaleLineOut: {
+            /** Id */
+            id: number;
+            /** Returned Qty */
+            returned_qty: number;
             /** Product Id */
             product_id: number;
             /** Article */
@@ -1155,6 +1399,10 @@ export interface components {
             payment_method: ("cash" | "card") | null;
             /** Debt At Sale */
             debt_at_sale: number;
+            /** Outstanding */
+            outstanding: number | null;
+            /** Payment Status */
+            payment_status: ("paid" | "partial" | "unpaid" | "returned") | null;
         };
         /** SaleOut */
         SaleOut: {
@@ -1203,6 +1451,12 @@ export interface components {
             payment_method: ("cash" | "card") | null;
             /** Debt At Sale */
             debt_at_sale: number;
+            /** Outstanding */
+            outstanding: number | null;
+            /** Payment Status */
+            payment_status: ("paid" | "partial" | "unpaid" | "returned") | null;
+            /** Returns */
+            returns: components["schemas"]["SaleReturnSummary"][];
         };
         /** SalePage */
         SalePage: {
@@ -1212,6 +1466,25 @@ export interface components {
             total: number;
             /** Sum Posted */
             sum_posted: number;
+        };
+        /** SaleReturnSummary */
+        SaleReturnSummary: {
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+            /**
+             * Returned At
+             * Format: date-time
+             */
+            returned_at: string;
+            /** Total */
+            total: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "posted" | "cancelled";
         };
         /** StockSummary */
         StockSummary: {
@@ -1244,6 +1517,12 @@ export interface components {
             revenue_unknown_cost: number;
             /** Debt Given */
             debt_given: number;
+            /** Returns Total */
+            returns_total: number;
+            /** Returns Count */
+            returns_count: number;
+            /** Defect Loss */
+            defect_loss: number;
             received: components["schemas"]["ReceivedOut"];
             /** Days */
             days: components["schemas"]["DayOut"][];
@@ -1970,6 +2249,7 @@ export interface operations {
                 date_to?: string | null;
                 customer_id?: number | null;
                 status?: ("posted" | "cancelled") | null;
+                payment_status?: ("unpaid" | "partial" | "open") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -2496,6 +2776,151 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerReportPage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    list_returns_api_returns_get: {
+        parameters: {
+            query?: {
+                sale_id?: number | null;
+                customer_id?: number | null;
+                from?: string | null;
+                to?: string | null;
+                status?: ("posted" | "cancelled") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnPage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    post_return_api_returns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnCreate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnOut"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_return_api_returns__return_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                return_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    cancel_return_api_returns__return_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                return_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnOut"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

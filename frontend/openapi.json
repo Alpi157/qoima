@@ -1259,6 +1259,27 @@
             }
           },
           {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "unpaid",
+                    "partial",
+                    "open"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Status"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -2216,6 +2237,319 @@
           }
         }
       }
+    },
+    "/api/returns": {
+      "get": {
+        "tags": [
+          "returns"
+        ],
+        "summary": "List Returns",
+        "operationId": "list_returns_api_returns_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sale_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 9223372036854775807,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sale Id"
+            }
+          },
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 9223372036854775807,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "posted",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnPage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "returns"
+        ],
+        "summary": "Post Return",
+        "operationId": "post_return_api_returns_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/returns/{return_id}": {
+      "get": {
+        "tags": [
+          "returns"
+        ],
+        "summary": "Get Return",
+        "operationId": "get_return_api_returns__return_id__get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Return Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/returns/{return_id}/cancel": {
+      "post": {
+        "tags": [
+          "returns"
+        ],
+        "summary": "Cancel Return",
+        "operationId": "cancel_return_api_returns__return_id__cancel_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Return Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnCancel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2664,6 +2998,13 @@
           "payment_request_conflict",
           "payment_not_found",
           "payment_already_cancelled",
+          "sale_not_posted",
+          "return_qty_exceeds_sold",
+          "return_request_conflict",
+          "return_not_found",
+          "return_already_cancelled",
+          "return_cancel_blocked",
+          "sale_has_returns",
           "not_found",
           "method_not_allowed",
           "http_error"
@@ -2787,6 +3128,32 @@
             ],
             "title": "Payment Method"
           },
+          "refund_amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Amount"
+          },
+          "refund_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Method"
+          },
           "debt_change": {
             "type": "integer",
             "title": "Debt Change"
@@ -2805,6 +3172,8 @@
           "amount",
           "paid_at_sale",
           "payment_method",
+          "refund_amount",
+          "refund_method",
           "debt_change",
           "debt_after"
         ],
@@ -3986,6 +4355,571 @@
         ],
         "title": "ReceivedOut"
       },
+      "ReturnCancel": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReturnCancel"
+      },
+      "ReturnCreate": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "sale_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Sale Id"
+          },
+          "returned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "refund_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Method"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnLineIn"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Lines"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "sale_id",
+          "lines"
+        ],
+        "title": "ReturnCreate"
+      },
+      "ReturnCustomerOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "phone"
+        ],
+        "title": "ReturnCustomerOut"
+      },
+      "ReturnLineIn": {
+        "properties": {
+          "sale_line_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Sale Line Id"
+          },
+          "qty": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Qty"
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "good",
+              "defective"
+            ],
+            "title": "Condition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sale_line_id",
+          "qty",
+          "condition"
+        ],
+        "title": "ReturnLineIn"
+      },
+      "ReturnLineOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "sale_line_id": {
+            "type": "integer",
+            "title": "Sale Line Id"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "unit_price": {
+            "type": "integer",
+            "title": "Unit Price"
+          },
+          "line_total": {
+            "type": "integer",
+            "title": "Line Total"
+          },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "good",
+              "defective"
+            ],
+            "title": "Condition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sale_line_id",
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "unit_price",
+          "line_total",
+          "unit_cost",
+          "condition"
+        ],
+        "title": "ReturnLineOut"
+      },
+      "ReturnListItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "sale": {
+            "$ref": "#/components/schemas/ReturnSaleOut"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReturnCustomerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "returned_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Returned At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "debt_credit": {
+            "type": "integer",
+            "title": "Debt Credit"
+          },
+          "refund_amount": {
+            "type": "integer",
+            "title": "Refund Amount"
+          },
+          "refund_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Method"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "posted",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "cancelled_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By Name"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "created_by_name": {
+            "type": "string",
+            "title": "Created By Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "request_id",
+          "sale",
+          "customer",
+          "returned_at",
+          "total",
+          "debt_credit",
+          "refund_amount",
+          "refund_method",
+          "note",
+          "status",
+          "cancelled_at",
+          "cancelled_by_name",
+          "cancel_reason",
+          "created_by_name",
+          "created_at"
+        ],
+        "title": "ReturnListItem"
+      },
+      "ReturnOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "sale": {
+            "$ref": "#/components/schemas/ReturnSaleOut"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReturnCustomerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "returned_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Returned At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "debt_credit": {
+            "type": "integer",
+            "title": "Debt Credit"
+          },
+          "refund_amount": {
+            "type": "integer",
+            "title": "Refund Amount"
+          },
+          "refund_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "card"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Method"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "posted",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "cancelled_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By Name"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "created_by_name": {
+            "type": "string",
+            "title": "Created By Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnLineOut"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "request_id",
+          "sale",
+          "customer",
+          "returned_at",
+          "total",
+          "debt_credit",
+          "refund_amount",
+          "refund_method",
+          "note",
+          "status",
+          "cancelled_at",
+          "cancelled_by_name",
+          "cancel_reason",
+          "created_by_name",
+          "created_at",
+          "lines"
+        ],
+        "title": "ReturnOut"
+      },
+      "ReturnPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "sum_posted": {
+            "type": "integer",
+            "title": "Sum Posted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "sum_posted"
+        ],
+        "title": "ReturnPage"
+      },
+      "ReturnSaleOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "number"
+        ],
+        "title": "ReturnSaleOut"
+      },
       "SaleCancel": {
         "properties": {
           "reason": {
@@ -4160,6 +5094,14 @@
       },
       "SaleLineOut": {
         "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "returned_qty": {
+            "type": "integer",
+            "title": "Returned Qty"
+          },
           "product_id": {
             "type": "integer",
             "title": "Product Id"
@@ -4202,6 +5144,8 @@
         },
         "type": "object",
         "required": [
+          "id",
+          "returned_qty",
           "product_id",
           "article",
           "name",
@@ -4281,6 +5225,34 @@
           "debt_at_sale": {
             "type": "integer",
             "title": "Debt At Sale"
+          },
+          "outstanding": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outstanding"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "paid",
+                  "partial",
+                  "unpaid",
+                  "returned"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
           }
         },
         "type": "object",
@@ -4295,7 +5267,9 @@
           "total",
           "paid_at_sale",
           "payment_method",
-          "debt_at_sale"
+          "debt_at_sale",
+          "outstanding",
+          "payment_status"
         ],
         "title": "SaleListItem"
       },
@@ -4424,6 +5398,41 @@
           "debt_at_sale": {
             "type": "integer",
             "title": "Debt At Sale"
+          },
+          "outstanding": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outstanding"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "paid",
+                  "partial",
+                  "unpaid",
+                  "returned"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "returns": {
+            "items": {
+              "$ref": "#/components/schemas/SaleReturnSummary"
+            },
+            "type": "array",
+            "title": "Returns"
           }
         },
         "type": "object",
@@ -4444,7 +5453,10 @@
           "total",
           "paid_at_sale",
           "payment_method",
-          "debt_at_sale"
+          "debt_at_sale",
+          "outstanding",
+          "payment_status",
+          "returns"
         ],
         "title": "SaleOut"
       },
@@ -4473,6 +5485,44 @@
           "sum_posted"
         ],
         "title": "SalePage"
+      },
+      "SaleReturnSummary": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "returned_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Returned At"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "posted",
+              "cancelled"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "returned_at",
+          "total",
+          "status"
+        ],
+        "title": "SaleReturnSummary"
       },
       "StockSummary": {
         "properties": {
@@ -4543,6 +5593,18 @@
             "type": "integer",
             "title": "Debt Given"
           },
+          "returns_total": {
+            "type": "integer",
+            "title": "Returns Total"
+          },
+          "returns_count": {
+            "type": "integer",
+            "title": "Returns Count"
+          },
+          "defect_loss": {
+            "type": "integer",
+            "title": "Defect Loss"
+          },
           "received": {
             "$ref": "#/components/schemas/ReceivedOut"
           },
@@ -4562,6 +5624,9 @@
           "profit",
           "revenue_unknown_cost",
           "debt_given",
+          "returns_total",
+          "returns_count",
+          "defect_loss",
           "received",
           "days"
         ],

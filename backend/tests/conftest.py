@@ -3,6 +3,7 @@ import subprocess
 import uuid
 from collections.abc import Generator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.auth.rate_limit import login_rate_limiter
 from app.config import get_settings
 from app.db import Base, get_db
+from app.inventory.service import MovementIn, post_movements
 from app.main import app
 from tests import factories
 
@@ -134,7 +136,7 @@ def isolated_stock_engine():
             conn.execute(
                 text(
                     "INSERT INTO document_counters (doc_type,last_number) VALUES "
-                    "('receipt',0),('sale',0),('payment',0)"
+                    "('receipt',0),('sale',0),('payment',0),('return',0)"
                 )
             )
         yield isolated
@@ -142,3 +144,12 @@ def isolated_stock_engine():
         isolated.dispose()
         with test_engine.begin() as conn:
             conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+
+
+@pytest.fixture
+def return_case(db_session):
+    user = factories.create_user(db_session)
+    customer = factories.create_customer(db_session)
+    product = factories.create_product(db_session, article="RET-1", sale_price=100)
+    post_movements(db_session, [MovementIn(product.id, 100, "receipt", unit_cost=40)], user.id)
+    return SimpleNamespace(db=db_session, user=user.id, customer=customer.id, product=product.id)

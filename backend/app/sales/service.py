@@ -4,7 +4,7 @@ from datetime import date
 
 from fastapi.exceptions import RequestValidationError
 from psycopg.errors import UniqueViolation
-from sqlalchemy import BigInteger, ColumnElement, cast, func, select
+from sqlalchemy import BigInteger, ColumnElement, case, cast, func, literal, select, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
@@ -19,11 +19,14 @@ from app.errors import (
     MissingPriceError,
     PaidExceedsTotalError,
     SaleAlreadyCancelledError,
+    SaleHasReturnsError,
     SaleNotFoundError,
     SaleRequestConflictError,
 )
 from app.inventory.service import MovementIn, post_movements
 from app.numbering import next_number
+from app.payments.models import CustomerPayment
+from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
 from app.sales.schemas import (
     SaleCreate,
@@ -33,6 +36,8 @@ from app.sales.schemas import (
     SaleListItem,
     SaleOut,
     SalePage,
+    SalePaymentFilter,
+    SaleReturnSummary,
     SaleStatus,
 )
 from app.schema_types import PaymentMethod
@@ -204,21 +209,119 @@ def post_sale(db: Session, data: SaleCreate, user_id: int) -> tuple[SaleOut, boo
 Canceller = aliased(User)
 
 
+def _payment_source():
+    """Own return credits first, then FIFO over the remaining invoice debts."""
+    returns = (
+        select(
+            SaleReturn.sale_id,
+            func.sum(SaleReturn.debt_credit).label("own"),
+            func.sum(SaleReturn.total).label("returned_total"),
+        )
+        .where(SaleReturn.status == "posted")
+        .group_by(SaleReturn.sale_id)
+        .cte("invoice_returns")
+    )
+    debt = Sale.total - Sale.paid_at_sale
+    own = func.coalesce(returns.c.own, 0)
+    residual = (
+        select(
+            Sale.id,
+            Sale.customer_id,
+            Sale.sold_at,
+            (debt - func.least(debt, own)).label("remaining"),
+            (own - func.least(debt, own)).label("leftover"),
+            (Sale.total - func.coalesce(returns.c.returned_total, 0)).label("net_total"),
+        )
+        .outerjoin(returns, returns.c.sale_id == Sale.id)
+        .where(Sale.status == "posted")
+        .cte("invoice_residual")
+    )
+    credits = union_all(
+        select(CustomerPayment.customer_id, CustomerPayment.amount.label("amount")).where(
+            CustomerPayment.status == "posted"
+        ),
+        select(residual.c.customer_id, residual.c.leftover).where(
+            residual.c.customer_id.is_not(None)
+        ),
+    ).cte("invoice_credits")
+    pool = (
+        select(credits.c.customer_id, func.sum(credits.c.amount).label("amount"))
+        .group_by(credits.c.customer_id)
+        .cte("invoice_pool")
+    )
+    cumulative = func.sum(residual.c.remaining).over(
+        partition_by=residual.c.customer_id,
+        order_by=(residual.c.sold_at, residual.c.id),
+        rows=(None, 0),
+    )
+    outstanding = (
+        select(
+            residual.c.id,
+            residual.c.net_total,
+            cast(
+                case(
+                    (residual.c.customer_id.is_(None), 0),
+                    else_=func.least(
+                        residual.c.remaining,
+                        func.greatest(0, cumulative - func.coalesce(pool.c.amount, 0)),
+                    ),
+                ),
+                BigInteger,
+            ).label("outstanding"),
+        )
+        .outerjoin(pool, pool.c.customer_id == residual.c.customer_id)
+        .cte("invoice_outstanding")
+    )
+    return (
+        select(
+            Sale.id.label("sale_id"),
+            outstanding.c.outstanding,
+            case(
+                (Sale.status == "cancelled", None),
+                (outstanding.c.net_total == 0, literal("returned")),
+                (outstanding.c.outstanding == 0, literal("paid")),
+                (outstanding.c.outstanding >= outstanding.c.net_total, literal("unpaid")),
+                else_=literal("partial"),
+            ).label("payment_status"),
+        )
+        .outerjoin(outstanding, outstanding.c.id == Sale.id)
+        .subquery()
+    )
+
+
 def get_sale(db: Session, sale_id: int) -> SaleOut:
+    payment = _payment_source()
     row = db.execute(
-        select(Sale, User.full_name, Canceller.full_name, Customer)
+        select(
+            Sale,
+            User.full_name,
+            Canceller.full_name,
+            Customer,
+            payment.c.outstanding,
+            payment.c.payment_status,
+        )
         .join(User, User.id == Sale.created_by)
         .outerjoin(Canceller, Canceller.id == Sale.cancelled_by)
         .outerjoin(Customer, Customer.id == Sale.customer_id)
+        .join(payment, payment.c.sale_id == Sale.id)
         .where(Sale.id == sale_id)
         .execution_options(populate_existing=True)
     ).one_or_none()
     if row is None:
         raise SaleNotFoundError()
-    sale, created_by_name, cancelled_by_name, customer = row
+    sale, created_by_name, cancelled_by_name, customer, outstanding, payment_status = row
 
+    returned = (
+        select(SaleReturnLine.sale_line_id, func.sum(SaleReturnLine.qty).label("qty"))
+        .join(SaleReturn, SaleReturn.id == SaleReturnLine.return_id)
+        .where(SaleReturn.status == "posted", SaleReturn.sale_id == sale_id)
+        .group_by(SaleReturnLine.sale_line_id)
+        .subquery()
+    )
     lines = [
         SaleLineOut(
+            id=line.id,
+            returned_qty=returned_qty,
             product_id=line.product_id,
             article=article,
             name=name,
@@ -228,9 +331,16 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
             unit_cost=line.unit_cost,
             line_total=line.line_total,
         )
-        for line, article, name, unit in db.execute(
-            select(SaleLine, Product.article, Product.name, Product.unit)
+        for line, article, name, unit, returned_qty in db.execute(
+            select(
+                SaleLine,
+                Product.article,
+                Product.name,
+                Product.unit,
+                func.coalesce(returned.c.qty, 0),
+            )
             .join(Product, Product.id == SaleLine.product_id)
+            .outerjoin(returned, returned.c.sale_line_id == SaleLine.id)
             .where(SaleLine.sale_id == sale.id)
             .order_by(SaleLine.id)
         ).all()
@@ -258,6 +368,16 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
         paid_at_sale=sale.paid_at_sale,
         payment_method=sale.payment_method,
         debt_at_sale=sale.total - sale.paid_at_sale,
+        outstanding=outstanding,
+        payment_status=payment_status,
+        returns=[
+            SaleReturnSummary.model_validate(document, from_attributes=True)
+            for document in db.scalars(
+                select(SaleReturn)
+                .where(SaleReturn.sale_id == sale.id)
+                .order_by(SaleReturn.returned_at, SaleReturn.id)
+            )
+        ],
     )
 
 
@@ -269,12 +389,18 @@ def list_sales(
     status: SaleStatus | None,
     limit: int,
     offset: int,
+    payment_status: SalePaymentFilter | None = None,
 ) -> SalePage:
+    payment = _payment_source()
     conditions: list[ColumnElement[bool]] = local_date_range(Sale.sold_at, date_from, date_to)
     if customer_id is not None:
         conditions.append(Sale.customer_id == customer_id)
     if status is not None:
         conditions.append(Sale.status == status)
+    if payment_status == "open":
+        conditions.append(payment.c.payment_status.in_(("unpaid", "partial")))
+    elif payment_status is not None:
+        conditions.append(payment.c.payment_status == payment_status)
 
     total, sum_posted = db.execute(
         select(
@@ -285,6 +411,7 @@ def list_sales(
             ),
         )
         .select_from(Sale)
+        .join(payment, payment.c.sale_id == Sale.id)
         .where(*conditions)
     ).one()
 
@@ -310,7 +437,10 @@ def list_sales(
             Sale.paid_at_sale,
             Sale.payment_method,
             (Sale.total - Sale.paid_at_sale).label("debt_at_sale"),
+            payment.c.outstanding,
+            payment.c.payment_status,
         )
+        .join(payment, payment.c.sale_id == Sale.id)
         .join(totals, totals.c.sale_id == Sale.id)
         .outerjoin(Customer, Customer.id == Sale.customer_id)
         .where(*conditions)
@@ -338,6 +468,15 @@ def cancel_sale(db: Session, sale_id: int, reason: str, user_id: int) -> SaleOut
         raise SaleNotFoundError()
     if sale.status == "cancelled":
         raise SaleAlreadyCancelledError()
+    if (
+        db.scalar(
+            select(SaleReturn.id)
+            .where(SaleReturn.sale_id == sale.id, SaleReturn.status == "posted")
+            .limit(1)
+        )
+        is not None
+    ):
+        raise SaleHasReturnsError()
 
     lines = db.execute(
         select(SaleLine).where(SaleLine.sale_id == sale.id).order_by(SaleLine.id)

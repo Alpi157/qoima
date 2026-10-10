@@ -18,6 +18,8 @@ const POSTED = makeSale({
       unit: 'шт',
       qty: 3,
       unit_price: 1250000,
+      id: 1,
+      returned_qty: 0,
       unit_cost: null,
       line_total: 3750000,
     },

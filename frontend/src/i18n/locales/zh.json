@@ -96,7 +96,15 @@
     "not_found": "没有找到",
     "method_not_allowed": "不支持这个操作",
     "http_error": "请求出错",
-    "app_error": "请求出错"
+    "app_error": "请求出错",
+    "sale_not_posted": "只能对已确认的销售办理退货。",
+    "return_qty_exceeds_sold": "{{article}}：已售 {{sold}}，已退 {{returned}}。不能退回 {{requested}}。",
+    "return_request_conflict": "此请求已用于另一笔退货。",
+    "return_not_found": "未找到退货。",
+    "return_already_cancelled": "退货已取消。",
+    "return_cancel_blocked": "无法取消退货：库存不足。",
+    "sale_has_returns": "此销售已有退货。请先取消退货。",
+    "duplicate_line_return": "商品 {{article}} 在退货中出现两次。"
   },
   "validation": {
     "missing": "必填",
@@ -122,7 +130,11 @@
     "null_not_allowed": "这些字段不能为空：{{fields}}",
     "payment_method_without_payment": "只有付款金额大于零时才能指定付款方式",
     "report_period_order": "结束日期不能早于开始日期",
-    "report_period_too_long": "报表期间不能超过366天"
+    "report_period_too_long": "报表期间不能超过366天",
+    "refund_method_without_refund": "只有退款金额大于零时才能指定退款方式。",
+    "returned_at_before_sale": "退货日期不能早于销售日期。",
+    "sale_line_not_in_sale": "此明细不属于指定的销售。",
+    "date_in_future_returned_at": "退货日期不能是未来日期。"
   },
   "products": {
     "movementKind": {

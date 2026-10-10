@@ -7,6 +7,7 @@ from app.inventory.models import StockBalance, StockMovement, Warehouse
 from app.numbering import DocumentCounter
 from app.payments.models import CustomerPayment
 from app.receipts.models import Receipt, ReceiptLine
+from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
 from app.settings.models import BusinessSettings
 
@@ -20,6 +21,8 @@ __all__ = [
     "ReceiptLine",
     "Sale",
     "SaleLine",
+    "SaleReturn",
+    "SaleReturnLine",
     "StockBalance",
     "StockMovement",
     "User",

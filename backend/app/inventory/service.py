@@ -24,6 +24,7 @@ from app.inventory.schemas import (
     StockSummary,
 )
 from app.receipts.models import Receipt
+from app.returns.models import SaleReturn
 from app.sales.models import Sale
 
 
@@ -66,12 +67,15 @@ def _apply_cost(balance: StockBalance, movement: MovementIn) -> int | None:
             if numerator >= 0 and denominator > 0:
                 balance.avg_cost = round_half_up(numerator, denominator)
         return cost
-    if movement.kind == "receipt_cancel" and cost is not None:
+    if movement.kind in ("receipt_cancel", "return_cancel") and cost is not None:
         remaining = qty + movement.qty
         if remaining > 0 and balance.avg_cost is not None:
             numerator = qty * balance.avg_cost + movement.qty * cost
             if numerator >= 0:
                 balance.avg_cost = round_half_up(numerator, remaining)
+        return cost
+    if movement.kind in ("return", "return_cancel"):
+        # Unknown historical return costs stay unknown in the journal.
         return cost
     return balance.avg_cost
 
@@ -192,7 +196,7 @@ def _movements_query(product_id: int) -> Select[tuple[Any, ...]]:
             history.c.kind,
             history.c.doc_type,
             history.c.doc_id,
-            func.coalesce(Receipt.number, Sale.number).label("doc_number"),
+            func.coalesce(Receipt.number, Sale.number, SaleReturn.number).label("doc_number"),
             history.c.note,
             User.full_name.label("created_by_name"),
             history.c.balance_after,
@@ -200,6 +204,9 @@ def _movements_query(product_id: int) -> Select[tuple[Any, ...]]:
         .join(User, User.id == history.c.created_by)
         .outerjoin(Receipt, and_(history.c.doc_type == "receipt", Receipt.id == history.c.doc_id))
         .outerjoin(Sale, and_(history.c.doc_type == "sale", Sale.id == history.c.doc_id))
+        .outerjoin(
+            SaleReturn, and_(history.c.doc_type == "return", SaleReturn.id == history.c.doc_id)
+        )
         .order_by(history.c.created_at.desc(), history.c.id.desc())
     )
 

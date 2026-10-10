@@ -103,6 +103,9 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
     paid_at_sale: 0,
     payment_method: null,
     debt_at_sale: 0,
+    outstanding: 0,
+    payment_status: 'returned',
+    returns: [],
     ...overrides,
   }
 }
@@ -153,6 +156,9 @@ export function makeReportSummary(
     profit: 40000,
     revenue_unknown_cost: 0,
     debt_given: 10000,
+    returns_total: 0,
+    returns_count: 0,
+    defect_loss: 0,
     received: { cash: 100000, card: 10000, total: 110000 },
     days: [{ date: '2026-09-27', revenue: 120000, profit: 40000 }],
     ...overrides,

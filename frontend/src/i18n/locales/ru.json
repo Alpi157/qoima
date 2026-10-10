@@ -102,7 +102,15 @@
     "not_found": "Не найдено",
     "method_not_allowed": "Метод не поддерживается",
     "http_error": "Ошибка запроса",
-    "app_error": "Ошибка запроса"
+    "app_error": "Ошибка запроса",
+    "sale_not_posted": "Возврат возможен только по проведённой продаже.",
+    "return_qty_exceeds_sold": "{{article}}: продано {{sold}}, уже возвращено {{returned}}. Вернуть {{requested}} нельзя.",
+    "return_request_conflict": "Этот запрос уже использован для другого возврата.",
+    "return_not_found": "Возврат не найден.",
+    "return_already_cancelled": "Возврат уже отменён.",
+    "return_cancel_blocked": "Нельзя отменить возврат: товара на складе не хватает.",
+    "sale_has_returns": "По этой продаже есть возврат. Сначала отмените возврат.",
+    "duplicate_line_return": "Товар {{article}} указан в возврате дважды."
   },
   "validation": {
     "missing": "Обязательное поле",
@@ -128,7 +136,11 @@
     "null_not_allowed": "Поле не может быть пустым: {{fields}}",
     "payment_method_without_payment": "Способ оплаты можно указать только при оплате больше нуля",
     "report_period_order": "Дата окончания не может быть раньше даты начала",
-    "report_period_too_long": "Период отчёта не может превышать 366 дней"
+    "report_period_too_long": "Период отчёта не может превышать 366 дней",
+    "refund_method_without_refund": "Способ возврата денег можно указать только при сумме больше нуля.",
+    "returned_at_before_sale": "Дата возврата не может быть раньше даты продажи.",
+    "sale_line_not_in_sale": "Строка не принадлежит указанной продаже.",
+    "date_in_future_returned_at": "Дата возврата не может быть в будущем."
   },
   "products": {
     "movementKind": {

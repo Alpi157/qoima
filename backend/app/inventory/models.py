@@ -18,7 +18,15 @@ from app.db import Base
 
 MAIN_WAREHOUSE_CODE = "main"
 
-MOVEMENT_KINDS = ("receipt", "receipt_cancel", "sale", "sale_cancel", "adjustment")
+MOVEMENT_KINDS = (
+    "receipt",
+    "receipt_cancel",
+    "sale",
+    "sale_cancel",
+    "adjustment",
+    "return",
+    "return_cancel",
+)
 
 
 class Warehouse(Base):

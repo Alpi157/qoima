@@ -60,6 +60,8 @@ class LedgerItem(BaseModel):
     amount: int
     paid_at_sale: int | None
     payment_method: PaymentMethod | None
+    refund_amount: int | None
+    refund_method: PaymentMethod | None
     debt_change: int
     debt_after: int
 

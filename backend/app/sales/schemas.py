@@ -8,6 +8,8 @@ from app.catalog.schemas import MAX_SALE_PRICE
 from app.schema_types import MAX_LINES, DbId, Note, PaymentMethod, Qty, Reason, check_not_in_future
 
 SaleStatus = Literal["posted", "cancelled"]
+SalePaymentStatus = Literal["paid", "partial", "unpaid", "returned"]
+SalePaymentFilter = Literal["unpaid", "partial", "open"]
 # Money in tiyn.
 UnitPrice = Annotated[int, Field(strict=True, ge=0, le=MAX_SALE_PRICE)]
 
@@ -52,6 +54,8 @@ class SaleCustomerOut(BaseModel):
 
 
 class SaleLineOut(BaseModel):
+    id: int
+    returned_qty: int
     product_id: int
     article: str
     name: str
@@ -60,6 +64,14 @@ class SaleLineOut(BaseModel):
     unit_price: int
     unit_cost: int | None
     line_total: int
+
+
+class SaleReturnSummary(BaseModel):
+    id: int
+    number: int
+    returned_at: datetime
+    total: int
+    status: SaleStatus
 
 
 class SaleOut(BaseModel):
@@ -80,6 +92,9 @@ class SaleOut(BaseModel):
     paid_at_sale: int
     payment_method: PaymentMethod | None
     debt_at_sale: int
+    outstanding: int | None
+    payment_status: SalePaymentStatus | None
+    returns: list[SaleReturnSummary]
 
 
 class SaleListItem(BaseModel):
@@ -94,6 +109,8 @@ class SaleListItem(BaseModel):
     paid_at_sale: int
     payment_method: PaymentMethod | None
     debt_at_sale: int
+    outstanding: int | None
+    payment_status: SalePaymentStatus | None
 
 
 class SalePage(BaseModel):

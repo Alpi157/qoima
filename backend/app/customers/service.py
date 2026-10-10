@@ -27,6 +27,7 @@ from app.customers.schemas import (
 from app.db_utils import LIKE_ESCAPE, contains_pattern
 from app.errors import CustomerNotFoundError
 from app.payments.models import CustomerPayment
+from app.returns.models import SaleReturn
 from app.sales.models import Sale
 
 
@@ -48,7 +49,15 @@ def debt_source():
         .where(CustomerPayment.status == "posted")
         .group_by(CustomerPayment.customer_id)
     )
-    changes = union_all(sales, payments).subquery()
+    returns = (
+        select(
+            SaleReturn.customer_id.label("customer_id"),
+            cast(-func.sum(SaleReturn.debt_credit), BigInteger).label("amount"),
+        )
+        .where(SaleReturn.status == "posted", SaleReturn.customer_id.is_not(None))
+        .group_by(SaleReturn.customer_id)
+    )
+    changes = union_all(sales, payments, returns).subquery()
     return (
         select(changes.c.customer_id, cast(func.sum(changes.c.amount), BigInteger).label("debt"))
         .group_by(changes.c.customer_id)
@@ -229,6 +238,8 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             Sale.paid_at_sale,
             Sale.payment_method,
             (Sale.total - Sale.paid_at_sale).label("debt_change"),
+            literal(None, type_=BigInteger).label("refund_amount"),
+            literal(None, type_=Text).label("refund_method"),
         ).where(Sale.customer_id == customer_id, Sale.status == "posted"),
         select(
             literal("payment").label("kind"),
@@ -240,7 +251,22 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
             literal(None, type_=BigInteger).label("paid_at_sale"),
             CustomerPayment.payment_method,
             (-CustomerPayment.amount).label("debt_change"),
+            literal(None, type_=BigInteger),
+            literal(None, type_=Text),
         ).where(CustomerPayment.customer_id == customer_id, CustomerPayment.status == "posted"),
+        select(
+            literal("return"),
+            SaleReturn.id,
+            SaleReturn.number,
+            SaleReturn.returned_at,
+            SaleReturn.created_at,
+            SaleReturn.total,
+            literal(None, type_=BigInteger),
+            literal(None, type_=Text),
+            -SaleReturn.debt_credit,
+            SaleReturn.refund_amount,
+            SaleReturn.refund_method,
+        ).where(SaleReturn.customer_id == customer_id, SaleReturn.status == "posted"),
     ).subquery()
     history = select(
         entries.c.kind,
@@ -252,6 +278,8 @@ def customer_ledger(db: Session, customer_id: int, limit: int, offset: int) -> L
         entries.c.paid_at_sale,
         entries.c.payment_method,
         entries.c.debt_change,
+        entries.c.refund_amount,
+        entries.c.refund_method,
         cast(
             func.sum(entries.c.debt_change).over(
                 order_by=(

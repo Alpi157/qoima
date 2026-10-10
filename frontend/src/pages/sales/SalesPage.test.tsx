@@ -20,6 +20,8 @@ const POSTED: SaleListItem = {
   paid_at_sale: 3750000,
   payment_method: 'cash',
   debt_at_sale: 0,
+  outstanding: 0,
+  payment_status: 'paid',
 }
 const CANCELLED: SaleListItem = { ...POSTED, id: 8, number: 20, status: 'cancelled' }
 

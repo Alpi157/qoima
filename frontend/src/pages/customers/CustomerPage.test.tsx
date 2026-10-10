@@ -19,6 +19,8 @@ const SALE: LedgerItem = {
   amount: 150000,
   paid_at_sale: 50000,
   payment_method: 'cash',
+  refund_amount: null,
+  refund_method: null,
   debt_change: 100000,
   debt_after: 100000,
 }
