@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
 
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { RouteErrorPage } from './components/RouteErrorPage'
 import { AppLayout } from './layout/AppLayout'
 import { LOGIN_PATH } from './lib/nextPath'
 import {
@@ -30,7 +31,7 @@ import {
   ReturnsPage,
 } from './pages/lazyPages'
 
-export const routes: RouteObject[] = [
+const pageRoutes: RouteObject[] = [
   { path: LOGIN_PATH, element: <LoginPage /> },
   {
     element: <ProtectedRoute />,
@@ -40,36 +41,43 @@ export const routes: RouteObject[] = [
       {
         element: <AppLayout />,
         children: [
-          { index: true, element: <HomePage /> },
-          { path: 'more', element: <MorePage /> },
-          // The simple screens of the main page (docs/design/simple-ui.md).
-          { path: 'sell', element: <SellPage /> },
-          { path: 'sell/done/:id', element: <SellDonePage /> },
-          { path: 'receive', element: <ReceivePage /> },
-          { path: 'receive/done/:id', element: <ReceiveDonePage /> },
-          { path: 'stock', element: <StockPage /> },
-          { path: 'report', element: <ReportPage /> },
-          { path: 'sale', element: <Navigate to="/sell" replace /> },
-          // Detailed sections opened from «Тағы»: their lists lead back with «Тағы».
-          { path: 'products', element: <ProductsPage /> },
-          { path: 'products/:id', element: <ProductPage /> },
-          { path: 'customers', element: <CustomersPage /> },
-          { path: 'debts', element: <DebtsPage /> },
-          { path: 'customers/:id', element: <CustomerPage /> },
-          { path: 'receipts', element: <ReceiptsPage /> },
-          { path: 'receipts/new', element: <Navigate to="/receive" replace /> },
-          { path: 'receipts/:id', element: <ReceiptPage /> },
-          { path: 'sales', element: <SalesPage /> },
-          { path: 'sales/:id', element: <SalePage /> },
-          { path: 'sales/:id/return', element: <ReturnCreatePage /> },
-          { path: 'returns', element: <ReturnsPage /> },
-          { path: 'returns/:id', element: <ReturnPage /> },
-          { path: 'settings', element: <SettingsPage /> },
-          { path: '*', element: <NotFoundPage /> },
+          {
+            errorElement: <RouteErrorPage />,
+            children: [
+              { index: true, element: <HomePage /> },
+              { path: 'more', element: <MorePage /> },
+              // The simple screens of the main page (docs/design/simple-ui.md).
+              { path: 'sell', element: <SellPage /> },
+              { path: 'sell/done/:id', element: <SellDonePage /> },
+              { path: 'receive', element: <ReceivePage /> },
+              { path: 'receive/done/:id', element: <ReceiveDonePage /> },
+              { path: 'stock', element: <StockPage /> },
+              { path: 'report', element: <ReportPage /> },
+              { path: 'sale', element: <Navigate to="/sell" replace /> },
+              // Detailed sections opened from «Тағы»: their lists lead back with «Тағы».
+              { path: 'products', element: <ProductsPage /> },
+              { path: 'products/:id', element: <ProductPage /> },
+              { path: 'customers', element: <CustomersPage /> },
+              { path: 'debts', element: <DebtsPage /> },
+              { path: 'customers/:id', element: <CustomerPage /> },
+              { path: 'receipts', element: <ReceiptsPage /> },
+              { path: 'receipts/new', element: <Navigate to="/receive" replace /> },
+              { path: 'receipts/:id', element: <ReceiptPage /> },
+              { path: 'sales', element: <SalesPage /> },
+              { path: 'sales/:id', element: <SalePage /> },
+              { path: 'sales/:id/return', element: <ReturnCreatePage /> },
+              { path: 'returns', element: <ReturnsPage /> },
+              { path: 'returns/:id', element: <ReturnPage /> },
+              { path: 'settings', element: <SettingsPage /> },
+              { path: '*', element: <NotFoundPage /> },
+            ],
+          },
         ],
       },
     ],
   },
 ]
+
+export const routes: RouteObject[] = [{ errorElement: <RouteErrorPage />, children: pageRoutes }]
 
 export const router = createBrowserRouter(routes)

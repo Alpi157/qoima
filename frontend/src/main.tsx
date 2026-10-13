@@ -22,8 +22,11 @@ import { queryClient } from './api/queryClient'
 import { LocalizedDates } from './components/LocalizedDates'
 import { PageLoader } from './components/PageLoader'
 import { LOGIN_PATH, loginPathFor } from './lib/nextPath'
+import { handlePreloadError } from './lib/pageReload'
 import { router } from './router'
 import { cssVariablesResolver, theme } from './theme'
+
+window.addEventListener('vite:preloadError', handlePreloadError)
 
 setUnauthorizedHandler(() => {
   const { pathname, search } = router.state.location

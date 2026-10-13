@@ -48,6 +48,55 @@ async function complete(
 }
 
 describe('DebtAdjustmentModal', () => {
+  it.each([
+    [null, ['Исправление ошибки']],
+    ['Увеличить долг', ['Начальный остаток', 'Исправление ошибки']],
+    ['Уменьшить долг', ['Долг прощён', 'Исправление ошибки']],
+  ] as const)('offers reasons appropriate to direction %s', async (direction, expected) => {
+    renderWithProviders(<Harness />)
+    if (direction) await setupUser().click(screen.getByRole('button', { name: direction }))
+    for (const reason of ['Начальный остаток', 'Долг прощён', 'Исправление ошибки']) {
+      expect(Boolean(screen.queryByRole('button', { name: reason }))).toBe(
+        expected.some((value) => value === reason),
+      )
+    }
+  })
+
+  it.each([
+    ['Увеличить долг', 'Начальный остаток', 'Уменьшить долг'],
+    ['Уменьшить долг', 'Долг прощён', 'Увеличить долг'],
+  ])('clears the incompatible quick reason (%s)', async (from, reason, to) => {
+    renderWithProviders(<Harness />)
+    const user = await complete(from, '100', reason)
+    await user.click(screen.getByRole('button', { name: to }))
+    expect((screen.getByRole('textbox', { name: 'Причина' }) as HTMLTextAreaElement).value).toBe('')
+    expect((screen.getByRole('button', { name: 'Сохранить' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+  })
+
+  it.each(['Своя причина', 'Начальный остаток'])(
+    'preserves manually entered text (%s)',
+    async (text) => {
+      renderWithProviders(<Harness />)
+      const user = await complete()
+      await fill(user, screen.getByRole('textbox', { name: 'Причина' }), text)
+      await user.click(screen.getByRole('button', { name: 'Уменьшить долг' }))
+      expect((screen.getByRole('textbox', { name: 'Причина' }) as HTMLTextAreaElement).value).toBe(
+        text,
+      )
+    },
+  )
+
+  it('preserves the mistake reason across direction changes', async () => {
+    renderWithProviders(<Harness />)
+    const user = await complete('Увеличить долг', '100', 'Исправление ошибки')
+    await user.click(screen.getByRole('button', { name: 'Уменьшить долг' }))
+    expect((screen.getByRole('textbox', { name: 'Причина' }) as HTMLTextAreaElement).value).toBe(
+      'Исправление ошибки',
+    )
+  })
+
   it('requires an explicit direction, positive amount and reason, including direct form submission', async () => {
     const user = setupUser()
     const post = vi.spyOn(api, 'POST')
@@ -64,7 +113,7 @@ describe('DebtAdjustmentModal', () => {
       screen.getByRole('button', { name: 'Уменьшить долг' }).getAttribute('aria-pressed'),
     ).toBe('false')
     await fill(user, field, '100')
-    await user.click(screen.getByRole('button', { name: 'Начальный остаток' }))
+    await user.click(screen.getByRole('button', { name: 'Исправление ошибки' }))
     expect((save as HTMLButtonElement).disabled).toBe(true)
     fireEvent.submit(save.closest('form')!)
     expect(post).not.toHaveBeenCalled()

@@ -106,11 +106,12 @@ function Profit({
   unknownRevenue: number
 }) {
   const { t } = useTranslation()
-  if (unknownRevenue === revenue) return <Text c="dimmed">{t('products.card.unknown')}</Text>
+  if (unknownRevenue !== 0 && unknownRevenue === revenue)
+    return <Text c="dimmed">{t('products.card.unknown')}</Text>
   return (
     <Text c={amount < 0 ? 'var(--q-color-warning-text)' : 'var(--q-color-sale)'}>
       {formatRoundedMoney(amount)}
-      {unknownRevenue > 0 && (
+      {unknownRevenue !== 0 && (
         <>
           {' '}
           <Tooltip

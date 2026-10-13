@@ -2,12 +2,85 @@ import { expect, test } from '@playwright/test'
 import { PDFDocument } from 'pdf-lib'
 
 import { getJson, type ListPage, login, settle, snap } from './snap.js'
+import { breakReportRender, REPORT_MODULE } from './pageModules.js'
+import { PAGE_RELOAD_KEY } from '../src/lib/pageReload.js'
 import type { components } from '../src/api/schema.js'
 import { todayLocal } from '../src/lib/dates.js'
 
 type Sale = components['schemas']['SaleOut']
 type ReturnDocument = components['schemas']['ReturnOut']
 type ReturnListItem = components['schemas']['ReturnListItem']
+
+test('route error screens', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  const viewport = page.viewportSize()!
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  for (const moduleError of [true, false]) {
+    await page.goto('/more')
+    await settle(page)
+    if (moduleError) {
+      await page.evaluate((key) => sessionStorage.setItem(key, String(Date.now())), PAGE_RELOAD_KEY)
+      await page.route(REPORT_MODULE, (route) =>
+        route.fulfill({ status: 404, body: 'Missing module' }),
+      )
+    } else await breakReportRender(page)
+    await page.getByRole('link', { name: 'Есеп', exact: true }).click()
+    await expect(
+      page.getByRole('heading', {
+        name: moduleError ? 'Бағдарлама жаңартылды' : 'Бірдеңе дұрыс болмады',
+      }),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Жаңарту', exact: true })).toBeInViewport()
+    await snap(page, `route-error-${moduleError ? 'module' : 'general'}`, width, {
+      fullPage: false,
+    })
+    await page.unroute(REPORT_MODULE)
+  }
+  await page.setViewportSize(viewport)
+})
+
+test('additional search results and debt adjustment directions', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  const products = await getJson<components['schemas']['ProductPage']>(
+    page,
+    '/api/products?limit=6',
+  )
+  expect(products.items).toHaveLength(6)
+  await page.route('**/api/products?*', async (route) => {
+    if (new URL(route.request().url()).searchParams.get('q') === 'SCREEN-MORE') {
+      await route.fulfill({ json: { items: products.items, total: 9 } })
+    } else await route.continue()
+  })
+  for (const path of ['/sell', '/receive']) {
+    await page.goto(path)
+    await page.getByRole('searchbox').fill('SCREEN-MORE')
+    await expect(page.getByText('Тағы 3 тауар табылды. Іздеуді нақтылаңыз.')).toBeVisible()
+    await snap(page, `${path.slice(1)}-more-results`, width)
+  }
+  await page.unroute('**/api/products?*')
+  const debts = await getJson<components['schemas']['CustomerDebtsPage']>(
+    page,
+    '/api/customers/debts',
+  )
+  const customer = debts.items.find((row) => row.debt > 0)!
+  await page.goto(`/customers/${customer.id}`)
+  await page.getByRole('button', { name: 'Қарызды түзету', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await expect(modal.getByRole('button', { name: 'Қате түзету', exact: true })).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Бастапқы қалдық', exact: true })).toHaveCount(0)
+  await expect(modal.getByRole('button', { name: 'Қарыз кешірілді', exact: true })).toHaveCount(0)
+  await snap(page, 'debt-adjustment-no-direction', width, { fullPage: false })
+  for (const [direction, reason, name] of [
+    ['Қарызды көбейту', 'Бастапқы қалдық', 'increase'],
+    ['Қарызды азайту', 'Қарыз кешірілді', 'decrease'],
+  ]) {
+    await modal.getByRole('button', { name: direction, exact: true }).click()
+    await expect(modal.getByRole('button', { name: reason, exact: true })).toBeVisible()
+    await snap(page, `debt-adjustment-${name}-reasons`, width, { fullPage: false })
+  }
+})
 
 // Every screen of docs/design/design-system.md, «Проверка глазами», in Kazakh on demo data.
 // Files: review/screenshots/<screen>-<width>.png. Each screen is also checked for machine

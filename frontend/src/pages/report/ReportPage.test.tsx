@@ -60,6 +60,46 @@ afterEach(() => {
 })
 
 describe('ReportPage', () => {
+  it('shows zero profit when both revenue and unknown revenue are zero', async () => {
+    await i18n.changeLanguage('kk')
+    mockReport({}, 1, { revenue: 0, profit: 0, revenue_unknown_cost: 0 })
+    renderReport()
+    await screen.findAllByText('OC-90')
+    for (const name of ['OC-90', i18n.t('sell.review.retail')]) {
+      const table = screen.getAllByRole('table').find((table) => within(table).queryByText(name))!
+      const row = within(table).getByText(name).closest('tr')!
+      expect(row.lastElementChild?.textContent).toBe(formatRoundedMoney(0))
+    }
+    expect(screen.queryByText('Белгісіз')).toBeNull()
+    expect(screen.queryByText('ішінара')).toBeNull()
+  })
+
+  it.each([120000, -120000])(
+    'shows unknown profit for equal nonzero amounts (%i)',
+    async (revenue) => {
+      await i18n.changeLanguage('kk')
+      mockReport({}, 1, { revenue, profit: 0, revenue_unknown_cost: revenue })
+      renderReport()
+      await waitFor(() => expect(screen.getAllByText('Белгісіз')).toHaveLength(4))
+      expect(screen.queryByText('ішінара')).toBeNull()
+    },
+  )
+
+  it('explains partially unknown negative revenue from returns', async () => {
+    await i18n.changeLanguage('kk')
+    mockReport({}, 1, { revenue: -120000, profit: -10050, revenue_unknown_cost: -60000 })
+    renderReport()
+    await waitFor(() => expect(screen.getAllByText('ішінара')).toHaveLength(4))
+    const labels = screen.getAllByText('ішінара')
+    for (const label of labels)
+      expect(label.parentElement?.textContent).toContain(formatRoundedMoney(-10050))
+    labels[0].focus()
+    expect(await screen.findByRole('tooltip')).toHaveProperty(
+      'textContent',
+      i18n.t('report.partialHint'),
+    )
+  })
+
   it.each([
     [2, 10050, true],
     [0, 0, false],

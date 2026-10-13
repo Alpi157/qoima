@@ -2,7 +2,7 @@ import { Alert, Button, Group, Stack, Text, Textarea } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -21,6 +21,7 @@ import { serverFormErrors } from '../../lib/formErrors'
 import { unitLabel } from '../../lib/labels'
 import { formatAmount, formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
+import { ReturnPage } from '../lazyPages'
 import { useCustomer } from '../customers/api'
 import { type Sale, useSale } from '../sales/api'
 import { type ReturnCreate, usePostReturn } from './api'
@@ -492,6 +493,9 @@ function ReturnLoader({ id }: { id: number }) {
 }
 
 export function ReturnCreatePage() {
+  useEffect(() => {
+    void ReturnPage.preload().catch(console.error)
+  }, [])
   const { t } = useTranslation()
   const id = parseId(useParams().id)
   return id === null ? (

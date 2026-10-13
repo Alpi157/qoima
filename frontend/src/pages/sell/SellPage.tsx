@@ -16,6 +16,7 @@ import {
 import { PageLoader } from '../../components/PageLoader'
 import { PageContainer } from '../../components/ui'
 import { apiErrorText } from '../../i18n/errorText'
+import { SellDonePage } from '../lazyPages'
 import { type Product, useRememberProduct } from '../products/api'
 import { SALE_REQUEST_CONFLICT, usePostSale } from '../sales/api'
 import {
@@ -224,6 +225,9 @@ function SellFlow({ userId }: { userId: number }) {
 
 /** /sell: a sale in three steps (docs/design/simple-ui.md, «Продажа»). */
 export function SellPage() {
+  useEffect(() => {
+    void SellDonePage.preload().catch(console.error)
+  }, [])
   const { data: me } = useMe()
   if (!me) return <PageLoader />
   return <SellFlow userId={me.id} />

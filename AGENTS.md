@@ -74,6 +74,10 @@
   из `DEMO_PASSWORD` или генерируется на запуск). Снимок `sell-3-debt-focus`
   дополнительно проверяет фокус на 1366x768 и 390x844. Один раз поставить браузер:
   `cd frontend && npx playwright install chromium`.
+- Дополнительная проверка собранных чанков: после подготовки демо-базы с тем же
+  `DEMO_PASSWORD` выполнить `cd frontend && QOIMA_E2E_BUILD=1 npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "page module"`.
+  Только при `QOIMA_E2E_BUILD=1` Playwright собирает frontend и запускает preview;
+  обычные e2e, `make test` и `make screenshots` используют прежний запуск без дополнительной сборки.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

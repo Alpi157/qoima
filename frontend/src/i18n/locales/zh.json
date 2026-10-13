@@ -59,6 +59,13 @@
       "kg": "公斤",
       "meter": "米",
       "pack": "包"
+    },
+    "routeError": {
+      "moduleTitle": "系统已更新",
+      "moduleDescription": "请刷新页面后继续。",
+      "title": "出了点问题",
+      "description": "请刷新页面重试。",
+      "reload": "刷新"
     }
   },
   "errors": {
@@ -509,7 +516,8 @@
     "draft": {
       "clear": "清空",
       "close": "关闭"
-    }
+    },
+    "moreResults": "还有 {{more}} 个结果，请细化搜索。"
   },
   "sell": {
     "steps": {

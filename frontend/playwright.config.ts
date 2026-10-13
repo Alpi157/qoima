@@ -7,6 +7,7 @@ const API_PORT = 8011
 const WEB_PORT = 5183
 const DESKTOP = { width: 1366, height: 800 }
 const PHONE = { width: 390, height: 844 }
+const builtFrontend = process.env.QOIMA_E2E_BUILD === '1'
 
 export default defineConfig({
   testDir: './e2e',
@@ -47,7 +48,9 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: `npx vite --port ${WEB_PORT} --strictPort`,
+      command: builtFrontend
+        ? `npm run build && npx vite preview --port ${WEB_PORT} --strictPort`
+        : `npx vite --port ${WEB_PORT} --strictPort`,
       env: { QOIMA_API_TARGET: `http://localhost:${API_PORT}` },
       url: `http://localhost:${WEB_PORT}`,
       reuseExistingServer: false,

@@ -36,6 +36,7 @@ import { FIELD_WIDTH } from '../../lib/fieldWidths'
 import { unitLabel } from '../../lib/labels'
 import { formatMoney, parseMoney } from '../../lib/money'
 import { qtyError } from '../../lib/validation'
+import { ReceiveDonePage } from '../lazyPages'
 import { type Product, useRememberProduct } from '../products/api'
 import { usePostReceipt } from '../receipts/api'
 import { NewProductForm } from './NewProductForm'
@@ -368,6 +369,9 @@ function ReceiveFlow({ userId }: { userId: number }) {
 
 /** /receive: goods came in (docs/design/simple-ui.md, «Приём товара»). */
 export function ReceivePage() {
+  useEffect(() => {
+    void ReceiveDonePage.preload().catch(console.error)
+  }, [])
   const { data: me } = useMe()
   if (!me) return <PageLoader />
   return <ReceiveFlow userId={me.id} />

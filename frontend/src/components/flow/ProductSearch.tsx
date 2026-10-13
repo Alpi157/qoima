@@ -47,6 +47,7 @@ export function ProductSearch({
   const text = query.trim()
   // Results of an older text stay on screen while the new one loads; hide them once cleared.
   const results = text && search.data ? search.data.items : []
+  const more = text && search.data ? search.data.total - results.length : 0
   const settled = text !== '' && text === debounced && !search.isFetching && search.isSuccess
 
   const add = (product: Product) => {
@@ -110,6 +111,11 @@ export function ProductSearch({
               </Group>
             </Card>
           ))}
+          {more > 0 && (
+            <Text size="sm" c="dimmed">
+              {t('flow.moreResults', { more })}
+            </Text>
+          )}
         </Stack>
       )}
 

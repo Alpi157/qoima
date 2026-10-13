@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 
 import { getJson, login, settle, snap } from './snap.js'
+import { REPORT_MODULE } from './pageModules.js'
 import { todayLocal } from '../src/lib/dates.js'
 import { formatMoney } from '../src/lib/money.js'
 import type { components } from '../src/api/schema.js'
@@ -14,6 +15,45 @@ type ReturnDocument = components['schemas']['ReturnOut']
 // They save a sale and a receiving, so they run after the screens (playwright.config.ts).
 
 const SEARCH = 'Артикулды немесе атауын жазыңыз'
+
+for (const alwaysMissing of [false, true]) {
+  test(`page module ${alwaysMissing ? 'persistent failure shows a localized error' : 'recovers after one missing request'}`, async ({
+    page,
+  }) => {
+    await login(page)
+    await page.goto('/more')
+    await settle(page)
+    let documents = 0
+    let modules = 0
+    page.on('request', (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documents++
+    })
+    await page.route(REPORT_MODULE, async (route) => {
+      modules++
+      if (alwaysMissing || modules === 1)
+        await route.fulfill({ status: 404, body: 'Missing module' })
+      else await route.continue()
+    })
+    await page.getByRole('link', { name: 'Есеп', exact: true }).click()
+    await expect(
+      page.getByRole('heading', {
+        name: alwaysMissing ? 'Бағдарлама жаңартылды' : 'Есеп',
+        exact: true,
+      }),
+    ).toBeVisible()
+    await settle(page)
+    expect(modules).toBeGreaterThanOrEqual(2)
+    expect(documents).toBe(1)
+    await expect(page.getByRole('banner').getByText('Qoima')).toBeVisible()
+    await expect(page.locator('body')).not.toContainText('Unexpected Application Error')
+    await expect(page.locator('body')).not.toContainText(
+      'Failed to fetch dynamically imported module',
+    )
+    if (alwaysMissing) {
+      await expect(page.getByRole('button', { name: 'Жаңарту', exact: true })).toBeInViewport()
+    }
+  })
+}
 
 test('good and defective return and cancellation restore this customer and these products', async ({
   page,
@@ -465,9 +505,10 @@ test('opening debt, payment and adjustment cancellation produce an overpayment',
   await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeDisabled()
   await expect(modal.getByText(/^Түзетуден кейінгі қарыз:/)).toHaveCount(0)
   await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('50000')
-  await modal.getByRole('button', { name: 'Бастапқы қалдық', exact: true }).click()
+  await expect(modal.getByRole('button', { name: 'Бастапқы қалдық', exact: true })).toHaveCount(0)
   await expect(modal.getByRole('button', { name: 'Сақтау', exact: true })).toBeDisabled()
   await modal.getByRole('button', { name: 'Қарызды көбейту', exact: true }).click()
+  await modal.getByRole('button', { name: 'Бастапқы қалдық', exact: true }).click()
   await expect(
     modal.getByText(`Түзетуден кейінгі қарыз: ${formatMoney(5000000)}`, { exact: true }),
   ).toBeVisible()
@@ -518,6 +559,8 @@ test('opening debt, payment and adjustment cancellation produce an overpayment',
   ).toBeVisible()
   await snap(page, 'debt-adjustment-decrease-modal', w, { fullPage: false })
   await modal.getByRole('button', { name: 'Қарызды көбейту', exact: true }).click()
+  await expect(modal.getByRole('textbox', { name: 'Себебі', exact: true })).toHaveValue('')
+  await modal.getByRole('button', { name: 'Қате түзету', exact: true }).click()
   await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('30000')
   await expect(
     modal.getByText('Соманы тексеріңіз. Артық нөл жазылған жоқ па?', { exact: true }),

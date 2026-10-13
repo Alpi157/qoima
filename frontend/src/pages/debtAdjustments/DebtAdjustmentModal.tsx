@@ -23,6 +23,16 @@ const QUICK_REASONS = [
   'debtAdjustments.reasons.forgiven',
   'debtAdjustments.reasons.mistake',
 ] as const
+type QuickReason = (typeof QUICK_REASONS)[number]
+
+function quickReasons(direction: Direction | null): QuickReason[] {
+  return QUICK_REASONS.filter(
+    (key) =>
+      key === 'debtAdjustments.reasons.mistake' ||
+      (direction === 'increase' && key === 'debtAdjustments.reasons.opening') ||
+      (direction === 'decrease' && key === 'debtAdjustments.reasons.forgiven'),
+  )
+}
 
 function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: () => void }) {
   const { t, i18n } = useTranslation()
@@ -33,6 +43,7 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
   const [direction, setDirection] = useState<Direction | null>(null)
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
+  const [quickReason, setQuickReason] = useState<QuickReason | null>(null)
   const [reasonTouched, setReasonTouched] = useState(false)
   const [adjustedAt, setAdjustedAt] = useState<string | null>(() => nowLocalInput(openedAt))
   const [extrasOpen, setExtrasOpen] = useState(false)
@@ -122,6 +133,11 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
           ]}
           onChange={(value) => {
             setDirection(value)
+            if (quickReason && !quickReasons(value).includes(quickReason)) {
+              setReason('')
+              setQuickReason(null)
+              setReasonTouched(false)
+            }
             setErrors((previous) => ({ ...previous, amount: '' }))
           }}
         />
@@ -145,14 +161,15 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
         />
         <Stack gap="xs">
           <Group gap="xs" role="group" aria-label={t('common.cancelDocument.quickLabel')}>
-            {QUICK_REASONS.map((key) => (
+            {quickReasons(direction).map((key) => (
               <Button
                 key={key}
                 size="sm"
-                variant={reason === t(key) ? 'light' : 'default'}
-                aria-pressed={reason === t(key)}
+                variant={quickReason === key ? 'light' : 'default'}
+                aria-pressed={quickReason === key}
                 onClick={() => {
                   setReason(t(key))
+                  setQuickReason(key)
                   setErrors((previous) => ({ ...previous, reason: '' }))
                 }}
               >
@@ -170,6 +187,7 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
             onBlur={() => setReasonTouched(true)}
             onChange={(event) => {
               setReason(event.currentTarget.value)
+              setQuickReason(null)
               setErrors((previous) => ({ ...previous, reason: '' }))
             }}
             error={errors.reason || (reasonTouched ? reasonError(reason) : null)}

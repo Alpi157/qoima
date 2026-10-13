@@ -8,7 +8,7 @@
 #   bash deploy/restore.sh --into-main qoima-2026-09-27_030000.dump
 #
 # By default the dump goes into a separate database qoima_restore_check (recreated each time),
-# and the row counts of the main tables are printed next to the main database: this checks
+# and the row counts of all public tables are printed next to the main database: this checks
 # that the backup is usable without touching real data.
 #
 # --into-main replaces the main database. It asks to type the database name, stops the api
@@ -23,8 +23,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE=(docker compose -f "$SCRIPT_DIR/docker-compose.prod.yml")
 CHECK_DB="qoima_restore_check"
-TABLES=(users products customers receipts receipt_lines sales sale_lines
-  stock_movements stock_balances business_settings document_counters)
 
 fail() {
   echo "ОШИБКА: $*" >&2
@@ -87,16 +85,29 @@ main_db_name() {
   "${COMPOSE[@]}" exec -T db sh -c 'printf %s "$POSTGRES_DB"' </dev/null
 }
 
-# Prints the row count of every table in TABLES, one per line ("-" if the table is missing).
+# Generate count queries in PostgreSQL: both literals and identifiers are quoted there.
+# Count each present table once; the union and missing-table markers are assembled below.
 row_counts() {
-  local db="$1" table
-  for table in "${TABLES[@]}"; do
-    if [ "$(db_psql -d "$db" -tA -c "SELECT to_regclass('public.$table') IS NOT NULL")" = "t" ]; then
-      db_psql -d "$db" -tA -c "SELECT count(*) FROM public.$table"
-    else
-      echo "-"
-    fi
-  done
+  local db="$1" query
+  query="$(db_psql -d "$db" -tA -c "
+    SELECT string_agg(
+      format('SELECT %L AS table_name, count(*) AS row_count FROM %I.%I',
+             tablename, schemaname, tablename),
+      ' UNION ALL ' ORDER BY tablename)
+    FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'alembic_version'")"
+  if [ -n "$query" ]; then
+    db_psql -d "$db" -tA -F $'\t' -c "$query ORDER BY table_name"
+  fi
+}
+
+alembic_version() {
+  local db="$1" version
+  if [ "$(db_psql -d "$db" -tA -c "SELECT to_regclass('public.alembic_version') IS NOT NULL")" = "t" ]; then
+    version="$(db_psql -d "$db" -tA -c "SELECT string_agg(version_num, ',' ORDER BY version_num) FROM public.alembic_version")"
+    printf '%s\n' "${version:--}"
+  else
+    echo "-"
+  fi
 }
 
 "${COMPOSE[@]}" ps --status running --services </dev/null | grep -qx db || fail "контейнер db не запущен"
@@ -118,7 +129,9 @@ if [ "$INTO_MAIN" -eq 1 ]; then
     'pg_restore --clean --if-exists --no-owner --single-transaction --exit-on-error -U "$POSTGRES_USER" -d "$POSTGRES_DB"' ||
     fail "восстановление не удалось, база $MAIN_DB не изменена"
   echo "Строк в таблицах $MAIN_DB:"
-  paste <(printf '%s\n' "${TABLES[@]}") <(row_counts "$MAIN_DB") | column -t
+  counts="$(row_counts "$MAIN_DB")"
+  printf '%s\n' "$counts" | column -t -s $'\t'
+  printf 'alembic_version\t%s\n' "$(alembic_version "$MAIN_DB")" | column -t -s $'\t'
   echo "OK: база $MAIN_DB восстановлена"
   exit 0
 fi
@@ -133,19 +146,39 @@ read_dump | "${COMPOSE[@]}" exec -T -e CHECK_DB="$CHECK_DB" db sh -c \
 
 echo
 echo "Количество строк: $CHECK_DB (из бэкапа) и $MAIN_DB (текущая база)"
-mapfile -t restored < <(row_counts "$CHECK_DB")
-mapfile -t current < <(row_counts "$MAIN_DB")
+restored_counts="$(row_counts "$CHECK_DB")"
+current_counts="$(row_counts "$MAIN_DB")"
+declare -A restored=() current=()
+while IFS=$'\t' read -r table count; do
+  [ -z "$table" ] || restored["$table"]="$count"
+done <<< "$restored_counts"
+while IFS=$'\t' read -r table count; do
+  [ -z "$table" ] || current["$table"]="$count"
+done <<< "$current_counts"
+tables="$(printf '%s\n' "${!restored[@]}" "${!current[@]}" | LC_ALL=C sort -u)"
 differ=0
-rows=("таблица $CHECK_DB $MAIN_DB")
-for i in "${!TABLES[@]}"; do
+rows=("таблица"$'\t'"$CHECK_DB"$'\t'"$MAIN_DB")
+while IFS= read -r table; do
+  [ -n "$table" ] || continue
+  restored_count="${restored[$table]:--}"
+  current_count="${current[$table]:--}"
   mark=""
-  if [ "${restored[$i]}" != "${current[$i]}" ]; then
+  if [ "$restored_count" = "-" ] || [ "$current_count" = "-" ] || [ "$restored_count" != "$current_count" ]; then
     mark="*"
     differ=1
   fi
-  rows+=("${TABLES[$i]} ${restored[$i]} ${current[$i]}$mark")
-done
-printf '%s\n' "${rows[@]}" | column -t
+  rows+=("$table"$'\t'"$restored_count"$'\t'"$current_count$mark")
+done <<< "$tables"
+restored_version="$(alembic_version "$CHECK_DB")"
+current_version="$(alembic_version "$MAIN_DB")"
+mark=""
+if [ "$restored_version" != "$current_version" ]; then
+  mark="*"
+  differ=1
+fi
+rows+=("alembic_version"$'\t'"$restored_version"$'\t'"$current_version$mark")
+printf '%s\n' "${rows[@]}" | column -t -s $'\t'
+
 echo
 if [ "$differ" -eq 0 ]; then
   echo "OK: бэкап восстановлен, количество строк совпадает с текущей базой"
