@@ -1,3 +1,4 @@
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
@@ -68,7 +69,8 @@ def test_parallel_receipt_documents_use_actual_posting_order(isolated_stock_engi
             return post_receipt(
                 db,
                 ReceiptCreate(
-                    lines=[ReceiptLineIn(product_id=product_id, qty=qty, unit_cost=cost)]
+                    request_id=uuid.uuid4(),
+                    lines=[ReceiptLineIn(product_id=product_id, qty=qty, unit_cost=cost)],
                 ),
                 user_id,
             )
@@ -77,7 +79,9 @@ def test_parallel_receipt_documents_use_actual_posting_order(isolated_stock_engi
         a = executor.submit(receipt, 2, 150)
         b = executor.submit(receipt, 3, 201)
         ready.set()
-        receipts = sorted([a.result(timeout=10), b.result(timeout=10)], key=lambda row: row.number)
+        receipts = sorted(
+            [a.result(timeout=10)[0], b.result(timeout=10)[0]], key=lambda row: row.number
+        )
     qty, cost = 1, 100
     for document in receipts:
         line = document.lines[0]

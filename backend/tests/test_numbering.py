@@ -23,14 +23,21 @@ def product(db_session: Session) -> Product:
 def _sale(client: TestClient, product_id: int, qty: int) -> tuple[int, dict]:
     response = client.post(
         "/api/sales",
-        json={"request_id": str(uuid.uuid4()), "lines": [{"product_id": product_id, "qty": qty}]},
+        json={
+            "request_id": str(uuid.uuid4()),
+            "lines": [{"product_id": product_id, "qty": qty, "unit_price": 1000}],
+        },
     )
     return response.status_code, response.json()
 
 
 def _receipt(client: TestClient, product_id: int) -> tuple[int, dict]:
     response = client.post(
-        "/api/receipts", json={"lines": [{"product_id": product_id, "qty": 1, "unit_cost": 0}]}
+        "/api/receipts",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "lines": [{"product_id": product_id, "qty": 1, "unit_cost": 0}],
+        },
     )
     return response.status_code, response.json()
 

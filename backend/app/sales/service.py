@@ -15,9 +15,9 @@ from app.customers.models import Customer
 from app.customers.service import fifo_debt_source
 from app.db_utils import local_date_range
 from app.errors import (
+    AmountTooLargeError,
     DebtRequiresCustomerError,
     DocumentCustomerNotFoundError,
-    MissingPriceError,
     PaidExceedsTotalError,
     SaleAlreadyCancelledError,
     SaleHasReturnsError,
@@ -31,7 +31,6 @@ from app.sales.models import Sale, SaleLine
 from app.sales.schemas import (
     SaleCreate,
     SaleCustomerOut,
-    SaleLineIn,
     SaleLineOut,
     SaleListItem,
     SaleOut,
@@ -40,7 +39,7 @@ from app.sales.schemas import (
     SaleReturnSummary,
     SaleStatus,
 )
-from app.schema_types import PaymentMethod
+from app.schema_types import MAX_MONEY, PaymentMethod
 
 DOC_TYPE = "sale"
 REQUEST_ID_CONSTRAINT = "uq_sales_request_id"
@@ -48,13 +47,6 @@ REQUEST_ID_CONSTRAINT = "uq_sales_request_id"
 
 def find_sale_by_request_id(db: Session, request_id: uuid.UUID) -> Sale | None:
     return db.execute(select(Sale).where(Sale.request_id == request_id)).scalar_one_or_none()
-
-
-def _line_price(line: SaleLineIn, sale_price: int | None) -> int | None:
-    """Price the line is sold at: the explicit one, else the product's if it is set."""
-    if line.unit_price is not None:
-        return line.unit_price
-    return sale_price if sale_price else None
 
 
 def _payment_method(paid: int, requested: PaymentMethod | None) -> PaymentMethod | None:
@@ -73,11 +65,7 @@ def _payment_method(paid: int, requested: PaymentMethod | None) -> PaymentMethod
 
 
 def _existing_sale(db: Session, data: SaleCreate) -> SaleOut | None:
-    """The sale already posted with this request_id, if its content matches the request.
-
-    Content is the customer and the lines (product_id, qty, unit_price) with prices resolved
-    the same way as when posting, so omitting unit_price matches a sale at the product's price.
-    """
+    """Return a matching sale using only the explicit prices from the request."""
     sale = find_sale_by_request_id(db, data.request_id)
     if sale is None:
         return None
@@ -87,18 +75,7 @@ def _existing_sale(db: Session, data: SaleCreate) -> SaleOut | None:
             SaleLine.sale_id == sale.id
         )
     ).all()
-    sale_prices = dict(
-        db.execute(
-            select(Product.id, Product.sale_price).where(
-                Product.id.in_({line.product_id for line in data.lines})
-            )
-        ).all()
-    )
-    requested = [
-        (line.product_id, line.qty, _line_price(line, sale_prices.get(line.product_id)))
-        for line in data.lines
-    ]
-    # Counter, not sorted(): a missing price is None and does not compare with int.
+    requested = [(line.product_id, line.qty, line.unit_price) for line in data.lines]
     paid = sale.total if data.paid_amount is None else data.paid_amount
     payment_method = _payment_method(paid, data.payment_method)
     if (
@@ -126,27 +103,20 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         if customer is None:
             raise DocumentCustomerNotFoundError()
 
-    products = load_line_products(db, [line.product_id for line in data.lines], "sale")
-    prices = []
-    for line in data.lines:
-        product = products[line.product_id]
-        price = _line_price(line, product.sale_price)
-        if price is None:
-            raise MissingPriceError(
-                f"Укажите цену для товара {product.article}", {"article": product.article}
-            )
-        prices.append(price)
+    load_line_products(db, [line.product_id for line in data.lines], "sale")
 
     sale_lines = [
         SaleLine(
             product_id=line.product_id,
             qty=line.qty,
-            unit_price=price,
-            line_total=line.qty * price,
+            unit_price=line.unit_price,
+            line_total=line.qty * line.unit_price,
         )
-        for line, price in zip(data.lines, prices, strict=True)
+        for line in data.lines
     ]
     total = sum(line.line_total for line in sale_lines)
+    if any(line.line_total > MAX_MONEY for line in sale_lines) or total > MAX_MONEY:
+        raise AmountTooLargeError()
     paid = total if data.paid_amount is None else data.paid_amount
     payment_method = _payment_method(paid, data.payment_method)
     if paid > total:

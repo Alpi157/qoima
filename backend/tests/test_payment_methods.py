@@ -24,7 +24,7 @@ def _sale(client, case, **values):
         json={
             "request_id": str(uuid.uuid4()),
             "customer_id": customer,
-            "lines": [{"product_id": product, "qty": 1}],
+            "lines": [{"product_id": product, "qty": 1, "unit_price": 100}],
             **values,
         },
     )
@@ -147,10 +147,10 @@ def test_receipt_price_required_and_zero_accepted(auth_client, payment_case):
     for value in ["missing", None]:
         if value is None:
             body["lines"][0]["unit_cost"] = None
-        response = auth_client.post("/api/receipts", json=body)
+        response = auth_client.post("/api/receipts", json={"request_id": str(uuid.uuid4()), **body})
         assert response.status_code == 422
         assert response.json()["code"] == "validation_error"
     body["lines"][0]["unit_cost"] = 0
-    response = auth_client.post("/api/receipts", json=body)
+    response = auth_client.post("/api/receipts", json={"request_id": str(uuid.uuid4()), **body})
     assert response.status_code == 201
     assert response.json()["lines"][0]["unit_cost"] == 0

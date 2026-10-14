@@ -86,7 +86,7 @@ def test_post_sale_decreases_stock(
             "customer_id": customer.id,
             "note": "  Самовывоз ",
             "lines": [
-                {"product_id": oc.id, "qty": 3},
+                {"product_id": oc.id, "qty": 3, "unit_price": 250_000},
                 {"product_id": bosch.id, "qty": 2, "unit_price": 99_950},
             ],
         },
@@ -137,7 +137,7 @@ def test_sale_movements_reference_the_document(
     auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    sale = _post(auth_client, [{"product_id": oc.id, "qty": 4}])
+    sale = _post(auth_client, [{"product_id": oc.id, "qty": 4, "unit_price": 250_000}])
 
     movement = db_session.execute(
         select(StockMovement).where(StockMovement.doc_id == sale["id"])
@@ -152,7 +152,7 @@ def test_sale_movements_reference_the_document(
 
 def test_sale_without_customer(auth_client: TestClient, products: tuple[Product, Product]) -> None:
     oc, _ = products
-    body = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    body = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}])
     assert body["customer"] is None
     assert body["note"] is None
     assert body["paid_at_sale"] == body["total"]
@@ -165,10 +165,16 @@ def test_partial_and_zero_paid_sale(
     oc, _ = products
     customer = create_customer(db_session)
     partial = _post(
-        auth_client, [{"product_id": oc.id, "qty": 1}], customer_id=customer.id, paid_amount=50_000
+        auth_client,
+        [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}],
+        customer_id=customer.id,
+        paid_amount=50_000,
     )
     zero = _post(
-        auth_client, [{"product_id": oc.id, "qty": 1}], customer_id=customer.id, paid_amount=0
+        auth_client,
+        [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}],
+        customer_id=customer.id,
+        paid_amount=0,
     )
     assert (partial["paid_at_sale"], partial["debt_at_sale"]) == (50_000, 200_000)
     assert (zero["paid_at_sale"], zero["debt_at_sale"]) == (0, 250_000)
@@ -180,13 +186,17 @@ def test_paid_exceeds_total_and_customer_required(
 ) -> None:
     oc, _ = products
     over = auth_client.post(
-        "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], paid_amount=250_001)
+        "/api/sales",
+        json=_payload(
+            [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}], paid_amount=250_001
+        ),
     )
     assert over.status_code == 422
     assert over.json()["code"] == "paid_exceeds_total"
     assert over.json()["params"] == {"total": 250_000, "paid": 250_001}
     no_customer = auth_client.post(
-        "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], paid_amount=0)
+        "/api/sales",
+        json=_payload([{"product_id": oc.id, "qty": 1, "unit_price": 250_000}], paid_amount=0),
     )
     assert no_customer.status_code == 422
     assert no_customer.json()["code"] == "debt_requires_customer"
@@ -201,7 +211,7 @@ def test_request_id_compares_final_paid_amount(
     payload = {
         "request_id": request_id,
         "customer_id": customer.id,
-        "lines": [{"product_id": oc.id, "qty": 1}],
+        "lines": [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}],
     }
     first = auth_client.post("/api/sales", json=payload)
     assert first.status_code == 201
@@ -214,25 +224,21 @@ def test_request_id_compares_final_paid_amount(
 
 def test_sale_number_grows(auth_client: TestClient, products: tuple[Product, Product]) -> None:
     oc, _ = products
-    first = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
-    second = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    first = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}])
+    second = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}])
     assert second["number"] > first["number"]
 
 
-def test_price_required_when_product_has_none(
-    auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
-) -> None:
-    oc, bosch = products
-    response = auth_client.post(
-        "/api/sales",
-        json=_payload([{"product_id": oc.id, "qty": 1}, {"product_id": bosch.id, "qty": 1}]),
-    )
+@pytest.mark.parametrize("price", ["missing", None])
+def test_price_is_required_even_when_product_has_price(auth_client, db_session, products, price):
+    oc, _ = products
+    line = {"product_id": oc.id, "qty": 1}
+    if price is None:
+        line["unit_price"] = None
+    response = auth_client.post("/api/sales", json=_payload([line]))
     assert response.status_code == 422
-    assert response.json() == {
-        "detail": "Укажите цену для товара 0986.452.041",
-        "code": "missing_price",
-        "params": {"article": "0986.452.041"},
-    }
+    assert response.json()["code"] == "validation_error"
+    assert response.json()["errors"][0]["field"] == "lines.0.unit_price"
     assert _sale_count(db_session) == 0
     assert _stock(db_session, oc.id) == 10
 
@@ -257,7 +263,9 @@ def test_sold_at_in_the_past_is_kept(
 ) -> None:
     oc, _ = products
     body = _post(
-        auth_client, [{"product_id": oc.id, "qty": 1}], sold_at="2026-01-05T10:00:00+05:00"
+        auth_client,
+        [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}],
+        sold_at="2026-01-05T10:00:00+05:00",
     )
     assert datetime.fromisoformat(body["sold_at"]) == datetime(2026, 1, 5, 5, 0, tzinfo=UTC)
 
@@ -268,7 +276,8 @@ def test_sold_at_in_the_future_rejected(
     oc, _ = products
     future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
     response = auth_client.post(
-        "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], sold_at=future)
+        "/api/sales",
+        json=_payload([{"product_id": oc.id, "qty": 1, "unit_price": 250_000}], sold_at=future),
     )
     assert response.status_code == 422
     assert response.json()["errors"] == [
@@ -286,21 +295,23 @@ def test_sold_at_in_the_future_rejected(
     "payload",
     [
         {},
-        {"lines": [{"product_id": 1, "qty": 1}]},
-        {"request_id": "not-a-uuid", "lines": [{"product_id": 1, "qty": 1}]},
+        {"lines": [{"product_id": 1, "qty": 1, "unit_price": 250_000}]},
+        {"request_id": "not-a-uuid", "lines": [{"product_id": 1, "qty": 1, "unit_price": 250_000}]},
         _payload([]),
-        _payload([{"product_id": 1, "qty": 1}] * 201),
-        _payload([{"product_id": 1, "qty": 0}]),
-        _payload([{"product_id": 1, "qty": 100_001}]),
-        _payload([{"product_id": 1, "qty": "1"}]),
+        _payload([{"product_id": 1, "qty": 1, "unit_price": 250_000}] * 201),
+        _payload([{"product_id": 1, "qty": 0, "unit_price": 250_000}]),
+        _payload([{"product_id": 1, "qty": 100_001, "unit_price": 250_000}]),
+        _payload([{"product_id": 1, "qty": "1", "unit_price": 250_000}]),
         _payload([{"product_id": 1, "qty": 1, "unit_price": -1}]),
         _payload([{"product_id": 1, "qty": 1, "unit_price": 100_000_000_001}]),
         _payload([{"product_id": 1, "qty": 1, "unit_price": 10.5}]),
-        _payload([{"product_id": 1, "qty": 1, "extra": 1}]),
-        _payload([{"product_id": 1, "qty": 1}], total=100),
-        _payload([{"product_id": 1, "qty": 1}], note="a" * 1001),
-        _payload([{"product_id": 1, "qty": 1}], customer_id=0),
-        _payload([{"product_id": 1, "qty": 1}], sold_at="2026-01-05T10:00:00"),
+        _payload([{"product_id": 1, "qty": 1, "extra": 1, "unit_price": 250_000}]),
+        _payload([{"product_id": 1, "qty": 1, "unit_price": 250_000}], total=100),
+        _payload([{"product_id": 1, "qty": 1, "unit_price": 250_000}], note="a" * 1001),
+        _payload([{"product_id": 1, "qty": 1, "unit_price": 250_000}], customer_id=0),
+        _payload(
+            [{"product_id": 1, "qty": 1, "unit_price": 250_000}], sold_at="2026-01-05T10:00:00"
+        ),
     ],
 )
 def test_post_sale_validation(auth_client: TestClient, payload: dict[str, object]) -> None:
@@ -312,7 +323,10 @@ def test_missing_customer_rejected(
 ) -> None:
     oc, _ = products
     response = auth_client.post(
-        "/api/sales", json=_payload([{"product_id": oc.id, "qty": 1}], customer_id=999999999)
+        "/api/sales",
+        json=_payload(
+            [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}], customer_id=999999999
+        ),
     )
     assert response.status_code == 422
     assert response.json() == {
@@ -329,7 +343,12 @@ def test_missing_product_rejected(
     oc, _ = products
     response = auth_client.post(
         "/api/sales",
-        json=_payload([{"product_id": oc.id, "qty": 1}, {"product_id": 999999999, "qty": 1}]),
+        json=_payload(
+            [
+                {"product_id": oc.id, "qty": 1, "unit_price": 250_000},
+                {"product_id": 999999999, "qty": 1, "unit_price": 250_000},
+            ]
+        ),
     )
     assert response.status_code == 422
     assert response.json() == {
@@ -345,7 +364,12 @@ def test_duplicate_product_rejected(
     oc, _ = products
     response = auth_client.post(
         "/api/sales",
-        json=_payload([{"product_id": oc.id, "qty": 1}, {"product_id": oc.id, "qty": 2}]),
+        json=_payload(
+            [
+                {"product_id": oc.id, "qty": 1, "unit_price": 250_000},
+                {"product_id": oc.id, "qty": 2, "unit_price": 250_000},
+            ]
+        ),
     )
     assert response.status_code == 422
     assert response.json() == {
@@ -359,7 +383,9 @@ def test_duplicate_product_rejected(
 def test_archived_product_rejected(auth_client: TestClient, db_session: Session) -> None:
     product = create_product(db_session, article="ARH-1", sale_price=100, is_archived=True)
     _receive(db_session, product, 3)
-    response = auth_client.post("/api/sales", json=_payload([{"product_id": product.id, "qty": 1}]))
+    response = auth_client.post(
+        "/api/sales", json=_payload([{"product_id": product.id, "qty": 1, "unit_price": 250_000}])
+    )
     assert response.status_code == 409
     assert response.json() == {
         "detail": "Товар ARH-1 в архиве",
@@ -377,7 +403,7 @@ def test_insufficient_stock_creates_nothing(
         "/api/sales",
         json=_payload(
             [
-                {"product_id": oc.id, "qty": 2},
+                {"product_id": oc.id, "qty": 2, "unit_price": 250_000},
                 {"product_id": bosch.id, "qty": 6, "unit_price": 100},
             ]
         ),
@@ -393,22 +419,19 @@ def test_insufficient_stock_creates_nothing(
     assert _stock(db_session, bosch.id) == 5
 
 
-def _lines(spec: list[tuple[str, int, int | None]], ids: dict[str, int]) -> list[dict]:
-    """Lines from (product key, qty, unit_price or None to omit it)."""
-    return [
-        {"product_id": ids[key], "qty": qty} | ({"unit_price": price} if price is not None else {})
-        for key, qty, price in spec
-    ]
+def _lines(spec: list[tuple[str, int, int]], ids: dict[str, int]) -> list[dict]:
+    """Lines from (product key, qty, unit_price or explicit price)."""
+    return [{"product_id": ids[key], "qty": qty, "unit_price": price} for key, qty, price in spec]
 
 
 @pytest.mark.parametrize(
     "retry",
     [
-        # Same lines, same prices; OC-90 again at the product's price.
-        [("oc", 2, None), ("bosch", 1, 500)],
+        # Same explicit prices.
+        [("oc", 2, 250_000), ("bosch", 1, 500)],
         # Lines in another order.
-        [("bosch", 1, 500), ("oc", 2, None)],
-        # The product's price passed explicitly: the resolved content is the same.
+        [("bosch", 1, 500), ("oc", 2, 250_000)],
+        # Same content repeated.
         [("oc", 2, 250_000), ("bosch", 1, 500)],
     ],
 )
@@ -416,12 +439,14 @@ def test_same_request_returns_same_sale(
     auth_client: TestClient,
     db_session: Session,
     products: tuple[Product, Product],
-    retry: list[tuple[str, int, int | None]],
+    retry: list[tuple[str, int, int]],
 ) -> None:
     oc, bosch = products
     ids = {"oc": oc.id, "bosch": bosch.id}
     customer = create_customer(db_session)
-    payload = _payload(_lines([("oc", 2, None), ("bosch", 1, 500)], ids), customer_id=customer.id)
+    payload = _payload(
+        _lines([("oc", 2, 250_000), ("bosch", 1, 500)], ids), customer_id=customer.id
+    )
     first = auth_client.post("/api/sales", json=payload)
     payload["lines"] = _lines(retry, ids)
     second = auth_client.post("/api/sales", json=payload)
@@ -437,25 +462,25 @@ def test_same_request_returns_same_sale(
 @pytest.mark.parametrize(
     ("retry", "other_customer"),
     [
-        ([("oc", 3, None)], False),
-        ([("oc", 2, None), ("bosch", 1, 100)], False),
+        ([("oc", 3, 250_000)], False),
+        ([("oc", 2, 250_000), ("bosch", 1, 100)], False),
         # Another price than the first sale, which went at the product's price.
         ([("oc", 2, 249_999)], False),
-        # No price and the product has none: a conflict, not "Укажите цену".
-        ([("bosch", 2, None)], False),
-        ([("oc", 2, None)], True),
+        # Another product, with an explicit zero price.
+        ([("bosch", 2, 0)], False),
+        ([("oc", 2, 250_000)], True),
     ],
 )
 def test_same_request_other_content_rejected(
     auth_client: TestClient,
     db_session: Session,
     products: tuple[Product, Product],
-    retry: list[tuple[str, int, int | None]],
+    retry: list[tuple[str, int, int]],
     other_customer: bool,
 ) -> None:
     oc, bosch = products
     ids = {"oc": oc.id, "bosch": bosch.id}
-    payload = _payload(_lines([("oc", 2, None)], ids))
+    payload = _payload(_lines([("oc", 2, 250_000)], ids))
     assert auth_client.post("/api/sales", json=payload).status_code == 201
 
     payload["lines"] = _lines(retry, ids)
@@ -473,19 +498,16 @@ def test_same_request_other_content_rejected(
     assert _stock(db_session, oc.id) == 8
 
 
-def test_same_request_with_explicit_price_then_without_it_rejected(
-    auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
-) -> None:
+def test_same_request_after_catalog_price_change(auth_client, db_session, products):
     oc, _ = products
-    ids = {"oc": oc.id}
-    payload = _payload(_lines([("oc", 2, 200_000)], ids))
-    assert auth_client.post("/api/sales", json=payload).status_code == 201
-
-    # Without unit_price the product's 250000 would apply: not the same sale.
-    payload["lines"] = _lines([("oc", 2, None)], ids)
-    response = auth_client.post("/api/sales", json=payload)
-
-    assert response.status_code == 409
+    payload = _payload([{"product_id": oc.id, "qty": 2, "unit_price": 200_000}])
+    first = auth_client.post("/api/sales", json=payload)
+    assert first.status_code == 201
+    oc.sale_price = 900_000
+    db_session.flush()
+    replay = auth_client.post("/api/sales", json=payload)
+    assert replay.status_code == 200
+    assert replay.json() == first.json()
     assert _sale_count(db_session) == 1
 
 
@@ -496,7 +518,7 @@ def test_concurrent_same_request_returns_existing_sale(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     oc, _ = products
-    payload = _payload([{"product_id": oc.id, "qty": 2}])
+    payload = _payload([{"product_id": oc.id, "qty": 2, "unit_price": 250_000}])
     first = auth_client.post("/api/sales", json=payload)
     assert first.status_code == 201
 
@@ -525,7 +547,10 @@ def test_cancel_sale_returns_stock(
     oc, bosch = products
     sale = _post(
         auth_client,
-        [{"product_id": oc.id, "qty": 3}, {"product_id": bosch.id, "qty": 5, "unit_price": 10}],
+        [
+            {"product_id": oc.id, "qty": 3, "unit_price": 250_000},
+            {"product_id": bosch.id, "qty": 5, "unit_price": 10},
+        ],
     )
     assert (_stock(db_session, oc.id), _stock(db_session, bosch.id)) == (7, 0)
 
@@ -550,7 +575,7 @@ def test_cancelled_by_name_is_the_user_who_cancelled(
     auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    sale = _post(auth_client, [{"product_id": oc.id, "qty": 3}])
+    sale = _post(auth_client, [{"product_id": oc.id, "qty": 3, "unit_price": 250_000}])
     assert sale["cancelled_by_name"] is None
 
     _login_as(auth_client, db_session, "Второй")
@@ -567,7 +592,7 @@ def test_cancel_twice_rejected(
     auth_client: TestClient, db_session: Session, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    sale = _post(auth_client, [{"product_id": oc.id, "qty": 3}])
+    sale = _post(auth_client, [{"product_id": oc.id, "qty": 3, "unit_price": 250_000}])
     url = f"/api/sales/{sale['id']}/cancel"
     assert auth_client.post(url, json={"reason": "Возврат"}).status_code == 200
 
@@ -587,7 +612,7 @@ def test_cancel_requires_reason(
     auth_client: TestClient, products: tuple[Product, Product], payload: dict[str, object]
 ) -> None:
     oc, _ = products
-    sale = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    sale = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}])
     assert auth_client.post(f"/api/sales/{sale['id']}/cancel", json=payload).status_code == 422
 
 
@@ -611,12 +636,15 @@ def test_list_sales(
     customer = create_customer(db_session, name="Ерлан")
     old = _post(
         auth_client,
-        [{"product_id": oc.id, "qty": 2}, {"product_id": bosch.id, "qty": 3, "unit_price": 100}],
+        [
+            {"product_id": oc.id, "qty": 2, "unit_price": 250_000},
+            {"product_id": bosch.id, "qty": 3, "unit_price": 100},
+        ],
         customer_id=customer.id,
         sold_at="2026-01-05T10:00:00+05:00",
     )
-    middle = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
-    new = _post(auth_client, [{"product_id": oc.id, "qty": 1}])
+    middle = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}])
+    new = _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}])
     auth_client.post(f"/api/sales/{new['id']}/cancel", json={"reason": "Ошибка ввода"})
 
     body = auth_client.get("/api/sales").json()
@@ -667,7 +695,12 @@ def test_same_sold_at_sorted_by_id(
 ) -> None:
     oc, _ = products
     at = "2026-02-01T12:00:00+05:00"
-    ids = [_post(auth_client, [{"product_id": oc.id, "qty": 1}], sold_at=at)["id"] for _ in "ab"]
+    ids = [
+        _post(auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}], sold_at=at)[
+            "id"
+        ]
+        for _ in "ab"
+    ]
     body = auth_client.get("/api/sales").json()
     assert [s["id"] for s in body["items"]] == ids[::-1]
 
@@ -691,7 +724,9 @@ def test_date_filter_uses_almaty_days(
     found: bool,
 ) -> None:
     oc, _ = products
-    sale = _post(auth_client, [{"product_id": oc.id, "qty": 1}], sold_at=sold_at)
+    sale = _post(
+        auth_client, [{"product_id": oc.id, "qty": 1, "unit_price": 250_000}], sold_at=sold_at
+    )
 
     body = auth_client.get("/api/sales", params={"date_from": day, "date_to": day}).json()
 
@@ -703,7 +738,7 @@ def test_product_history_shows_sale_number(
     auth_client: TestClient, products: tuple[Product, Product]
 ) -> None:
     oc, _ = products
-    sale = _post(auth_client, [{"product_id": oc.id, "qty": 4}])
+    sale = _post(auth_client, [{"product_id": oc.id, "qty": 4, "unit_price": 250_000}])
     auth_client.post(f"/api/sales/{sale['id']}/cancel", json={"reason": "Возврат"})
 
     body = auth_client.get(f"/api/products/{oc.id}/movements").json()

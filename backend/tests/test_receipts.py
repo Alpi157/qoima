@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -24,7 +25,9 @@ def _movement_count(db: Session, product_id: int) -> int:
 
 
 def _post(client: TestClient, lines: list[dict[str, object]], **fields: object) -> dict:
-    response = client.post("/api/receipts", json={"lines": lines, **fields})
+    response = client.post(
+        "/api/receipts", json={"request_id": str(uuid.uuid4()), "lines": lines, **fields}
+    )
     assert response.status_code == 201, response.text
     return response.json()
 
@@ -172,7 +175,11 @@ def test_received_at_in_the_future_rejected(
 
     response = auth_client.post(
         "/api/receipts",
-        json={"lines": [{"product_id": oc.id, "qty": 1, "unit_cost": 0}], "received_at": future},
+        json={
+            "request_id": str(uuid.uuid4()),
+            "lines": [{"product_id": oc.id, "qty": 1, "unit_cost": 0}],
+            "received_at": future,
+        },
     )
 
     assert response.status_code == 422
@@ -202,7 +209,12 @@ def test_received_at_in_the_future_rejected(
     ],
 )
 def test_post_receipt_validation(auth_client: TestClient, payload: dict[str, object]) -> None:
-    assert auth_client.post("/api/receipts", json=payload).status_code == 422
+    assert (
+        auth_client.post(
+            "/api/receipts", json={"request_id": str(uuid.uuid4()), **payload}
+        ).status_code
+        == 422
+    )
 
 
 def test_duplicate_product_rejected(
@@ -212,10 +224,11 @@ def test_duplicate_product_rejected(
     response = auth_client.post(
         "/api/receipts",
         json={
+            "request_id": str(uuid.uuid4()),
             "lines": [
                 {"product_id": oc.id, "qty": 1, "unit_cost": 0},
                 {"product_id": oc.id, "qty": 2, "unit_cost": 0},
-            ]
+            ],
         },
     )
     assert response.status_code == 422
@@ -234,10 +247,11 @@ def test_missing_product_rejected(
     response = auth_client.post(
         "/api/receipts",
         json={
+            "request_id": str(uuid.uuid4()),
             "lines": [
                 {"product_id": oc.id, "qty": 1, "unit_cost": 0},
                 {"product_id": 999999999, "qty": 1, "unit_cost": 0},
-            ]
+            ],
         },
     )
     assert response.status_code == 422
@@ -251,7 +265,11 @@ def test_missing_product_rejected(
 def test_archived_product_rejected(auth_client: TestClient, db_session: Session) -> None:
     product = create_product(db_session, article="ARH-1", is_archived=True)
     response = auth_client.post(
-        "/api/receipts", json={"lines": [{"product_id": product.id, "qty": 1, "unit_cost": 0}]}
+        "/api/receipts",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "lines": [{"product_id": product.id, "qty": 1, "unit_cost": 0}],
+        },
     )
     assert response.status_code == 409
     assert response.json() == {

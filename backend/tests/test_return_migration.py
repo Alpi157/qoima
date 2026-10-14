@@ -5,9 +5,7 @@ import uuid
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
-from app.inventory.service import MovementIn, post_movements
 from tests.conftest import BACKEND_DIR, test_engine
 
 PREVIOUS = "2a7c9e41b603"
@@ -94,17 +92,23 @@ def migration_case():
                 {"r": receipt, "p": product},
             )
             conn.execute(text("UPDATE document_counters SET last_number=1"))
-        with Session(engine) as db:
-            post_movements(
-                db,
-                [
-                    MovementIn(
-                        product, 1, "receipt", unit_cost=40, doc_type="receipt", doc_id=receipt
-                    )
-                ],
-                user,
+            # Seed the historical schema without the current ORM's newer columns.
+            warehouse = conn.scalar(text("SELECT id FROM warehouses WHERE code='main'"))
+            conn.execute(
+                text(
+                    "INSERT INTO stock_balances (product_id,warehouse_id,qty,avg_cost) "
+                    "VALUES (:p,:w,1,40)"
+                ),
+                {"p": product, "w": warehouse},
             )
-            db.commit()
+            conn.execute(
+                text(
+                    "INSERT INTO stock_movements "
+                    "(product_id,warehouse_id,qty,kind,unit_cost,doc_type,doc_id,created_by) "
+                    "VALUES (:p,:w,1,'receipt',40,'receipt',:r,:u)"
+                ),
+                {"p": product, "w": warehouse, "r": receipt, "u": user},
+            )
         yield (
             engine,
             migrate,

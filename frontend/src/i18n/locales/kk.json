@@ -88,7 +88,6 @@
     "duplicate_line": "{{article}} тауары екі рет жазылған",
     "duplicate_line_receipt": "{{article}} тауары қабылдауда екі рет жазылған",
     "duplicate_line_sale": "{{article}} тауары сатылымда екі рет жазылған",
-    "missing_price": "{{article}} тауарының бағасын жазыңыз",
     "insufficient_stock": "Қоймада тауар жетпейді. {{items}}",
     "receipt_not_found": "Қабылдау табылмады",
     "receipt_already_cancelled": "Бұл қабылдаудың күші бұрын жойылған",
@@ -118,7 +117,10 @@
     "debt_adjustment_exceeds_debt": "Қарыздан көп азайту мүмкін емес. Қазіргі қарыз: {{debt}}.",
     "debt_adjustment_request_conflict": "Бұл сұрау басқа қарызды түзету үшін қолданылған.",
     "debt_adjustment_not_found": "Қарызды түзету құжаты табылмады.",
-    "debt_adjustment_already_cancelled": "Қарызды түзету құжатының күші жойылған."
+    "debt_adjustment_already_cancelled": "Қарызды түзету құжатының күші жойылған.",
+    "receipt_request_conflict": "Бұл қабылдау бұрын басқа құраммен сақталған болуы мүмкін. Қабылдаулар тізімін тексеріңіз.",
+    "stock_adjustment_request_conflict": "Бұл түзету бұрын басқа мәнмен сақталған болуы мүмкін. Тауар тарихын тексеріңіз.",
+    "amount_too_large": "Сома тым үлкен"
   },
   "validation": {
     "missing": "Міндетті түрде толтырыңыз",

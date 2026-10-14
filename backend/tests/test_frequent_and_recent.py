@@ -30,7 +30,7 @@ def _sell(
 ) -> dict:
     payload: dict[str, object] = {
         "request_id": str(uuid.uuid4()),
-        "lines": [{"product_id": p.id, "qty": 1} for p in products],
+        "lines": [{"product_id": p.id, "qty": 1, "unit_price": p.sale_price} for p in products],
     }
     if customer is not None:
         payload["customer_id"] = customer.id

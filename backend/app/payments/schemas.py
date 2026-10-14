@@ -4,10 +4,10 @@ from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
-from app.schema_types import MAX_BIGINT, DbId, Note, PaymentMethod, Reason, check_not_in_future
+from app.schema_types import MAX_MONEY, DbId, Note, PaymentMethod, Reason, check_not_in_future
 
 PaymentStatus = Literal["posted", "cancelled"]
-PaymentAmount = Annotated[int, Field(strict=True, ge=1, le=MAX_BIGINT)]
+PaymentAmount = Annotated[int, Field(strict=True, ge=1, le=MAX_MONEY)]
 
 
 class PaymentCreate(BaseModel):

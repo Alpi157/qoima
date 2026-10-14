@@ -206,6 +206,7 @@ test('screens', async ({ page }, testInfo) => {
     const { id } = (await product.json()) as components['schemas']['ProductOut']
     const receipt = await page.request.post('/api/receipts', {
       data: {
+        request_id: crypto.randomUUID(),
         lines: [{ product_id: id, qty: 2, unit_cost: 60000 }],
       },
     })
@@ -214,7 +215,7 @@ test('screens', async ({ page }, testInfo) => {
       data: {
         request_id: crypto.randomUUID(),
         payment_method: 'cash',
-        lines: [{ product_id: id, qty: 2 }],
+        lines: [{ product_id: id, qty: 2, unit_price: 120000 }],
       },
     })
     expect(sale.ok()).toBeTruthy()

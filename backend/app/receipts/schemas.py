@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
@@ -32,6 +33,7 @@ class ReceiptLineIn(BaseModel):
 class ReceiptCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    request_id: UUID
     lines: list[ReceiptLineIn] = Field(min_length=1, max_length=MAX_LINES)
     supplier: Supplier = None
     note: Note = None
@@ -60,6 +62,7 @@ class ReceiptLineOut(BaseModel):
 class ReceiptOut(BaseModel):
     id: int
     number: int
+    request_id: UUID | None
     received_at: datetime
     supplier: str | None
     note: str | None

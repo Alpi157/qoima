@@ -28,7 +28,9 @@ class ErrorCode(StrEnum):
     PRODUCT_ARCHIVED = "product_archived"
     LINE_PRODUCT_NOT_FOUND = "line_product_not_found"
     DUPLICATE_LINE = "duplicate_line"
-    MISSING_PRICE = "missing_price"
+    AMOUNT_TOO_LARGE = "amount_too_large"
+    RECEIPT_REQUEST_CONFLICT = "receipt_request_conflict"
+    STOCK_ADJUSTMENT_REQUEST_CONFLICT = "stock_adjustment_request_conflict"
     RECEIPT_NOT_FOUND = "receipt_not_found"
     RECEIPT_ALREADY_CANCELLED = "receipt_already_cancelled"
     RECEIPT_CANCEL_BLOCKED = "receipt_cancel_blocked"
@@ -170,11 +172,22 @@ class DuplicateLineError(AppError):
     status_code = 422
 
 
-class MissingPriceError(AppError):
-    """A sale line has no price, and the product has no sale price to fall back to."""
-
-    code = ErrorCode.MISSING_PRICE
+class AmountTooLargeError(AppError):
+    code = ErrorCode.AMOUNT_TOO_LARGE
     status_code = 422
+    default_message = "Сумма слишком большая"
+
+
+class ReceiptRequestConflictError(AppError):
+    code = ErrorCode.RECEIPT_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "Этот запрос уже использован для другого приёма"
+
+
+class StockAdjustmentRequestConflictError(AppError):
+    code = ErrorCode.STOCK_ADJUSTMENT_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "Этот запрос уже использован для другой корректировки остатка"
 
 
 class ReceiptNotFoundError(AppError):

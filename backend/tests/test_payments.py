@@ -37,7 +37,7 @@ def debt_case(auth_client: TestClient, db_session: Session) -> tuple[int, int]:
             "request_id": str(uuid.uuid4()),
             "customer_id": customer.id,
             "paid_amount": 20_000,
-            "lines": [{"product_id": product.id, "qty": 1}],
+            "lines": [{"product_id": product.id, "qty": 1, "unit_price": 100_000}],
         },
     )
     assert sale.status_code == 201, sale.text
@@ -190,7 +190,7 @@ def test_fully_paid_sale_appears_in_ledger(
         json={
             "request_id": str(uuid.uuid4()),
             "customer_id": customer_id,
-            "lines": [{"product_id": product_id, "qty": 1}],
+            "lines": [{"product_id": product_id, "qty": 1, "unit_price": 100_000}],
         },
     )
     assert response.status_code == 201
@@ -236,7 +236,7 @@ def test_debts_order_and_page_totals(
                 "request_id": str(uuid.uuid4()),
                 "customer_id": customer.id,
                 "paid_amount": paid,
-                "lines": [{"product_id": product_id, "qty": 1}],
+                "lines": [{"product_id": product_id, "qty": 1, "unit_price": 100_000}],
             },
         )
         assert response.status_code == 201

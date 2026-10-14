@@ -15,7 +15,8 @@ export interface ReceiptDraftLine {
 
 /** The unfinished receiving kept in localStorage (simple-ui.md, «Черновики»). */
 export interface ReceiptDraft {
-  version: 1
+  version: 2
+  requestId: string
   lines: ReceiptDraftLine[]
   supplier: string
   note: string
@@ -26,7 +27,15 @@ export interface ReceiptDraft {
 }
 
 export function createReceiptDraft(): ReceiptDraft {
-  return { version: 1, lines: [], supplier: '', note: '', receivedAt: null, extrasOpen: false }
+  return {
+    version: 2,
+    requestId: crypto.randomUUID(),
+    lines: [],
+    supplier: '',
+    note: '',
+    receivedAt: null,
+    extrasOpen: false,
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,9 +53,12 @@ function parseLine(value: unknown): ReceiptDraftLine | null {
 }
 
 export function parseReceiptDraft(raw: unknown): ReceiptDraft | null {
-  if (!isRecord(raw) || raw.version !== 1 || !Array.isArray(raw.lines)) return null
+  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== 2) || !Array.isArray(raw.lines))
+    return null
+  if (raw.version === 2 && typeof raw.requestId !== 'string') return null
   return {
-    version: 1,
+    version: 2,
+    requestId: raw.version === 1 ? crypto.randomUUID() : (raw.requestId as string),
     lines: raw.lines.map(parseLine).filter((line) => line !== null),
     supplier: text(raw.supplier),
     note: text(raw.note),
@@ -84,6 +96,7 @@ export function receiptLineWarning(line: ReceiptDraftLine): string | null {
 export function receiptBody(draft: ReceiptDraft): ReceiptCreate {
   const receivedAt = draft.receivedAt === null ? null : localInputToIso(draft.receivedAt)
   return {
+    request_id: draft.requestId,
     supplier: draft.supplier.trim() || null,
     note: draft.note.trim() || null,
     ...(receivedAt !== null ? { received_at: receivedAt } : {}),

@@ -92,7 +92,6 @@
     "duplicate_line": "Товар {{article}} указан в документе дважды",
     "duplicate_line_receipt": "Товар {{article}} указан в приходе дважды",
     "duplicate_line_sale": "Товар {{article}} указан в продаже дважды",
-    "missing_price": "Укажите цену для товара {{article}}",
     "insufficient_stock": "Недостаточно товара. {{items}}",
     "receipt_not_found": "Приход не найден",
     "receipt_already_cancelled": "Приход уже отменён",
@@ -122,7 +121,10 @@
     "debt_adjustment_exceeds_debt": "Нельзя уменьшить больше долга. Текущий долг: {{debt}}.",
     "debt_adjustment_request_conflict": "Этот запрос уже использован для другого исправления долга.",
     "debt_adjustment_not_found": "Исправление долга не найдено.",
-    "debt_adjustment_already_cancelled": "Исправление долга уже отменено."
+    "debt_adjustment_already_cancelled": "Исправление долга уже отменено.",
+    "receipt_request_conflict": "Этот приём, возможно, уже сохранён с другим составом. Проверьте список приёмов.",
+    "stock_adjustment_request_conflict": "Эта корректировка, возможно, уже сохранена с другими данными. Проверьте историю товара.",
+    "amount_too_large": "Сумма слишком большая"
   },
   "validation": {
     "missing": "Обязательное поле",

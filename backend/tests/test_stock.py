@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
@@ -17,7 +19,11 @@ def _stock(db: Session, product_id: int) -> int:
 
 def _receipt(client: TestClient, product_id: int, qty: int) -> dict:
     response = client.post(
-        "/api/receipts", json={"lines": [{"product_id": product_id, "qty": qty, "unit_cost": 0}]}
+        "/api/receipts",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "lines": [{"product_id": product_id, "qty": qty, "unit_cost": 0}],
+        },
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -26,7 +32,12 @@ def _receipt(client: TestClient, product_id: int, qty: int) -> dict:
 def _adjust(client: TestClient, product_id: int, qty: int, reason: str = "Пересчёт") -> dict:
     response = client.post(
         "/api/stock/adjustments",
-        json={"product_id": product_id, "qty": qty, "reason": reason},
+        json={
+            "request_id": str(uuid.uuid4()),
+            "product_id": product_id,
+            "qty": qty,
+            "reason": reason,
+        },
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -68,7 +79,13 @@ def test_adjustment_below_zero_rejected(
     _adjust(auth_client, product.id, 2)
 
     response = auth_client.post(
-        "/api/stock/adjustments", json={"product_id": product.id, "qty": -3, "reason": "Пересчёт"}
+        "/api/stock/adjustments",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "product_id": product.id,
+            "qty": -3,
+            "reason": "Пересчёт",
+        },
     )
 
     assert response.status_code == 409
@@ -105,7 +122,9 @@ def test_adjustment_validation(
     payload.update(fields)
     payload = {k: v for k, v in payload.items() if v is not None}
 
-    response = auth_client.post("/api/stock/adjustments", json=payload)
+    response = auth_client.post(
+        "/api/stock/adjustments", json={"request_id": str(uuid.uuid4()), **payload}
+    )
 
     assert response.status_code == 422
     assert _stock(db_session, product.id) == 0
@@ -120,7 +139,13 @@ def test_adjustment_allowed_for_archived_product(
 
 def test_adjustment_missing_product(auth_client: TestClient) -> None:
     response = auth_client.post(
-        "/api/stock/adjustments", json={"product_id": 999999999, "qty": 1, "reason": "Пересчёт"}
+        "/api/stock/adjustments",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "product_id": 999999999,
+            "qty": 1,
+            "reason": "Пересчёт",
+        },
     )
     assert response.status_code == 404
     assert response.json() == {

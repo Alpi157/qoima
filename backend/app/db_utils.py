@@ -1,8 +1,22 @@
 from datetime import date, datetime, time, timedelta
+from uuid import UUID
 
-from sqlalchemy import ColumnElement, DateTime, func, literal
+from sqlalchemy import ColumnElement, DateTime, func, literal, text
+from sqlalchemy.orm import Session
 
 LIKE_ESCAPE = "\\"
+
+# Separate two-key advisory-lock namespaces for independently posted operations.
+RECEIPT_REQUEST_LOCK = 2201
+STOCK_ADJUSTMENT_REQUEST_LOCK = 2202
+
+
+def lock_request_id(db: Session, namespace: int, request_id: UUID) -> None:
+    """Serialize one request until transaction end, before reading its saved result."""
+    db.execute(
+        text("SELECT pg_advisory_xact_lock(:namespace, hashtext(CAST(:request_id AS text)))"),
+        {"namespace": namespace, "request_id": str(request_id)},
+    )
 
 
 def escape_like(value: str) -> str:

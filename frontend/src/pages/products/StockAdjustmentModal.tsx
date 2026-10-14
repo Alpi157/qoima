@@ -54,6 +54,7 @@ interface AdjustmentFormProps {
 function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
   const create = useCreateAdjustment()
   const { t } = useTranslation()
+  const [requestId] = useState(() => crypto.randomUUID())
   const [direction, setDirection] = useState<Direction>('add')
   const [qty, setQty] = useState<number | string>(1)
   const [reason, setReason] = useState('')
@@ -72,7 +73,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
     if (qtyProblem || reasonProblem) return
     setFormError(null)
     create.mutate(
-      { product_id: product.id, qty: delta, reason: reason.trim() },
+      { request_id: requestId, product_id: product.id, qty: delta, reason: reason.trim() },
       {
         onSuccess: (result) => {
           notifications.show({

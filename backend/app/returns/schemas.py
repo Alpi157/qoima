@@ -6,8 +6,8 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validato
 from pydantic_core import PydanticCustomError
 
 from app.schema_types import (
-    MAX_BIGINT,
     MAX_LINES,
+    MAX_MONEY,
     DbId,
     Note,
     PaymentMethod,
@@ -18,7 +18,7 @@ from app.schema_types import (
 
 ReturnStatus = Literal["posted", "cancelled"]
 ReturnCondition = Literal["good", "defective"]
-ExpectedAmount = Annotated[int, Field(strict=True, ge=0, le=MAX_BIGINT)]
+ExpectedAmount = Annotated[int, Field(strict=True, ge=0, le=MAX_MONEY)]
 
 
 class ReturnLineIn(BaseModel):

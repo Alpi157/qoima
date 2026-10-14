@@ -88,6 +88,9 @@ def post_payment(db: Session, data: PaymentCreate, user_id: int) -> tuple[Paymen
         )
         if customer is None:
             raise DocumentCustomerNotFoundError()
+        existing = _existing_payment(db, data)
+        if existing is not None:
+            return existing, False
         debt = current_debt(db, data.customer_id)
         if data.amount > debt:
             raise PaymentExceedsDebtError(params={"debt": debt, "amount": data.amount})

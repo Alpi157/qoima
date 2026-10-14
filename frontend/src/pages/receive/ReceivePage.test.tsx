@@ -1,8 +1,8 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
-import { ApiError } from '../../api/errors'
+import { ApiError, networkError } from '../../api/errors'
 import { draftKey } from '../../components/flow'
 import { makeProduct, makeReceipt, ok } from '../../test/fixtures'
 import { mockFlowGet, postBody } from '../../test/flowApi'
@@ -30,7 +30,8 @@ function renderReceive(route = '/receive') {
 
 function saveDraft(draft: Partial<ReceiptDraft>, key = RECEIPT_KEY) {
   const full: ReceiptDraft = {
-    version: 1,
+    version: 2,
+    requestId: crypto.randomUUID(),
     lines: [{ productId: 1, qty: 3, cost: '' }],
     supplier: '',
     note: '',
@@ -177,6 +178,7 @@ describe('ReceivePage', () => {
     expect(post.mock.calls[0][0]).toBe('/api/receipts')
     const body = postBody<ReceiptCreate>(post)
     expect(body).toEqual({
+      request_id: expect.any(String),
       supplier: null,
       note: null,
       lines: [{ product_id: 1, qty: 3, unit_cost: 90000 }],
@@ -207,6 +209,7 @@ describe('ReceivePage', () => {
     await user.click(submitButton())
 
     expect(postBody<ReceiptCreate>(post)).toEqual({
+      request_id: expect.any(String),
       supplier: 'Начальные остатки',
       note: null,
       lines: [{ product_id: 1, qty: 3, unit_cost: 90000 }],
@@ -386,4 +389,68 @@ it('adds all valid line costs to the purchase total in integer tiyn', async () =
   renderReceive()
   await screen.findByRole('textbox', { name: 'Закупочная цена W712' })
   expect(screen.getByTestId('receipt-total').textContent).toBe('Сумма: 3\u00a0901\u00a0₸')
+})
+
+it('upgrades an old draft and keeps its key through network errors and reload', async () => {
+  const user = setupUser()
+  mockFlowGet({ products: [FILTER] })
+  const old = {
+    version: 1,
+    lines: [{ productId: 1, qty: 3, cost: '900' }],
+    supplier: 'Supplier',
+    note: '',
+    receivedAt: null,
+    extrasOpen: false,
+  }
+  localStorage.setItem(RECEIPT_KEY, JSON.stringify(old))
+  const post = vi.spyOn(api, 'POST').mockRejectedValue(networkError())
+  const rendered = renderReceive()
+  await screen.findByRole('textbox', { name: 'Количество OC-90' })
+  const migrated = storedDraft()!
+  expect(migrated).toMatchObject({ ...old, version: 2, requestId: expect.any(String) })
+  await user.click(submitButton())
+  await screen.findByRole('alert')
+  expect(postBody<ReceiptCreate>(post).request_id).toBe(migrated.requestId)
+  expect(storedDraft()?.requestId).toBe(migrated.requestId)
+  rendered.unmount()
+  renderReceive()
+  await screen.findByRole('textbox', { name: 'Количество OC-90' })
+  await user.click(submitButton())
+  await screen.findByRole('alert')
+  expect(postBody<ReceiptCreate>(post, 1).request_id).toBe(migrated.requestId)
+})
+
+it('starts with a new key after a successful receipt', async () => {
+  const user = setupUser()
+  mockFlowGet({ products: [FILTER] })
+  saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
+  const originalKey = storedDraft()!.requestId
+  vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt()))
+  const { router } = renderReceive()
+  await screen.findByRole('textbox', { name: 'Количество OC-90' })
+  await user.click(submitButton())
+  await waitFor(() => expect(router.state.location.pathname).toBe('/receive/done/5'))
+  expect(storedDraft()).toBeNull()
+  await act(() => router.navigate('/receive'))
+  await fill(user, await screen.findByRole('searchbox'), 'OC')
+  await user.keyboard('{Enter}')
+  await screen.findByRole('textbox', { name: 'Количество OC-90' })
+  expect(storedDraft()?.requestId).not.toBe(originalKey)
+  expect(storedDraft()?.requestId).toMatch(/^[a-f0-9-]{36}$/)
+})
+
+it('shows the receipt conflict without clearing the draft', async () => {
+  const user = setupUser()
+  mockFlowGet({ products: [FILTER] })
+  saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
+  vi.spyOn(api, 'POST').mockRejectedValue(
+    new ApiError(409, 'detail', {}, 'receipt_request_conflict'),
+  )
+  renderReceive()
+  await screen.findByRole('textbox', { name: 'Количество OC-90' })
+  await user.click(submitButton())
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    'Этот приём, возможно, уже сохранён с другим составом. Проверьте список приёмов.',
+  )
+  expect(storedDraft()?.lines).toHaveLength(1)
 })

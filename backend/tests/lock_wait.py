@@ -31,3 +31,29 @@ def wait_until_lock_waiting(pid: int, table: str = "customers") -> None:
                 return
             poll.wait(min(0.01, max(0, deadline - monotonic())))
     raise AssertionError(f"B не ждёт блокировку {table} (pid={pid})")
+
+
+def wait_until_advisory_lock_waiting(pid: int, namespace: int, request_id) -> None:
+    """Observe this exact two-key advisory lock, refreshing statistics on every poll."""
+    deadline = monotonic() + 5
+    poll = Event()
+    with test_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        while monotonic() < deadline:
+            waiting = conn.scalar(
+                text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
+                        WHERE a.pid = :pid AND a.wait_event_type = 'Lock'
+                          AND a.wait_event = 'advisory'
+                          AND l.locktype = 'advisory' AND NOT l.granted
+                          AND l.classid::bigint = :namespace AND l.objsubid = 2
+                          AND l.objid::bigint =
+                              (hashtext(CAST(:request_id AS text))::bigint & 4294967295)
+                    )
+                """),
+                {"pid": pid, "namespace": namespace, "request_id": str(request_id)},
+            )
+            if waiting:
+                return
+            poll.wait(min(0.01, max(0, deadline - monotonic())))
+    raise AssertionError(f"B не ждёт advisory-lock {namespace}/{request_id} (pid={pid})")

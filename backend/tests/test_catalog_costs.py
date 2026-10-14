@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import event
 
 from app.catalog.service import frequent_products, get_product, search_products
@@ -18,6 +20,7 @@ def test_last_cost_skips_null_and_cancelled_receipts(auth_client, db_session):
     post_receipt(
         db_session,
         ReceiptCreate(
+            request_id=uuid.uuid4(),
             received_at="2026-01-01T10:00:00+05:00",
             lines=[ReceiptLineIn(product_id=product.id, qty=4, unit_cost=100)],
         ),
@@ -38,9 +41,10 @@ def test_last_cost_skips_null_and_cancelled_receipts(auth_client, db_session):
         user.id,
     )
     assert get_product(db_session, product.id).last_cost == 100
-    latest = post_receipt(
+    latest, _ = post_receipt(
         db_session,
         ReceiptCreate(
+            request_id=uuid.uuid4(),
             received_at="2026-01-03T10:00:00+05:00",
             lines=[ReceiptLineIn(product_id=product.id, qty=1, unit_cost=300)],
         ),
@@ -54,6 +58,7 @@ def test_last_cost_skips_null_and_cancelled_receipts(auth_client, db_session):
     post_receipt(
         db_session,
         ReceiptCreate(
+            request_id=uuid.uuid4(),
             received_at="2026-01-01T10:00:00+05:00",
             lines=[ReceiptLineIn(product_id=product.id, qty=1, unit_cost=0)],
         ),
@@ -136,12 +141,18 @@ def test_catalog_queries_have_no_n_plus_one(db_session):
         product = create_product(db_session, sale_price=500)
         post_receipt(
             db_session,
-            ReceiptCreate(lines=[ReceiptLineIn(product_id=product.id, qty=2, unit_cost=100)]),
+            ReceiptCreate(
+                request_id=uuid.uuid4(),
+                lines=[ReceiptLineIn(product_id=product.id, qty=2, unit_cost=100)],
+            ),
             user.id,
         )
         post_sale(
             db_session,
-            SaleCreate(request_id=uuid.uuid4(), lines=[SaleLineIn(product_id=product.id, qty=1)]),
+            SaleCreate(
+                request_id=uuid.uuid4(),
+                lines=[SaleLineIn(product_id=product.id, qty=1, unit_price=product.sale_price)],
+            ),
             user.id,
         )
     conn = db_session.connection()

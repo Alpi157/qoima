@@ -599,6 +599,11 @@ export interface components {
     schemas: {
         /** AdjustmentCreate */
         AdjustmentCreate: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
             /** Product Id */
             product_id: number;
             /** Qty */
@@ -818,7 +823,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "missing_price" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -1143,6 +1148,11 @@ export interface components {
         };
         /** ReceiptCreate */
         ReceiptCreate: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
             /** Lines */
             lines: components["schemas"]["ReceiptLineIn"][];
             /** Supplier */
@@ -1205,6 +1215,8 @@ export interface components {
             id: number;
             /** Number */
             number: number;
+            /** Request Id */
+            request_id: string | null;
             /**
              * Received At
              * Format: date-time
@@ -1484,7 +1496,7 @@ export interface components {
             /** Qty */
             qty: number;
             /** Unit Price */
-            unit_price?: number | null;
+            unit_price: number;
         };
         /** SaleLineOut */
         SaleLineOut: {
@@ -2296,6 +2308,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Приём с этим request_id уже проведён */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptOut"];
+                };
+            };
             /** @description Successful Response */
             201: {
                 headers: {
@@ -2857,6 +2878,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Корректировка с этим request_id уже проведена */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentOut"];
+                };
+            };
             /** @description Successful Response */
             201: {
                 headers: {

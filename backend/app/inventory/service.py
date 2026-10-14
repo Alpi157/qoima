@@ -1,14 +1,22 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
+from psycopg.errors import UniqueViolation
 from sqlalchemy import Numeric, Select, and_, cast, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
 from app.catalog.models import Product
-from app.errors import InsufficientStockError, ProductNotFoundError
+from app.db_utils import STOCK_ADJUSTMENT_REQUEST_LOCK, lock_request_id
+from app.errors import (
+    InsufficientStockError,
+    ProductNotFoundError,
+    StockAdjustmentRequestConflictError,
+)
 from app.inventory.models import (
     MAIN_WAREHOUSE_CODE,
     MOVEMENT_KINDS,
@@ -38,6 +46,7 @@ class MovementIn:
     note: str | None = None
     warehouse_id: int | None = None
     unit_cost: int | None = None
+    request_id: UUID | None = None
 
 
 def round_half_up(numerator: int, denominator: int) -> int:
@@ -152,6 +161,7 @@ def post_movements(
                 warehouse_id=warehouse_id,
                 qty=m.qty,
                 unit_cost=unit_cost,
+                request_id=m.request_id,
                 kind=m.kind,
                 doc_type=m.doc_type,
                 doc_id=m.doc_id,
@@ -221,20 +231,69 @@ def list_movements(db: Session, product_id: int, limit: int, offset: int) -> Mov
     return MovementPage(items=items, total=total)
 
 
-def create_adjustment(db: Session, data: AdjustmentCreate, user_id: int) -> AdjustmentOut:
-    """Manual stock correction. Allowed for archived products too."""
-    _ensure_product_exists(db, data.product_id)
-    (movement,) = post_movements(
-        db, [MovementIn(data.product_id, data.qty, "adjustment", note=data.reason)], user_id
-    )
-    db.commit()
-
-    history = _movements_query(data.product_id).subquery()
+def _adjustment_out(db: Session, movement: StockMovement) -> AdjustmentOut:
+    history = _movements_query(movement.product_id).subquery()
     row = db.execute(select(history).where(history.c.id == movement.id)).one()
     return AdjustmentOut(
         movement=MovementOut.model_validate(row, from_attributes=True),
-        stock=_product_stock(db, data.product_id),
+        stock=_product_stock(db, movement.product_id),
     )
+
+
+def _existing_adjustment(db: Session, data: AdjustmentCreate) -> AdjustmentOut | None:
+    movement = db.scalar(select(StockMovement).where(StockMovement.request_id == data.request_id))
+    if movement is None:
+        return None
+    if (
+        movement.kind != "adjustment"
+        or movement.product_id != data.product_id
+        or movement.qty != data.qty
+        or movement.note != data.reason
+    ):
+        raise StockAdjustmentRequestConflictError()
+    return _adjustment_out(db, movement)
+
+
+def _is_request_id_conflict(exc: IntegrityError) -> bool:
+    return (
+        isinstance(exc.orig, UniqueViolation)
+        and exc.orig.diag.constraint_name == "uq_stock_movements_request_id"
+    )
+
+
+def create_adjustment(
+    db: Session, data: AdjustmentCreate, user_id: int
+) -> tuple[AdjustmentOut, bool]:
+    """Manual stock correction. Allowed for archived products too."""
+    lock_request_id(db, STOCK_ADJUSTMENT_REQUEST_LOCK, data.request_id)
+    existing = _existing_adjustment(db, data)
+    if existing is not None:
+        return existing, False
+    try:
+        _ensure_product_exists(db, data.product_id)
+        (movement,) = post_movements(
+            db,
+            [
+                MovementIn(
+                    data.product_id,
+                    data.qty,
+                    "adjustment",
+                    note=data.reason,
+                    request_id=data.request_id,
+                )
+            ],
+            user_id,
+        )
+        db.commit()
+    except IntegrityError as exc:
+        if not _is_request_id_conflict(exc):
+            raise
+        db.rollback()
+        existing = _existing_adjustment(db, data)
+        if existing is None:
+            raise
+        return existing, False
+    return _adjustment_out(db, movement), True
 
 
 def stock_summary(db: Session) -> StockSummary:

@@ -134,3 +134,31 @@ describe('fieldErrorText', () => {
     expect(fieldErrorText(fieldError('Без типа'))).toBe('Без типа')
   })
 })
+
+it.each([
+  [
+    'ru',
+    'receipt_request_conflict',
+    'Этот приём, возможно, уже сохранён с другим составом. Проверьте список приёмов.',
+  ],
+  [
+    'kk',
+    'receipt_request_conflict',
+    'Бұл қабылдау бұрын басқа құраммен сақталған болуы мүмкін. Қабылдаулар тізімін тексеріңіз.',
+  ],
+  ['zh', 'receipt_request_conflict', '此入库可能已用其他内容保存，请检查入库列表。'],
+  [
+    'ru',
+    'stock_adjustment_request_conflict',
+    'Эта корректировка, возможно, уже сохранена с другими данными. Проверьте историю товара.',
+  ],
+  [
+    'kk',
+    'stock_adjustment_request_conflict',
+    'Бұл түзету бұрын басқа мәнмен сақталған болуы мүмкін. Тауар тарихын тексеріңіз.',
+  ],
+  ['zh', 'stock_adjustment_request_conflict', '此调整可能已用其他数据保存，请检查商品记录。'],
+] as const)('translates %s %s', async (language, code, expected) => {
+  await i18n.changeLanguage(language)
+  expect(apiErrorText(new ApiError(409, 'detail', {}, code))).toBe(expected)
+})

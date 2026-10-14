@@ -107,6 +107,7 @@ export function ok<T>(data: T) {
 
 export function makeReceipt(overrides: Partial<Receipt> = {}): Receipt {
   return {
+    request_id: null,
     id: 5,
     number: 12,
     received_at: '2026-09-27T09:00:00Z',

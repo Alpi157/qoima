@@ -2,7 +2,9 @@ import { screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
-import { ApiError } from '../../api/errors'
+import { ApiError, networkError } from '../../api/errors'
+import type { components } from '../../api/schema'
+import { postBody } from '../../test/flowApi'
 import { makeProduct, ok } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { fill, setupUser } from '../../test/user'
@@ -12,8 +14,10 @@ const PRODUCT = makeProduct({ id: 1, article: 'OC-90', stock: 5 })
 
 function renderModal() {
   const onClose = vi.fn()
-  renderWithProviders(<StockAdjustmentModal product={PRODUCT} opened onClose={onClose} />)
-  return { onClose }
+  const result = renderWithProviders(
+    <StockAdjustmentModal product={PRODUCT} opened onClose={onClose} />,
+  )
+  return { ...result, onClose }
 }
 
 function qtyField(): HTMLInputElement {
@@ -39,7 +43,7 @@ describe('StockAdjustmentModal', () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(post).toHaveBeenCalledWith('/api/stock/adjustments', {
-      body: { product_id: 1, qty: -3, reason: 'Брак' },
+      body: { request_id: expect.any(String), product_id: 1, qty: -3, reason: 'Брак' },
     })
   })
 
@@ -69,4 +73,43 @@ describe('StockAdjustmentModal', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(message)
     expect(onClose).not.toHaveBeenCalled()
   })
+})
+
+it('keeps the adjustment key while open and generates another on reopening', async () => {
+  const user = setupUser()
+  const post = vi.spyOn(api, 'POST').mockRejectedValue(networkError())
+  const first = renderModal()
+  await user.click(screen.getByRole('button', { name: 'Брак' }))
+  await user.click(screen.getByRole('button', { name: 'Добавить' }))
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Добавить' }).getAttribute('data-loading'),
+    ).toBeNull(),
+  )
+  const original = postBody<components['schemas']['AdjustmentCreate']>(post).request_id
+  await user.click(screen.getByRole('button', { name: 'Добавить' }))
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(2))
+  expect(postBody<components['schemas']['AdjustmentCreate']>(post, 1).request_id).toBe(original)
+  // Unmounting is the same lifetime as the form closing inside StockAdjustmentModal.
+  first.unmount()
+  renderModal()
+  await user.click(screen.getByRole('button', { name: 'Брак' }))
+  await user.click(screen.getByRole('button', { name: 'Добавить' }))
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(3))
+  expect(postBody<components['schemas']['AdjustmentCreate']>(post, 2).request_id).not.toBe(original)
+})
+
+it('shows its own adjustment conflict inside the window', async () => {
+  const user = setupUser()
+  vi.spyOn(api, 'POST').mockRejectedValue(
+    new ApiError(409, 'detail', {}, 'stock_adjustment_request_conflict'),
+  )
+  const { onClose } = renderModal()
+  await user.click(screen.getByRole('button', { name: 'Брак' }))
+  await user.click(screen.getByRole('button', { name: 'Добавить' }))
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    'Эта корректировка, возможно, уже сохранена с другими данными. Проверьте историю товара.',
+  )
+  expect(onClose).not.toHaveBeenCalled()
 })

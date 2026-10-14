@@ -216,6 +216,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
     receipts_service.post_receipt(
         db,
         ReceiptCreate(
+            request_id=uuid.uuid4(),
             supplier=OPENING_SUPPLIER,
             note=OPENING_SUPPLIER,
             received_at=_local_time(now, *OPENING_TIME),
@@ -236,6 +237,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
     create_adjustment(
         db,
         AdjustmentCreate(
+            request_id=uuid.uuid4(),
             product_id=product_ids[unknown.article],
             qty=unknown.initial_qty,
             reason="Начальные остатки без закупочной цены",
@@ -247,6 +249,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         receipts_service.post_receipt(
             db,
             ReceiptCreate(
+                request_id=uuid.uuid4(),
                 supplier=supplier,
                 received_at=_local_time(now, days_ago, at),
                 lines=[
@@ -281,7 +284,15 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 payment_method=("card" if number % 2 else "cash") if number != 15 else None,
                 sold_at=_local_time(now, days_ago, at),
                 lines=[
-                    SaleLineIn(product_id=product_ids[article], qty=qty) for article, qty in lines
+                    SaleLineIn(
+                        product_id=product_ids[article],
+                        qty=qty,
+                        unit_price=next(
+                            item.price_tenge for item in PRODUCTS if item.article == article
+                        )
+                        * 100,
+                    )
+                    for article, qty in lines
                 ],
             ),
             user.id,

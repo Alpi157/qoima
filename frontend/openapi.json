@@ -1061,6 +1061,16 @@
                 }
               }
             }
+          },
+          "200": {
+            "description": "Приём с этим request_id уже проведён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptOut"
+                }
+              }
+            }
           }
         }
       }
@@ -2152,6 +2162,16 @@
                 }
               }
             }
+          },
+          "200": {
+            "description": "Корректировка с этим request_id уже проведена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentOut"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2851,6 +2871,11 @@
     "schemas": {
       "AdjustmentCreate": {
         "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
           "product_id": {
             "type": "integer",
             "maximum": 9.223372036854776e+18,
@@ -2873,6 +2898,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "request_id",
           "product_id",
           "qty",
           "reason"
@@ -3291,8 +3317,8 @@
           },
           "amount": {
             "type": "integer",
-            "maximum": 9.223372036854776e+18,
-            "minimum": -9.223372036854776e+18,
+            "maximum": 1000000000000000.0,
+            "minimum": -1000000000000000.0,
             "title": "Amount"
           },
           "adjusted_at": {
@@ -3500,7 +3526,9 @@
           "product_archived",
           "line_product_not_found",
           "duplicate_line",
-          "missing_price",
+          "amount_too_large",
+          "receipt_request_conflict",
+          "stock_adjustment_request_conflict",
           "receipt_not_found",
           "receipt_already_cancelled",
           "receipt_cancel_blocked",
@@ -3896,7 +3924,7 @@
           },
           "amount": {
             "type": "integer",
-            "maximum": 9.223372036854776e+18,
+            "maximum": 1000000000000000.0,
             "minimum": 1.0,
             "title": "Amount"
           },
@@ -4530,6 +4558,11 @@
       },
       "ReceiptCreate": {
         "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
           "lines": {
             "items": {
               "$ref": "#/components/schemas/ReceiptLineIn"
@@ -4579,6 +4612,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "request_id",
           "lines"
         ],
         "title": "ReceiptCreate"
@@ -4730,6 +4764,18 @@
             "type": "integer",
             "title": "Number"
           },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
           "received_at": {
             "type": "string",
             "format": "date-time",
@@ -4835,6 +4881,7 @@
         "required": [
           "id",
           "number",
+          "request_id",
           "received_at",
           "supplier",
           "note",
@@ -4966,7 +5013,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 9.223372036854776e+18,
+                "maximum": 1000000000000000.0,
                 "minimum": 0.0
               },
               {
@@ -4979,7 +5026,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 9.223372036854776e+18,
+                "maximum": 1000000000000000.0,
                 "minimum": 0.0
               },
               {
@@ -5525,7 +5572,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 100000000000.0,
+                "maximum": 1000000000000000.0,
                 "minimum": 0.0
               },
               {
@@ -5636,16 +5683,9 @@
             "title": "Qty"
           },
           "unit_price": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 100000000000.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "maximum": 100000000000.0,
+            "minimum": 0.0,
             "title": "Unit Price"
           }
         },
@@ -5653,7 +5693,8 @@
         "type": "object",
         "required": [
           "product_id",
-          "qty"
+          "qty",
+          "unit_price"
         ],
         "title": "SaleLineIn"
       },

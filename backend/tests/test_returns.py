@@ -555,8 +555,8 @@ def test_return_line_order_replay_and_multiple_line_refund(return_case):
             customer_id=case.customer,
             sold_at=AT,
             lines=[
-                SaleLineIn(product_id=case.product, qty=2),
-                SaleLineIn(product_id=second.id, qty=2),
+                SaleLineIn(product_id=case.product, qty=2, unit_price=100),
+                SaleLineIn(product_id=second.id, qty=2, unit_price=second.sale_price),
             ],
         ),
         case.user,

@@ -86,7 +86,6 @@
     "duplicate_line": "商品 {{article}} 重复添加了",
     "duplicate_line_receipt": "商品 {{article}} 在入库单里重复添加了",
     "duplicate_line_sale": "商品 {{article}} 在销售单里重复添加了",
-    "missing_price": "请填写商品 {{article}} 的价格",
     "insufficient_stock": "库存不足。{{items}}",
     "receipt_not_found": "没有找到这张入库单",
     "receipt_already_cancelled": "这张入库单已经作废了",
@@ -116,7 +115,10 @@
     "debt_adjustment_exceeds_debt": "减少金额不能超过欠款。当前欠款：{{debt}}。",
     "debt_adjustment_request_conflict": "此请求已用于其他欠款调整。",
     "debt_adjustment_not_found": "未找到欠款调整单。",
-    "debt_adjustment_already_cancelled": "欠款调整单已撤销。"
+    "debt_adjustment_already_cancelled": "欠款调整单已撤销。",
+    "receipt_request_conflict": "此入库可能已用其他内容保存，请检查入库列表。",
+    "stock_adjustment_request_conflict": "此调整可能已用其他数据保存，请检查商品记录。",
+    "amount_too_large": "金额过大"
   },
   "validation": {
     "missing": "必填",

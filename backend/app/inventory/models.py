@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
@@ -49,6 +50,12 @@ class StockMovement(Base):
         ),
         CheckConstraint("(doc_type IS NULL) = (doc_id IS NULL)", name="doc_ref_complete"),
         Index("ix_stock_movements_product_id_created_at", "product_id", "created_at"),
+        Index(
+            "uq_stock_movements_request_id",
+            "request_id",
+            unique=True,
+            postgresql_where=text("request_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -56,6 +63,7 @@ class StockMovement(Base):
     warehouse_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("warehouses.id"))
     qty: Mapped[int] = mapped_column(Integer)
     unit_cost: Mapped[int | None] = mapped_column(BigInteger)
+    request_id: Mapped[UUID | None] = mapped_column()
     kind: Mapped[str] = mapped_column(Text)
     doc_type: Mapped[str | None] = mapped_column(Text)
     doc_id: Mapped[int | None] = mapped_column(BigInteger)

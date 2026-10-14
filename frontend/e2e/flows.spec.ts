@@ -74,6 +74,7 @@ test('good and defective return and cancellation restore this customer and these
   }
   const received = await page.request.post('/api/receipts', {
     data: {
+      request_id: crypto.randomUUID(),
       lines: products.map((product) => ({
         product_id: product.id,
         qty: 10,
@@ -601,4 +602,40 @@ test('opening debt, payment and adjustment cancellation produce an overpayment',
   expect(history.items[0]).toMatchObject({ kind: 'payment', debt_after: -2000000 })
   await expect(page.locator('.mantine-Notification-root')).toHaveCount(0, { timeout: 10000 })
   await snap(page, 'customer-adjustment-overpayment', w)
+})
+
+test('manual stock adjustment posts once and keeps the existing form behavior', async ({
+  page,
+}) => {
+  await login(page)
+  const created = await page.request.post('/api/products', {
+    data: { article: `STOCK-22-${width(page)}`, name: 'Қалдықты тексеру', sale_price: 10000 },
+  })
+  expect(created.status()).toBe(201)
+  const product = (await created.json()) as Product
+  await page.goto(`/products/${product.id}`)
+  await page.getByRole('button', { name: 'Санын түзету', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await expect(modal.getByRole('textbox', { name: 'Себебі' })).toBeVisible()
+  await modal.getByRole('textbox', { name: 'Себебі' }).fill('Пересчёт')
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/stock/adjustments') && response.request().method() === 'POST',
+  )
+  await modal.getByRole('button', { name: 'Қосу', exact: true }).click()
+  const response = await responsePromise
+  expect(response.status()).toBe(201)
+  const body = response.request().postDataJSON() as components['schemas']['AdjustmentCreate']
+  expect(body.request_id).toMatch(/^[a-f0-9-]{36}$/)
+  await expect(modal).toHaveCount(0)
+  const replay = await page.request.post('/api/stock/adjustments', { data: body })
+  expect(replay.status()).toBe(200)
+  expect(await replay.json()).toEqual(await response.json())
+  const updated = await getJson<Product>(page, `/api/products/${product.id}`)
+  expect(updated.stock).toBe(1)
+  const history = await getJson<components['schemas']['MovementPage']>(
+    page,
+    `/api/products/${product.id}/movements`,
+  )
+  expect(history.total).toBe(1)
 })

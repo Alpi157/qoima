@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,7 +10,12 @@ HUGE_ID = 2**63
 
 def test_validation_error_format(auth_client: TestClient) -> None:
     response = auth_client.post(
-        "/api/receipts", json={"lines": [{"product_id": 1, "qty": 0, "unit_cost": 0}], "extra": 1}
+        "/api/receipts",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "lines": [{"product_id": 1, "qty": 0, "unit_cost": 0}],
+            "extra": 1,
+        },
     )
 
     assert response.status_code == 422
@@ -30,7 +37,8 @@ def test_validation_error_format(auth_client: TestClient) -> None:
 
 def test_validation_error_uses_our_own_type_and_text(auth_client: TestClient) -> None:
     response = auth_client.post(
-        "/api/stock/adjustments", json={"product_id": 1, "qty": 0, "reason": "Пересчёт"}
+        "/api/stock/adjustments",
+        json={"request_id": str(uuid.uuid4()), "product_id": 1, "qty": 0, "reason": "Пересчёт"},
     )
     assert response.status_code == 422
     assert response.json()["errors"] == [
@@ -161,7 +169,7 @@ def test_huge_id_in_path_rejected(auth_client: TestClient, method: str, path: st
             "/api/sales",
             {
                 "request_id": "0b3f5d2e-8a3c-4c1e-9f0a-2d6b7e8f9a01",
-                "lines": [{"product_id": HUGE_ID, "qty": 1}],
+                "lines": [{"product_id": HUGE_ID, "qty": 1, "unit_price": 0}],
             },
             "lines.0.product_id",
         ),
@@ -170,7 +178,7 @@ def test_huge_id_in_path_rejected(auth_client: TestClient, method: str, path: st
             {
                 "request_id": "0b3f5d2e-8a3c-4c1e-9f0a-2d6b7e8f9a01",
                 "customer_id": HUGE_ID,
-                "lines": [{"product_id": 1, "qty": 1}],
+                "lines": [{"product_id": 1, "qty": 1, "unit_price": 0}],
             },
             "customer_id",
         ),
@@ -184,7 +192,7 @@ def test_huge_id_in_path_rejected(auth_client: TestClient, method: str, path: st
 def test_huge_id_in_body_rejected(
     auth_client: TestClient, path: str, body: dict[str, object], field: str
 ) -> None:
-    response = auth_client.post(path, json=body)
+    response = auth_client.post(path, json={"request_id": str(uuid.uuid4()), **body})
     assert response.status_code == 422
     assert response.json()["errors"] == [
         {
@@ -233,6 +241,7 @@ def test_future_date_error_type(auth_client: TestClient) -> None:
     response = auth_client.post(
         "/api/receipts",
         json={
+            "request_id": str(uuid.uuid4()),
             "lines": [{"product_id": 1, "qty": 1, "unit_cost": 0}],
             "received_at": "2999-01-01T00:00:00Z",
         },

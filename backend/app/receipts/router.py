@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import current_user
@@ -36,13 +36,22 @@ def get_receipt(receipt_id: DbId, db: Session = Depends(get_db)) -> ReceiptOut:
     return service.get_receipt(db, receipt_id)
 
 
-@router.post("", response_model=ReceiptOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ReceiptOut,
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": ReceiptOut, "description": "Приём с этим request_id уже проведён"}},
+)
 def post_receipt(
     payload: ReceiptCreate,
+    response: Response,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> ReceiptOut:
-    return service.post_receipt(db, payload, user.id)
+    receipt, created = service.post_receipt(db, payload, user.id)
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return receipt
 
 
 @router.post("/{receipt_id}/cancel", response_model=ReceiptOut)

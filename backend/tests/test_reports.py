@@ -37,7 +37,10 @@ def report_case(db_session):
                 sold_at=at,
                 paid_amount=paid,
                 payment_method=method,
-                lines=[SaleLineIn(product_id=p, qty=q) for p, q in lines],
+                lines=[
+                    SaleLineIn(product_id=p, qty=q, unit_price=300 if p == a.id else 200)
+                    for p, q in lines
+                ],
             ),
             user.id,
         )[0]
@@ -277,7 +280,7 @@ def test_report_ties_sort_by_id_and_merge_anonymous_sales(auth_client, db_sessio
                 request_id=uuid.uuid4(),
                 customer_id=customer.id,
                 sold_at="2026-01-10T10:00:00+05:00",
-                lines=[SaleLineIn(product_id=product.id, qty=1)],
+                lines=[SaleLineIn(product_id=product.id, qty=1, unit_price=product.sale_price)],
             ),
             user.id,
         )

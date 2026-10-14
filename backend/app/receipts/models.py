@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
@@ -28,6 +29,7 @@ class Receipt(Base):
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     # Gapless, taken from document_counters by app.numbering.next_number.
     number: Mapped[int] = mapped_column(BigInteger, unique=True)
+    request_id: Mapped[UUID | None] = mapped_column(unique=True)
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

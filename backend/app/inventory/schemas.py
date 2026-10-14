@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_core import PydanticCustomError
@@ -14,6 +15,7 @@ AdjustmentQty = Annotated[int, Field(strict=True, ge=-MAX_ADJUSTMENT_QTY, le=MAX
 class AdjustmentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    request_id: UUID
     product_id: DbId
     qty: AdjustmentQty
     reason: Reason

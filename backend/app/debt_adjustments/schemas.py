@@ -5,10 +5,10 @@ from typing import Annotated, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 from pydantic_core import PydanticCustomError
 
-from app.schema_types import MAX_BIGINT, DbId, Reason, check_not_in_future
+from app.schema_types import MAX_MONEY, DbId, Reason, check_not_in_future
 
 DebtAdjustmentStatus = Literal["posted", "cancelled"]
-DebtAdjustmentAmount = Annotated[int, Field(strict=True, ge=-MAX_BIGINT - 1, le=MAX_BIGINT)]
+DebtAdjustmentAmount = Annotated[int, Field(strict=True, ge=-MAX_MONEY, le=MAX_MONEY)]
 
 
 class DebtAdjustmentCreate(BaseModel):

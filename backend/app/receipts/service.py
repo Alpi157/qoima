@@ -1,17 +1,22 @@
-from datetime import date
+from collections import Counter
+from datetime import UTC, date
 
+from psycopg.errors import UniqueViolation
 from sqlalchemy import BigInteger, ColumnElement, cast, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
 from app.catalog.models import Product
 from app.catalog.service import load_line_products
-from app.db_utils import local_date_range
+from app.db_utils import RECEIPT_REQUEST_LOCK, local_date_range, lock_request_id
 from app.errors import (
+    AmountTooLargeError,
     InsufficientStockError,
     ReceiptAlreadyCancelledError,
     ReceiptCancelError,
     ReceiptNotFoundError,
+    ReceiptRequestConflictError,
 )
 from app.inventory.service import MovementIn, post_movements
 from app.numbering import next_number
@@ -24,16 +29,52 @@ from app.receipts.schemas import (
     ReceiptPage,
     ReceiptStatus,
 )
+from app.schema_types import MAX_MONEY
 
 DOC_TYPE = "receipt"
+REQUEST_ID_CONSTRAINT = "uq_receipts_request_id"
+
+
+def _existing_receipt(db: Session, data: ReceiptCreate) -> ReceiptOut | None:
+    receipt = db.scalar(select(Receipt).where(Receipt.request_id == data.request_id))
+    if receipt is None:
+        return None
+    stored = db.execute(
+        select(ReceiptLine.product_id, ReceiptLine.qty, ReceiptLine.unit_cost).where(
+            ReceiptLine.receipt_id == receipt.id
+        )
+    ).all()
+    same_time = data.received_at is None or receipt.received_at.astimezone(
+        UTC
+    ) == data.received_at.astimezone(UTC)
+    if (
+        Counter(map(tuple, stored))
+        != Counter((line.product_id, line.qty, line.unit_cost) for line in data.lines)
+        or receipt.supplier != data.supplier
+        or receipt.note != data.note
+        or not same_time
+    ):
+        raise ReceiptRequestConflictError()
+    return get_receipt(db, receipt.id)
+
+
+def _is_request_id_conflict(exc: IntegrityError) -> bool:
+    return (
+        isinstance(exc.orig, UniqueViolation)
+        and exc.orig.diag.constraint_name == REQUEST_ID_CONSTRAINT
+    )
 
 
 def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
     """Post a receipt without committing. The caller owns the transaction."""
     load_line_products(db, [line.product_id for line in data.lines], "receipt")
+    costs = [line.qty * line.unit_cost for line in data.lines]
+    if any(cost > MAX_MONEY for cost in costs) or sum(costs) > MAX_MONEY:
+        raise AmountTooLargeError()
 
     receipt = Receipt(
         number=next_number(db, DOC_TYPE),
+        request_id=data.request_id,
         supplier=data.supplier,
         note=data.note,
         created_by=user_id,
@@ -70,10 +111,23 @@ def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
     return receipt
 
 
-def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> ReceiptOut:
-    receipt = _post_receipt(db, data, user_id)
-    db.commit()
-    return get_receipt(db, receipt.id)
+def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> tuple[ReceiptOut, bool]:
+    lock_request_id(db, RECEIPT_REQUEST_LOCK, data.request_id)
+    existing = _existing_receipt(db, data)
+    if existing is not None:
+        return existing, False
+    try:
+        receipt = _post_receipt(db, data, user_id)
+        db.commit()
+    except IntegrityError as exc:
+        if not _is_request_id_conflict(exc):
+            raise
+        db.rollback()
+        existing = _existing_receipt(db, data)
+        if existing is None:
+            raise
+        return existing, False
+    return get_receipt(db, receipt.id), True
 
 
 def _total_cost(pairs: list[tuple[int, int | None]]) -> int | None:
@@ -116,6 +170,7 @@ def get_receipt(db: Session, receipt_id: int) -> ReceiptOut:
     return ReceiptOut(
         id=receipt.id,
         number=receipt.number,
+        request_id=receipt.request_id,
         received_at=receipt.received_at,
         supplier=receipt.supplier,
         note=receipt.note,

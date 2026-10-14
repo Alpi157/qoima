@@ -1,6 +1,7 @@
 """Validate an XLSX template and import it as one CLI operation."""
 
 import re
+import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -308,6 +309,7 @@ def import_products(db: Session, path: Path, username: str, *, apply: bool = Fal
                 receipt = receipt_service._post_receipt(
                     db,
                     ReceiptCreate(
+                        request_id=uuid.uuid4(),
                         lines=lines[start : start + MAX_LINES],
                         supplier="X2",
                         note="Бастапқы қалдық, X2-ден көшіру",

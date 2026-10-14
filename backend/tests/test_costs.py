@@ -119,21 +119,30 @@ def test_unknown_receipt_cancel_keeps_average(db_session, stock_case):
 
 def test_sale_snapshot_and_historical_return(db_session, stock_case):
     product_id, user_id = stock_case
-    receipt = post_receipt(
+    receipt, _ = post_receipt(
         db_session,
-        ReceiptCreate(lines=[ReceiptLineIn(product_id=product_id, qty=4, unit_cost=100)]),
+        ReceiptCreate(
+            request_id=uuid.uuid4(),
+            lines=[ReceiptLineIn(product_id=product_id, qty=4, unit_cost=100)],
+        ),
         user_id,
     )
     sale, _ = post_sale(
         db_session,
-        SaleCreate(request_id=uuid.uuid4(), lines=[SaleLineIn(product_id=product_id, qty=2)]),
+        SaleCreate(
+            request_id=uuid.uuid4(),
+            lines=[SaleLineIn(product_id=product_id, qty=2, unit_price=500)],
+        ),
         user_id,
     )
     assert sale.lines[0].unit_cost == 100
     assert balance(db_session, product_id).avg_cost == 100
     post_receipt(
         db_session,
-        ReceiptCreate(lines=[ReceiptLineIn(product_id=product_id, qty=2, unit_cost=300)]),
+        ReceiptCreate(
+            request_id=uuid.uuid4(),
+            lines=[ReceiptLineIn(product_id=product_id, qty=2, unit_cost=300)],
+        ),
         user_id,
     )
     assert balance(db_session, product_id).avg_cost == 200
@@ -170,7 +179,10 @@ def test_unknown_sale_snapshot_and_cancel(db_session, stock_case):
     move(db_session, stock_case, 3, "adjustment")
     sale, _ = post_sale(
         db_session,
-        SaleCreate(request_id=uuid.uuid4(), lines=[SaleLineIn(product_id=product_id, qty=1)]),
+        SaleCreate(
+            request_id=uuid.uuid4(),
+            lines=[SaleLineIn(product_id=product_id, qty=1, unit_price=500)],
+        ),
         user_id,
     )
     assert sale.lines[0].unit_cost is None
