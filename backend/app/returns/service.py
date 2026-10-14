@@ -64,7 +64,7 @@ def _existing_return(db: Session, data: ReturnCreate) -> ReturnOut | None:
         or not same_time
         or (data.refund_method is not None and data.refund_method != document.refund_method)
     ):
-        raise ReturnRequestConflictError()
+        raise ReturnRequestConflictError(params={"id": document.id, "number": document.number})
     return get_return(db, document.id)
 
 

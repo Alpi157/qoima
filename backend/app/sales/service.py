@@ -84,7 +84,7 @@ def _existing_sale(db: Session, data: SaleCreate) -> SaleOut | None:
         or sale.paid_at_sale != paid
         or sale.payment_method != payment_method
     ):
-        raise SaleRequestConflictError()
+        raise SaleRequestConflictError(params={"id": sale.id, "number": sale.number})
     return get_sale(db, sale.id)
 
 

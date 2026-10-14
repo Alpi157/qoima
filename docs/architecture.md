@@ -785,15 +785,15 @@ NULL. У прежних видов ledger reason NULL. Только posted-до�
 | `line_product_not_found` | 422 | `product_ids` (список id) | в строках документа товар, которого нет |
 | `duplicate_line` | 422 | `article`, `document` (`receipt`, `sale` или `return`) | товар указан в документе дважды |
 | `amount_too_large` | 422 | - | произведение количества на цену или итог продажи/приёма больше MAX_MONEY |
-| `receipt_request_conflict` | 409 | - | request_id использован приёмом с другим составом |
-| `stock_adjustment_request_conflict` | 409 | - | request_id использован корректировкой остатка с другим составом |
+| `receipt_request_conflict` | 409 | `id`, `number` | request_id использован приёмом с другим составом |
+| `stock_adjustment_request_conflict` | 409 | `movement_id`, `product_id` | request_id использован корректировкой остатка с другим составом |
 | `insufficient_stock` | 409 | `items` | не хватает товара на остатке |
 | `receipt_not_found` | 404 | - | приход не найден |
 | `receipt_already_cancelled` | 409 | - | приход уже отменён |
 | `receipt_cancel_blocked` | 409 | `items` | отмена прихода увела бы остаток в минус |
 | `sale_not_posted` | 409 | - | возврат по непроведённой продаже |
 | `return_qty_exceeds_sold` | 409 | `article`, `sold`, `returned`, `requested` | возвращаемое количество превышает доступное |
-| `return_request_conflict` | 409 | - | request_id использован возвратом с другим составом |
+| `return_request_conflict` | 409 | `id`, `number` | request_id использован возвратом с другим составом |
 | `return_not_found` | 404 | - | возврат не найден |
 | `return_already_cancelled` | 409 | - | возврат уже отменён |
 | `return_split_changed` | 409 | `debt_credit`, `refund_amount` | деление суммы возврата изменилось, проверьте новый расчёт |
@@ -801,15 +801,15 @@ NULL. У прежних видов ledger reason NULL. Только posted-до�
 | `sale_has_returns` | 409 | - | у продажи есть проведённые возвраты |
 | `sale_not_found` | 404 | - | продажа не найдена |
 | `sale_already_cancelled` | 409 | - | продажа уже отменена |
-| `sale_request_conflict` | 409 | - | `request_id` уже использован продажей с другим содержимым |
+| `sale_request_conflict` | 409 | `id`, `number` | `request_id` уже использован продажей с другим содержимым |
 | `debt_requires_customer` | 422 | нет | продажа в долг без покупателя |
 | `paid_exceeds_total` | 422 | `total`, `paid` | оплата при продаже больше итога |
 | `debt_adjustment_exceeds_debt` | 409 | `debt`, `amount` (знаковый) | уменьшение превышает текущий долг |
-| `debt_adjustment_request_conflict` | 409 | нет | request_id использован другим исправлением долга |
+| `debt_adjustment_request_conflict` | 409 | `id`, `number` | request_id использован другим исправлением долга |
 | `debt_adjustment_not_found` | 404 | нет | исправление долга не найдено |
 | `debt_adjustment_already_cancelled` | 409 | нет | исправление долга уже отменено |
 | `payment_exceeds_debt` | 409 | `debt`, `amount` | оплата больше текущего долга |
-| `payment_request_conflict` | 409 | нет | `request_id` уже использован другой оплатой |
+| `payment_request_conflict` | 409 | `id`, `number` | `request_id` уже использован другой оплатой |
 | `payment_not_found` | 404 | нет | оплата не найдена |
 | `payment_already_cancelled` | 409 | нет | оплата уже отменена |
 | `not_found` | 404 | - | неизвестный адрес (ответ самого FastAPI, «Не найдено») |

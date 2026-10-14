@@ -69,7 +69,9 @@ def _existing_debt_adjustment(db: Session, data: DebtAdjustmentCreate) -> DebtAd
         or debt_adjustment.reason != data.reason
         or not same_time
     ):
-        raise DebtAdjustmentRequestConflictError()
+        raise DebtAdjustmentRequestConflictError(
+            params={"id": debt_adjustment.id, "number": debt_adjustment.number}
+        )
     return get_debt_adjustment(db, debt_adjustment.id)
 
 

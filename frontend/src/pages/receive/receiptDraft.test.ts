@@ -14,7 +14,12 @@ const oldDraft = {
 describe('receipt draft keys', () => {
   it('upgrades version 1 without losing unfinished work', () => {
     const draft = parseReceiptDraft(oldDraft)
-    expect(draft).toEqual({ ...oldDraft, version: 2, requestId: expect.any(String) })
+    expect(draft).toEqual({
+      ...oldDraft,
+      version: 2,
+      unknown: false,
+      requestId: expect.any(String),
+    })
     expect(draft?.requestId).toMatch(/^[a-f0-9-]{36}$/)
     expect(parseReceiptDraft(draft)).toEqual(draft)
   })

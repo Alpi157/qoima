@@ -9,6 +9,8 @@ import type { SaleCreate } from '../sales/api'
 
 export interface SaleDraftLine {
   productId: number
+  article?: string
+  name?: string
   /** A number, or '' while the field is empty. */
   qty: number | string
   /** The price as typed; null keeps the product's current price. */
@@ -29,6 +31,7 @@ export interface SaleDraft {
   version: 1
   /** One id per sale: a resend after any error, or after a reload, reuses it. */
   requestId: string
+  unknown?: boolean
   lines: SaleDraftLine[]
   customer: SaleCustomerChoice
   payment: SalePayment
@@ -44,6 +47,7 @@ export function createSaleDraft(): SaleDraft {
   return {
     version: 1,
     requestId: crypto.randomUUID(),
+    unknown: false,
     lines: [],
     customer: null,
     payment: { mode: 'full', paid: '', method: 'cash' },
@@ -58,7 +62,13 @@ function parseLine(value: unknown): SaleDraftLine | null {
   if (!isRecord(value) || typeof value.productId !== 'number') return null
   const qty = typeof value.qty === 'number' || typeof value.qty === 'string' ? value.qty : 1
   const price = typeof value.price === 'string' ? value.price : null
-  return { productId: value.productId, qty, price }
+  return {
+    productId: value.productId,
+    qty,
+    price,
+    ...(typeof value.article === 'string' ? { article: value.article } : {}),
+    ...(typeof value.name === 'string' ? { name: value.name } : {}),
+  }
 }
 
 function parseCustomer(value: unknown): SaleCustomerChoice {
@@ -91,7 +101,14 @@ export function parseSaleDraft(raw: unknown): SaleDraft | null {
             isRecord(raw.payment) && typeof raw.payment.paid === 'string' ? raw.payment.paid : '',
         }
   const method = isRecord(raw.payment) && raw.payment.method === 'card' ? 'card' : 'cash'
-  return { version: 1, requestId: raw.requestId, lines, customer, payment: { ...payment, method } }
+  return {
+    version: 1,
+    requestId: raw.requestId,
+    unknown: raw.unknown === true,
+    lines,
+    customer,
+    payment: { ...payment, method },
+  }
 }
 
 /** Empty partial payment means zero; malformed text remains invalid. */
@@ -111,9 +128,13 @@ export function isSaleDraftEmpty(draft: SaleDraft): boolean {
 }
 
 /** Adding a product that is already a line raises its quantity. */
-export function addSaleLine(lines: SaleDraftLine[], productId: number): SaleDraftLine[] {
+export function addSaleLine(
+  lines: SaleDraftLine[],
+  productId: number,
+  identity?: { article: string; name: string },
+): SaleDraftLine[] {
   const existing = lines.find((line) => line.productId === productId)
-  if (!existing) return [...lines, { productId, qty: 1, price: null }]
+  if (!existing) return [...lines, { productId, qty: 1, price: null, ...identity }]
   return lines.map((line) =>
     line === existing ? { ...line, qty: typeof line.qty === 'number' ? line.qty + 1 : 1 } : line,
   )
@@ -153,6 +174,8 @@ export interface SaleLineView {
 
 /** Request body: every line carries its price, even when it equals the product's price. */
 export function saleBody(draft: SaleDraft, lines: SaleLineView[]): SaleCreate {
+  if (lines.length !== draft.lines.length || lines.length === 0)
+    throw new Error(i18n.t('flow.blocked.loading'))
   const customer = draft.customer
   const paid = salePaid(
     draft.payment,

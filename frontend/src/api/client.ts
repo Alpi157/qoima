@@ -34,3 +34,19 @@ export async function unwrap<T>(request: Promise<{ data?: T }>): Promise<T> {
   const { data } = await request
   return data as T
 }
+
+/** A fresh deadline for each attempt; aborting never proves that a POST was not saved. */
+export async function withDocumentTimeout<T>(
+  send: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), 30_000)
+  try {
+    return await send(controller.signal)
+  } catch (error) {
+    if (controller.signal.aborted) throw networkError()
+    throw error
+  } finally {
+    window.clearTimeout(timer)
+  }
+}

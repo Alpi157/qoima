@@ -67,7 +67,7 @@ def _existing_payment(db: Session, data: PaymentCreate) -> PaymentOut | None:
         or payment.note != data.note
         or not same_time
     ):
-        raise PaymentRequestConflictError()
+        raise PaymentRequestConflictError(params={"id": payment.id, "number": payment.number})
     return get_payment(db, payment.id)
 
 

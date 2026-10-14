@@ -7,6 +7,8 @@ import type { ReceiptCreate } from '../receipts/api'
 
 export interface ReceiptDraftLine {
   productId: number
+  article?: string
+  name?: string
   /** A number, or '' while the field is empty. */
   qty: number | string
   /** Purchase price as typed in the line; '' when not given. */
@@ -17,6 +19,7 @@ export interface ReceiptDraftLine {
 export interface ReceiptDraft {
   version: 2
   requestId: string
+  unknown?: boolean
   lines: ReceiptDraftLine[]
   supplier: string
   note: string
@@ -30,6 +33,7 @@ export function createReceiptDraft(): ReceiptDraft {
   return {
     version: 2,
     requestId: crypto.randomUUID(),
+    unknown: false,
     lines: [],
     supplier: '',
     note: '',
@@ -49,7 +53,13 @@ function text(value: unknown): string {
 function parseLine(value: unknown): ReceiptDraftLine | null {
   if (!isRecord(value) || typeof value.productId !== 'number') return null
   const qty = typeof value.qty === 'number' || typeof value.qty === 'string' ? value.qty : 1
-  return { productId: value.productId, qty, cost: text(value.cost) }
+  return {
+    productId: value.productId,
+    qty,
+    cost: text(value.cost),
+    ...(typeof value.article === 'string' ? { article: value.article } : {}),
+    ...(typeof value.name === 'string' ? { name: value.name } : {}),
+  }
 }
 
 export function parseReceiptDraft(raw: unknown): ReceiptDraft | null {
@@ -58,6 +68,7 @@ export function parseReceiptDraft(raw: unknown): ReceiptDraft | null {
   if (raw.version === 2 && typeof raw.requestId !== 'string') return null
   return {
     version: 2,
+    unknown: raw.unknown === true,
     requestId: raw.version === 1 ? crypto.randomUUID() : (raw.requestId as string),
     lines: raw.lines.map(parseLine).filter((line) => line !== null),
     supplier: text(raw.supplier),
@@ -76,10 +87,14 @@ export function addReceiptLine(
   lines: ReceiptDraftLine[],
   productId: number,
   lastCost: number | null = null,
+  identity?: { article: string; name: string },
 ): ReceiptDraftLine[] {
   const existing = lines.find((line) => line.productId === productId)
   if (!existing)
-    return [...lines, { productId, qty: 1, cost: lastCost === null ? '' : tiynToInput(lastCost) }]
+    return [
+      ...lines,
+      { productId, qty: 1, cost: lastCost === null ? '' : tiynToInput(lastCost), ...identity },
+    ]
   return lines.map((line) =>
     line === existing ? { ...line, qty: typeof line.qty === 'number' ? line.qty + 1 : 1 } : line,
   )

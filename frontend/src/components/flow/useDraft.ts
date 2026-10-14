@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /** A flow whose unfinished document is kept: the sale and the receiving. */
 export type DraftFlow = 'sale' | 'receipt'
@@ -29,11 +29,11 @@ function writeDraft(key: string, value: unknown | null): void {
 export interface DraftOptions<T> {
   userId: number
   flow: DraftFlow
-  /** An empty document; for a sale it takes a new request_id. */
+  /** A fresh document with a new request_id. */
   create: () => T
   /** The saved value if it still has the expected shape, else null (it is then dropped). */
   parse: (raw: unknown) => T | null
-  /** Nothing worth keeping: no lines. */
+  /** Whether there are no document lines, for the restored notice. */
   isEmpty: (value: T) => boolean
 }
 
@@ -46,31 +46,44 @@ export function useDraft<T>({ userId, flow, create, parse, isEmpty }: DraftOptio
   const key = draftKey(userId, flow)
   const [state, setState] = useState(() => {
     const saved = parse(readDraft(key))
-    return saved !== null && !isEmpty(saved)
-      ? { value: saved, restored: true }
-      : { value: create(), restored: false }
+    return saved !== null
+      ? { value: saved, restored: !isEmpty(saved), retained: true }
+      : { value: create(), restored: false, retained: false }
   })
+  const current = useRef(state)
 
   useEffect(() => {
-    writeDraft(key, isEmpty(state.value) ? null : state.value)
-  }, [key, state.value, isEmpty])
+    if (current.current.retained) writeDraft(key, current.current.value)
+  }, [key])
 
   const update = useCallback(
-    (change: (value: T) => T) =>
-      setState((current) => ({ value: change(current.value), restored: false })),
-    [],
+    (change: (value: T) => T, dismiss = true) => {
+      const next = {
+        value: change(current.current.value),
+        restored: dismiss ? false : current.current.restored,
+        retained: true,
+      }
+      current.current = next
+      // Persist before starting a POST: a reload during the request must keep its key.
+      writeDraft(key, next.value)
+      setState(next)
+    },
+    [key],
   )
 
   /** After a save or «Бас тарту»: a fresh document, the draft is removed. */
   const clear = useCallback(() => {
     writeDraft(key, null)
-    setState({ value: create(), restored: false })
+    const next = { value: create(), restored: false, retained: false }
+    current.current = next
+    setState(next)
   }, [key, create])
 
-  const dismissRestored = useCallback(
-    () => setState((current) => ({ ...current, restored: false })),
-    [],
-  )
+  const dismissRestored = useCallback(() => {
+    const next = { ...current.current, restored: false }
+    current.current = next
+    setState(next)
+  }, [])
 
   return { value: state.value, update, clear, restored: state.restored, dismissRestored }
 }

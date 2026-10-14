@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 
-import { api, unwrap } from '../../api/client'
+import { api, unwrap, withDocumentTimeout } from '../../api/client'
 import { useInvalidatePayments } from '../../api/invalidate'
 import type { components } from '../../api/schema'
 
@@ -10,7 +10,9 @@ export type PaymentCreate = components['schemas']['PaymentCreate']
 export function usePostPayment() {
   const invalidate = useInvalidatePayments()
   return useMutation({
-    mutationFn: (body: PaymentCreate) => unwrap(api.POST('/api/payments', { body })),
+    meta: { handlesError: true },
+    mutationFn: (body: PaymentCreate) =>
+      withDocumentTimeout((signal) => unwrap(api.POST('/api/payments', { body, signal }))),
     onSuccess: invalidate,
   })
 }

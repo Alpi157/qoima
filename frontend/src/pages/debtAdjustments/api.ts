@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 
-import { api, unwrap } from '../../api/client'
+import { api, unwrap, withDocumentTimeout } from '../../api/client'
 import { useInvalidateDebtAdjustments } from '../../api/invalidate'
 import type { components } from '../../api/schema'
 
@@ -10,7 +10,9 @@ export type DebtAdjustmentCreate = components['schemas']['DebtAdjustmentCreate']
 export function usePostDebtAdjustment() {
   const invalidate = useInvalidateDebtAdjustments()
   return useMutation({
-    mutationFn: (body: DebtAdjustmentCreate) => unwrap(api.POST('/api/debt-adjustments', { body })),
+    meta: { handlesError: true },
+    mutationFn: (body: DebtAdjustmentCreate) =>
+      withDocumentTimeout((signal) => unwrap(api.POST('/api/debt-adjustments', { body, signal }))),
     onSuccess: invalidate,
   })
 }

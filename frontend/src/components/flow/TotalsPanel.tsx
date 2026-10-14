@@ -17,6 +17,7 @@ export interface TotalsPanelProps {
   /** Why the main button cannot be pressed; null when it can. */
   blockedReason: string | null
   loading?: boolean
+  hideAction?: boolean
   /** Above the button: a failed save. */
   error?: ReactNode
   onCancel: () => void
@@ -36,6 +37,7 @@ export function TotalsPanel({
   onAction,
   blockedReason,
   loading = false,
+  hideAction = false,
   error,
   onCancel,
 }: TotalsPanelProps) {
@@ -50,17 +52,19 @@ export function TotalsPanel({
             {belowSummary}
             {error}
             <Stack gap="xs" w="100%">
-              <Button
-                size="lg"
-                color={actionColor}
-                fullWidth
-                onClick={onAction}
-                disabled={blockedReason !== null}
-                loading={loading}
-                aria-describedby={blockedReason ? 'flow-blocked-reason' : undefined}
-              >
-                {actionLabel}
-              </Button>
+              {!hideAction && (
+                <Button
+                  size="lg"
+                  color={actionColor}
+                  fullWidth
+                  onClick={onAction}
+                  disabled={blockedReason !== null}
+                  loading={loading}
+                  aria-describedby={blockedReason ? 'flow-blocked-reason' : undefined}
+                >
+                  {actionLabel}
+                </Button>
+              )}
               {blockedReason && (
                 <Text id="flow-blocked-reason" className="flow-hint-warning" fw={600}>
                   {blockedReason}

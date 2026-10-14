@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query'
 
 import { api, unwrap } from '../../api/client'
+import { isApiError } from '../../api/errors'
 import { queryKeys, type ProductListParams } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
 import { PAGE_SIZE, pageOffset } from '../../lib/pagination'
@@ -87,7 +88,7 @@ function productQuery(id: number) {
  */
 export function useProductsByIds(ids: number[]) {
   return useQueries({
-    queries: ids.map((id) => productQuery(id)),
+    queries: ids.map((id) => ({ ...productQuery(id), meta: { handlesError: true } })),
     combine: (results) => ({
       products: new Map(
         results.flatMap((result, index) =>
@@ -96,9 +97,15 @@ export function useProductsByIds(ids: number[]) {
       ),
       /** Deleted (404) or hidden products: a document cannot take them, their lines go. */
       missing: ids.filter(
-        (_, index) => results[index].isError || results[index].data?.is_archived === true,
+        (_, index) =>
+          (isApiError(results[index].error) && results[index].error.status === 404) ||
+          results[index].data?.is_archived === true,
       ),
       isPending: results.some((result) => result.isPending),
+      hasLoadError: results.some(
+        (result) => result.isError && !(isApiError(result.error) && result.error.status === 404),
+      ),
+      reload: () => Promise.all(results.map((result) => result.refetch())),
     }),
   })
 }

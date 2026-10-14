@@ -117,9 +117,13 @@ describe('ReceivePage', () => {
 
   it('a product that is not found is created on the spot and becomes a line', async () => {
     const user = setupUser()
-    mockFlowGet({ products: [FILTER] })
+    const catalog = [FILTER]
+    mockFlowGet({ products: catalog })
     const created = makeProduct({ id: 30, article: 'PE5R', name: 'Свеча Mazda', stock: 0 })
-    const post = vi.spyOn(api, 'POST').mockReturnValue(ok(created))
+    const post = vi.spyOn(api, 'POST').mockImplementation(() => {
+      catalog.push(created)
+      return ok(created)
+    })
     renderReceive()
 
     await fill(user, await screen.findByRole('searchbox'), 'PE5R')
@@ -143,7 +147,7 @@ describe('ReceivePage', () => {
     })
     expect(await screen.findByRole('textbox', { name: 'Количество PE5R' })).toBeTruthy()
     expect(screen.queryByTestId('new-product-form')).toBeNull()
-    expect(storedDraft()?.lines).toEqual([{ productId: 30, qty: 1, cost: '' }])
+    expect(storedDraft()?.lines).toMatchObject([{ productId: 30, qty: 1, cost: '' }])
   })
 
   it('an existing article in the new product form is shown under the field', async () => {
@@ -324,7 +328,7 @@ describe('receiving costs in lines', () => {
       await fill(user, search, 'OC')
       await user.keyboard('{Enter}')
       await waitFor(() =>
-        expect(storedDraft()?.lines[0]).toEqual({ productId: 1, qty: 2, cost: '700' }),
+        expect(storedDraft()?.lines[0]).toMatchObject({ productId: 1, qty: 2, cost: '700' }),
       )
     },
   )
@@ -409,14 +413,14 @@ it('upgrades an old draft and keeps its key through network errors and reload', 
   const migrated = storedDraft()!
   expect(migrated).toMatchObject({ ...old, version: 2, requestId: expect.any(String) })
   await user.click(submitButton())
-  await screen.findByRole('alert')
+  await screen.findByTestId('unknown-result')
   expect(postBody<ReceiptCreate>(post).request_id).toBe(migrated.requestId)
   expect(storedDraft()?.requestId).toBe(migrated.requestId)
   rendered.unmount()
   renderReceive()
   await screen.findByRole('textbox', { name: 'Количество OC-90' })
-  await user.click(submitButton())
-  await screen.findByRole('alert')
+  await user.click(screen.getByRole('button', { name: 'Проверить ещё раз' }))
+  await screen.findByTestId('unknown-result')
   expect(postBody<ReceiptCreate>(post, 1).request_id).toBe(migrated.requestId)
 })
 
@@ -444,13 +448,11 @@ it('shows the receipt conflict without clearing the draft', async () => {
   mockFlowGet({ products: [FILTER] })
   saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
   vi.spyOn(api, 'POST').mockRejectedValue(
-    new ApiError(409, 'detail', {}, 'receipt_request_conflict'),
+    new ApiError(409, 'detail', {}, 'receipt_request_conflict', { id: 5, number: 42 }),
   )
   renderReceive()
   await screen.findByRole('textbox', { name: 'Количество OC-90' })
   await user.click(submitButton())
-  expect((await screen.findByRole('alert')).textContent).toBe(
-    'Этот приём, возможно, уже сохранён с другим составом. Проверьте список приёмов.',
-  )
+  expect((await screen.findByRole('alert')).textContent).toContain('№42')
   expect(storedDraft()?.lines).toHaveLength(1)
 })

@@ -18,6 +18,7 @@ function showError(error: unknown): void {
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError(error, query) {
+      if (query.meta?.handlesError) return
       // 401 is handled by the redirect to /login.
       if (isApiError(error) && error.status === 401) return
       // Detail pages show their own "not found" state.
@@ -26,7 +27,8 @@ export const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
-    onError(error) {
+    onError(error, _variables, _context, mutation) {
+      if (mutation.meta?.handlesError) return
       // Forms show 4xx themselves next to the fields; only unexpected failures go here.
       if (isServerOrNetworkError(error)) showError(error)
     },

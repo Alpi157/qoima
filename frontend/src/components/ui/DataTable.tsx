@@ -28,6 +28,7 @@ export interface DataTableProps<T> {
   /** Below this width the table scrolls inside its card instead of squeezing the columns. */
   minWidth?: number
   /** Last row under the lines, e.g. the total. */
+  highlightedRowKey?: string | null
   footer?: ReactNode
 }
 
@@ -54,6 +55,7 @@ export function DataTable<T>({
   mobileCardWithLinks = false,
   minWidth = 600,
   footer,
+  highlightedRowKey,
 }: DataTableProps<T>) {
   const navigate = useNavigate()
 
@@ -77,6 +79,9 @@ export function DataTable<T>({
                 return (
                   <Table.Tr
                     key={rowKey(row)}
+                    data-row-key={String(rowKey(row))}
+                    data-highlighted={String(rowKey(row)) === highlightedRowKey || undefined}
+                    tabIndex={String(rowKey(row)) === highlightedRowKey ? -1 : undefined}
                     data-clickable={href ? true : undefined}
                     data-dimmed={dimmed?.(row) || undefined}
                     onClick={
@@ -117,6 +122,9 @@ export function DataTable<T>({
             return href && mobileCardWithLinks ? (
               <Card
                 key={rowKey(row)}
+                data-row-key={String(rowKey(row))}
+                data-highlighted={String(rowKey(row)) === highlightedRowKey || undefined}
+                tabIndex={String(rowKey(row)) === highlightedRowKey ? -1 : undefined}
                 c={dimmed?.(row) ? 'dimmed' : undefined}
                 onClick={(event) => {
                   if (!(
@@ -132,6 +140,9 @@ export function DataTable<T>({
             ) : href ? (
               <MantineCard
                 key={rowKey(row)}
+                data-row-key={String(rowKey(row))}
+                data-highlighted={String(rowKey(row)) === highlightedRowKey || undefined}
+                tabIndex={String(rowKey(row)) === highlightedRowKey ? -1 : undefined}
                 component={Link}
                 to={href}
                 c={dimmed?.(row) ? 'dimmed' : 'inherit'}
@@ -140,7 +151,13 @@ export function DataTable<T>({
                 {content}
               </MantineCard>
             ) : (
-              <Card key={rowKey(row)} c={dimmed?.(row) ? 'dimmed' : undefined}>
+              <Card
+                key={rowKey(row)}
+                data-row-key={String(rowKey(row))}
+                data-highlighted={String(rowKey(row)) === highlightedRowKey || undefined}
+                tabIndex={String(rowKey(row)) === highlightedRowKey ? -1 : undefined}
+                c={dimmed?.(row) ? 'dimmed' : undefined}
+              >
                 {content}
               </Card>
             )

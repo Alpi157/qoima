@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { makeProduct, ok } from '../../test/fixtures'
@@ -67,4 +67,43 @@ it('rounds only average cost, preserving last cost and the sale price', async ()
   expect(screen.getByText('688')).toBeTruthy()
   expect(screen.getByText('900,50')).toBeTruthy()
   expect(screen.getByText('1 500,05')).toBeTruthy()
+})
+
+it('finds the saved adjustment on the second history page and highlights it', async () => {
+  const movements = Array.from({ length: 51 }, (_, i) => ({
+    id: i + 1,
+    created_at: '2026-09-27T09:00:00Z',
+    kind: 'adjustment',
+    qty: 1,
+    balance_after: i + 1,
+    doc_type: null,
+    doc_id: null,
+    doc_number: null,
+    created_by_name: 'Владелец',
+    note: 'Пересчёт',
+  }))
+  vi.spyOn(api, 'GET').mockImplementation(((
+    path: string,
+    init?: { params?: { query?: { offset?: number } } },
+  ) =>
+    ok(
+      path === '/api/products/{product_id}'
+        ? makeProduct()
+        : {
+            items: movements.slice(
+              init?.params?.query?.offset ?? 0,
+              (init?.params?.query?.offset ?? 0) + 50,
+            ),
+            total: 51,
+          },
+    )) as never)
+  const { router } = renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
+    route: '/products/1?movementFocus=51',
+  })
+  await waitFor(() => expect(router.state.location.search).toBe('?page=2'))
+  await waitFor(() =>
+    expect(
+      document.querySelectorAll('[data-row-key="movement-51"][data-highlighted="true"]').length,
+    ).toBe(2),
+  )
 })

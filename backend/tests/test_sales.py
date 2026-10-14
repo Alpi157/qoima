@@ -481,7 +481,7 @@ def test_same_request_other_content_rejected(
     oc, bosch = products
     ids = {"oc": oc.id, "bosch": bosch.id}
     payload = _payload(_lines([("oc", 2, 250_000)], ids))
-    assert auth_client.post("/api/sales", json=payload).status_code == 201
+    saved = auth_client.post("/api/sales", json=payload).json()
 
     payload["lines"] = _lines(retry, ids)
     if other_customer:
@@ -492,7 +492,7 @@ def test_same_request_other_content_rejected(
     assert response.json() == {
         "detail": "Этот запрос уже использован для другой продажи",
         "code": "sale_request_conflict",
-        "params": {},
+        "params": {"id": saved["id"], "number": saved["number"]},
     }
     assert _sale_count(db_session) == 1
     assert _stock(db_session, oc.id) == 8

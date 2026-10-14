@@ -1,7 +1,6 @@
-import { Alert, Anchor, Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Anchor, Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import { type ReactNode, useCallback, useEffect, useRef } from 'react'
-import { Trans, useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 import { ArrowLeftIcon, CheckIcon } from '../../components/icons'
 import { StickyActions } from '../../components/flow/StickyActions'
@@ -20,8 +19,11 @@ import {
   type SalePayment,
   type SaleCustomerChoice,
   type SaleLineView,
+  type SaleDraftLine,
 } from './saleDraft'
+import { qtyError } from '../../lib/validation'
 import { saleTotals } from './saleTotals'
+import { UnloadedLine } from '../../components/flow/LineLoadNotice'
 
 export interface SellStepReviewProps {
   views: SaleLineView[]
@@ -33,6 +35,9 @@ export interface SellStepReviewProps {
   saving: boolean
   /** A failed save: shown above the button. */
   error: ReactNode
+  incomplete: boolean
+  unknown: boolean
+  unresolved: SaleDraftLine[]
 }
 
 function ProductCell({ article, name }: { article: string; name: string }) {
@@ -56,6 +61,9 @@ export function SellStepReview({
   onSubmit,
   saving,
   error,
+  incomplete,
+  unknown,
+  unresolved,
 }: SellStepReviewProps) {
   const { t } = useTranslation()
   const paymentFields = useRef<HTMLDivElement>(null)
@@ -68,6 +76,11 @@ export function SellStepReview({
   }, [payment.mode, focusPayment])
 
   const totals = saleTotals(views)
+  totals.kinds += unresolved.length
+  totals.qty += unresolved.reduce(
+    (sum, line) => sum + (qtyError(line.qty) === null ? (line.qty as number) : 0),
+    0,
+  )
   const paymentError = salePaymentError(payment, totals.sum)
   const hasCustomer = customer !== null && customer !== 'none'
   const customerName =
@@ -83,13 +96,13 @@ export function SellStepReview({
       <PageHeader title={t('sell.review.title')} />
       <Stack gap="lg" maw={1000}>
         <Card>
-          <SimpleGrid cols={2} spacing="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
             <Stat label={t('sell.review.customer')} value={customerName} />
             <Stat
               size="display"
               label={t('sell.total')}
-              value={formatAmount(totals.sum)}
-              unit="₸"
+              value={incomplete ? '—' : formatAmount(totals.sum)}
+              unit={incomplete ? undefined : '₸'}
               testId="review-total"
             />
             <Stat label={t('sell.review.kinds')} value={totals.kinds} />
@@ -185,36 +198,34 @@ export function SellStepReview({
           )}
         />
 
+        {unresolved.map((line) => (
+          <UnloadedLine key={line.productId} article={line.article} name={line.name}>
+            <Text>
+              {t('flow.qty')}: {line.qty}
+            </Text>
+          </UnloadedLine>
+        ))}
+        {incomplete && <Text fw={600}>{t('flow.blocked.loading')}</Text>}
         {error}
 
         <StickyActions>
           <Button variant="default" leftSection={<ArrowLeftIcon size={20} />} onClick={onBack}>
             {t('sell.review.back')}
           </Button>
-          <Button
-            size="lg"
-            color="green"
-            leftSection={<CheckIcon />}
-            onClick={onSubmit}
-            loading={saving}
-            disabled={Boolean(paymentError)}
-          >
-            {t('sell.review.submit')}
-          </Button>
+          {!unknown && (
+            <Button
+              size="lg"
+              color="green"
+              leftSection={<CheckIcon />}
+              onClick={onSubmit}
+              loading={saving}
+              disabled={incomplete || views.length === 0 || Boolean(paymentError)}
+            >
+              {t('sell.review.submit')}
+            </Button>
+          )}
         </StickyActions>
       </Stack>
     </>
-  )
-}
-
-/** «Продажа могла уже пройти»: the request_id was used by a sale with other contents. */
-export function RequestConflictAlert() {
-  return (
-    <Alert color="orange" role="alert">
-      <Trans
-        i18nKey="sell.review.conflict"
-        components={{ history: <Anchor component={Link} to="/sales" inherit /> }}
-      />
-    </Alert>
   )
 }

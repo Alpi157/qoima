@@ -1,7 +1,6 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 
-import { api, unwrap } from '../../api/client'
-import type { ErrorCode } from '../../api/errors'
+import { api, unwrap, withDocumentTimeout } from '../../api/client'
 import { useInvalidateSales } from '../../api/invalidate'
 import { queryKeys, type SaleListParams } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
@@ -11,9 +10,6 @@ export type Sale = components['schemas']['SaleOut']
 export type SaleListItem = components['schemas']['SaleListItem']
 export type SaleCreate = components['schemas']['SaleCreate']
 export type SaleStatus = SaleListItem['status']
-
-// The request_id was already used by a sale with other contents.
-export const SALE_REQUEST_CONFLICT: ErrorCode = 'sale_request_conflict'
 
 export function isSaleStatus(value: string): value is SaleStatus {
   return value === 'posted' || value === 'cancelled'
@@ -53,7 +49,9 @@ export function useSale(id: number) {
 export function usePostSale() {
   const invalidate = useInvalidateSales()
   return useMutation({
-    mutationFn: (body: SaleCreate) => unwrap(api.POST('/api/sales', { body })),
+    meta: { handlesError: true },
+    mutationFn: (body: SaleCreate) =>
+      withDocumentTimeout((signal) => unwrap(api.POST('/api/sales', { body, signal }))),
     onSuccess: invalidate,
   })
 }

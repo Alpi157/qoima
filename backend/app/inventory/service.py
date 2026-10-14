@@ -250,7 +250,9 @@ def _existing_adjustment(db: Session, data: AdjustmentCreate) -> AdjustmentOut |
         or movement.qty != data.qty
         or movement.note != data.reason
     ):
-        raise StockAdjustmentRequestConflictError()
+        raise StockAdjustmentRequestConflictError(
+            params={"movement_id": movement.id, "product_id": movement.product_id}
+        )
     return _adjustment_out(db, movement)
 
 

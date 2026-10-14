@@ -508,7 +508,8 @@
     "totals": "合计",
     "blocked": {
       "empty": "请先添加商品。",
-      "fix": "请修改橙色标记的商品。"
+      "fix": "请修改橙色标记的商品。",
+      "loading": "商品尚未加载完成。"
     },
     "cancel": "取消",
     "cancelConfirm": {
@@ -519,7 +520,21 @@
       "clear": "清空",
       "close": "关闭"
     },
-    "moreResults": "还有 {{more}} 个结果，请细化搜索。"
+    "moreResults": "还有 {{more}} 个结果，请细化搜索。",
+    "result": {
+      "title": "尚不确定是否已保存",
+      "description": "网络中断，已输入的内容仍在。请点击“再次检查”，不会重复保存。",
+      "retry": "再次检查",
+      "conflict": "此单据似乎已保存为 №{{number}}，但内容不同。请打开核对。",
+      "open": "打开",
+      "stockConflict": "此数量调整似乎已保存，但内容不同。请打开商品历史核对。",
+      "closeWarning": "付款或调整可能已保存，关闭后请在列表中核对。",
+      "cancelledPayment": "付款 №{{number}} 已取消",
+      "cancelledAdjustment": "调整 №{{number}} 已取消",
+      "keepOpen": "继续填写"
+    },
+    "removed": "以下商品已删除或归档，已从列表中移除：{{articles}}",
+    "noConnection": "无网络连接。明细已保存，联网后可继续。"
   },
   "sell": {
     "steps": {
@@ -574,8 +589,7 @@
       "product": "商品",
       "price": "单价",
       "back": "返回：顾客",
-      "submit": "保存销售",
-      "conflict": "这笔销售可能已经保存。请查看<history>销售记录</history>。"
+      "submit": "保存销售"
     },
     "done": {
       "title": "销售已保存",

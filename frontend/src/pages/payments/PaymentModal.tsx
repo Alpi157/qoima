@@ -1,6 +1,10 @@
-import { Alert, Button, Group, Modal, Stack, Text, Textarea } from '@mantine/core'
+import { useDocumentResult } from '../../components/flow/documentResultState'
+import { Alert, Button, Group, Stack, Text, Textarea } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
+import { DocumentModal } from '../../components/flow/DocumentModal'
+import { useDocumentModalStatus } from '../../components/flow/documentModalState'
+import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -8,6 +12,7 @@ import { hasErrorCode, isApiError } from '../../api/errors'
 import { ExtraSection } from '../../components/ExtraSection'
 import { MoneyInput } from '../../components/MoneyInput'
 import { PaymentMethodChoice, type PaymentMethod } from '../../components/PaymentMethodChoice'
+import { useInvalidatePayments } from '../../api/invalidate'
 import { apiErrorText } from '../../i18n/errorText'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
@@ -20,6 +25,8 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
   const { t, i18n } = useTranslation()
   const post = usePostPayment()
   const [requestId] = useState(() => crypto.randomUUID())
+  const result = useDocumentResult()
+  const modal = useDocumentModalStatus(result.unknown, post.isPending)
   const [openedAt] = useState(() => new Date())
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<PaymentMethod>('cash')
@@ -69,17 +76,18 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
           onClose()
         },
         onError: (error) => {
+          if (result.acceptError(error)) return
           if (hasErrorCode(error, 'payment_exceeds_debt')) {
             setErrors({ amount: apiErrorText(error, t) })
             if (isApiError(error) && typeof error.params.debt === 'number')
               setCurrentDebt(error.params.debt)
             return
           }
-          const result = serverFormErrors(error, {
+          const mapped = serverFormErrors(error, {
             fieldMap: { amount: 'amount', paid_at: 'paidAt', note: 'note' },
           })
-          setErrors(result.fields)
-          setMessage(result.message)
+          setErrors(mapped.fields)
+          setMessage(mapped.message)
         },
       },
     )
@@ -148,6 +156,17 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
             error={errors.note}
           />
         </ExtraSection>
+        {result.conflict && (
+          <RequestConflictAlert
+            error={result.conflict}
+            onClear={() => modal?.clear()}
+            onOpen={() => modal?.openSaved()}
+            customerId={customer.id}
+          />
+        )}
+        {result.unknown && (
+          <UnknownResult onRetry={submit} busy={post.isPending} disabled={false} />
+        )}
         {message && (
           <Alert color="red" role="alert">
             {message}
@@ -155,12 +174,14 @@ function PaymentForm({ customer, onClose }: { customer: Customer; onClose: () =>
         )}
         <PaymentMethodChoice value={method} onChange={setMethod} />
         <Group justify="flex-end" gap="sm" className="q-modal-actions">
-          <Button variant="default" onClick={onClose} disabled={post.isPending}>
+          <Button variant="default" onClick={() => modal?.close()} disabled={post.isPending}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" loading={post.isPending}>
-            {t('common.save')}
-          </Button>
+          {!result.unknown && (
+            <Button type="submit" loading={post.isPending}>
+              {t('common.save')}
+            </Button>
+          )}
         </Group>
       </Stack>
     </form>
@@ -177,9 +198,15 @@ export function PaymentModal({
   onClose: () => void
 }) {
   const { t } = useTranslation()
+  const invalidate = useInvalidatePayments()
   return (
-    <Modal opened={opened} onClose={onClose} title={t('payments.title')}>
+    <DocumentModal
+      invalidate={invalidate}
+      opened={opened}
+      onClose={onClose}
+      title={t('payments.title')}
+    >
       {opened && <PaymentForm customer={customer} onClose={onClose} />}
-    </Modal>
+    </DocumentModal>
   )
 }

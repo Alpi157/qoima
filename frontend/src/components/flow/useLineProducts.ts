@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { type Product, useProductsByIds } from '../../pages/products/api'
 
@@ -13,18 +13,37 @@ export interface LineView<L> {
  */
 export function useLineProducts<L extends { productId: number }>(
   lines: L[],
-  onMissing: (productIds: number[]) => void,
+  onMissing: (productIds: number[], products: Map<number, Product>) => void,
 ) {
-  const { products, missing, isPending } = useProductsByIds(lines.map((line) => line.productId))
+  const { products, missing, isPending, hasLoadError, reload } = useProductsByIds(
+    lines.map((line) => line.productId),
+  )
   const missingKey = missing.join(',')
+  const reported = useRef('')
 
   useEffect(() => {
-    if (missingKey) onMissing(missingKey.split(',').map(Number))
-  }, [missingKey, onMissing])
+    if (missingKey && reported.current !== missingKey) {
+      reported.current = missingKey
+      onMissing(missingKey.split(',').map(Number), products)
+    }
+    if (!missingKey) reported.current = ''
+  }, [missingKey, onMissing, products])
 
   const views: LineView<L>[] = lines.flatMap((line) => {
     const product = products.get(line.productId)
-    return product && !product.is_archived ? [{ line, product }] : []
+    return product && !product.is_archived && !missing.includes(line.productId)
+      ? [{ line, product }]
+      : []
   })
-  return { views, isPending }
+  return {
+    views,
+    products,
+    isPending,
+    hasLoadError,
+    reload,
+    incomplete: views.length !== lines.length,
+    unresolved: lines.filter(
+      (line) => !products.has(line.productId) && !missing.includes(line.productId),
+    ),
+  }
 }

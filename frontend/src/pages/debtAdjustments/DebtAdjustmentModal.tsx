@@ -1,6 +1,10 @@
-import { Alert, Button, Group, Modal, Stack, Text, Textarea } from '@mantine/core'
+import { useDocumentResult } from '../../components/flow/documentResultState'
+import { Alert, Button, Group, Stack, Text, Textarea } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
+import { DocumentModal } from '../../components/flow/DocumentModal'
+import { useDocumentModalStatus } from '../../components/flow/documentModalState'
+import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -8,6 +12,7 @@ import { hasErrorCode, isApiError } from '../../api/errors'
 import { ExtraSection } from '../../components/ExtraSection'
 import { MoneyInput } from '../../components/MoneyInput'
 import { TwoChoice } from '../../components/TwoChoice'
+import { useInvalidateDebtAdjustments } from '../../api/invalidate'
 import { apiErrorText } from '../../i18n/errorText'
 import { localInputToIso, nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
@@ -38,6 +43,8 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
   const { t, i18n } = useTranslation()
   const post = usePostDebtAdjustment()
   const [requestId] = useState(() => crypto.randomUUID())
+  const result = useDocumentResult()
+  const modal = useDocumentModalStatus(result.unknown, post.isPending)
   const [openedAt] = useState(() => new Date())
   const [dateNow, setDateNow] = useState(openedAt)
   const [direction, setDirection] = useState<Direction | null>(null)
@@ -93,18 +100,19 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
           onClose()
         },
         onError: (error) => {
+          if (result.acceptError(error)) return
           if (hasErrorCode(error, 'debt_adjustment_exceeds_debt')) {
             setErrors({ amount: apiErrorText(error, t) })
             if (isApiError(error) && typeof error.params.debt === 'number')
               setCurrentDebt(error.params.debt)
             return
           }
-          const result = serverFormErrors(error, {
+          const mapped = serverFormErrors(error, {
             fieldMap: { amount: 'amount', adjusted_at: 'adjustedAt', reason: 'reason' },
           })
-          setErrors(result.fields)
-          setMessage(result.message)
-          if (result.fields.adjustedAt) setExtrasOpen(true)
+          setErrors(mapped.fields)
+          setMessage(mapped.message)
+          if (mapped.fields.adjustedAt) setExtrasOpen(true)
         },
       },
     )
@@ -213,6 +221,17 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
             styles={{ wrapper: { maxWidth: FIELD_WIDTH.date } }}
           />
         </ExtraSection>
+        {result.conflict && (
+          <RequestConflictAlert
+            error={result.conflict}
+            onClear={() => modal?.clear()}
+            onOpen={() => modal?.openSaved()}
+            customerId={customer.id}
+          />
+        )}
+        {result.unknown && (
+          <UnknownResult onRetry={submit} busy={post.isPending} disabled={!canSave} />
+        )}
         {message && (
           <Alert color="red" role="alert">
             {message}
@@ -232,12 +251,14 @@ function AdjustmentForm({ customer, onClose }: { customer: Customer; onClose: ()
         </Stack>
       )}
       <Group justify="flex-end" gap="sm" className="q-modal-actions">
-        <Button variant="default" onClick={onClose} disabled={post.isPending}>
+        <Button variant="default" onClick={() => modal?.close()} disabled={post.isPending}>
           {t('common.cancel')}
         </Button>
-        <Button type="submit" loading={post.isPending} disabled={!canSave}>
-          {t('common.save')}
-        </Button>
+        {!result.unknown && (
+          <Button type="submit" loading={post.isPending} disabled={!canSave}>
+            {t('common.save')}
+          </Button>
+        )}
       </Group>
     </form>
   )
@@ -253,14 +274,16 @@ export function DebtAdjustmentModal({
   onClose: () => void
 }) {
   const { t } = useTranslation()
+  const invalidate = useInvalidateDebtAdjustments()
   return (
-    <Modal
+    <DocumentModal
+      invalidate={invalidate}
       opened={opened}
       onClose={onClose}
       title={t('debtAdjustments.title')}
       classNames={{ content: 'q-debt-adjustment-modal', body: 'q-debt-adjustment-body' }}
     >
       {opened && <AdjustmentForm customer={customer} onClose={onClose} />}
-    </Modal>
+    </DocumentModal>
   )
 }

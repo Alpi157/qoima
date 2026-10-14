@@ -1,6 +1,13 @@
 import { Anchor, Button, Group, SimpleGrid, Stack, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
+import { useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
+import { api, unwrap } from '../../api/client'
+import { queryKeys } from '../../api/queryKeys'
+import { PAGE_SIZE } from '../../lib/pagination'
+import { usePagedFocus } from '../../components/ui/usePagedFocus'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
@@ -80,7 +87,7 @@ function MovementCard({ movement: m }: { movement: Movement }) {
   )
 }
 
-function MovementTable({ items }: { items: Movement[] }) {
+function MovementTable({ items, highlighted }: { items: Movement[]; highlighted: string | null }) {
   const { t } = useTranslation()
   const columns: DataTableColumn<Movement>[] = [
     {
@@ -114,7 +121,8 @@ function MovementTable({ items }: { items: Movement[] }) {
   return (
     <DataTable
       rows={items}
-      rowKey={(m) => m.id}
+      rowKey={(m) => `movement-${m.id}`}
+      highlightedRowKey={highlighted}
       columns={columns}
       minWidth={900}
       mobileCard={(m) => <MovementCard movement={m} />}
@@ -125,6 +133,44 @@ function MovementTable({ items }: { items: Movement[] }) {
 function MovementHistory({ productId }: { productId: number }) {
   const { page, setPage } = useListParams()
   const movements = useProductMovements(productId, page)
+  const queryClient = useQueryClient()
+  const [params, setParams] = useSearchParams()
+  const token = params.get('movementFocus')
+  const target = token && /^[1-9][0-9]*$/.test(token) ? `movement-${token}` : null
+  const fetchPage = useCallback(
+    (requested: number) =>
+      queryClient.fetchQuery({
+        queryKey: queryKeys.productMovements(productId, requested),
+        staleTime: 0,
+        queryFn: () =>
+          unwrap(
+            api.GET('/api/products/{product_id}/movements', {
+              params: {
+                path: { product_id: productId },
+                query: { limit: PAGE_SIZE, offset: (requested - 1) * PAGE_SIZE },
+              },
+            }),
+          ),
+      }),
+    [queryClient, productId],
+  )
+  const keyOf = useCallback((item: Movement) => `movement-${item.id}`, [])
+  const found = useCallback(
+    (requested: number) =>
+      setParams(
+        (previous) => {
+          const next = new URLSearchParams(previous)
+          next.delete('movementFocus')
+          if (requested > 1) next.set('page', String(requested))
+          else next.delete('page')
+          return next
+        },
+        { replace: true },
+      ),
+    [setParams],
+  )
+  const focus = usePagedFocus(target, fetchPage, keyOf, found)
+
   const { t } = useTranslation()
 
   if (movements.isPending) return <PageLoader />
@@ -134,7 +180,8 @@ function MovementHistory({ productId }: { productId: number }) {
   if (movements.data.total === 0) return <Text c="dimmed">{t('products.movements.empty')}</Text>
   return (
     <Stack gap="md">
-      <MovementTable items={movements.data.items} />
+      {Boolean(focus.error) && <QueryError error={focus.error} onRetry={focus.retry} />}
+      <MovementTable items={movements.data.items} highlighted={focus.highlighted} />
       <ListPagination total={movements.data.total} page={page} onChange={setPage} />
     </Stack>
   )

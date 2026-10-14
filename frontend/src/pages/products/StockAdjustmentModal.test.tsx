@@ -44,6 +44,7 @@ describe('StockAdjustmentModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(post).toHaveBeenCalledWith('/api/stock/adjustments', {
       body: { request_id: expect.any(String), product_id: 1, qty: -3, reason: 'Брак' },
+      signal: expect.any(AbortSignal),
     })
   })
 
@@ -82,13 +83,9 @@ it('keeps the adjustment key while open and generates another on reopening', asy
   await user.click(screen.getByRole('button', { name: 'Брак' }))
   await user.click(screen.getByRole('button', { name: 'Добавить' }))
   await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
-  await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: 'Добавить' }).getAttribute('data-loading'),
-    ).toBeNull(),
-  )
+  await screen.findByTestId('unknown-result')
   const original = postBody<components['schemas']['AdjustmentCreate']>(post).request_id
-  await user.click(screen.getByRole('button', { name: 'Добавить' }))
+  await user.click(screen.getByRole('button', { name: 'Проверить ещё раз' }))
   await waitFor(() => expect(post).toHaveBeenCalledTimes(2))
   expect(postBody<components['schemas']['AdjustmentCreate']>(post, 1).request_id).toBe(original)
   // Unmounting is the same lifetime as the form closing inside StockAdjustmentModal.
@@ -103,13 +100,14 @@ it('keeps the adjustment key while open and generates another on reopening', asy
 it('shows its own adjustment conflict inside the window', async () => {
   const user = setupUser()
   vi.spyOn(api, 'POST').mockRejectedValue(
-    new ApiError(409, 'detail', {}, 'stock_adjustment_request_conflict'),
+    new ApiError(409, 'detail', {}, 'stock_adjustment_request_conflict', {
+      movement_id: 12,
+      product_id: 1,
+    }),
   )
   const { onClose } = renderModal()
   await user.click(screen.getByRole('button', { name: 'Брак' }))
   await user.click(screen.getByRole('button', { name: 'Добавить' }))
-  expect((await screen.findByRole('alert')).textContent).toBe(
-    'Эта корректировка, возможно, уже сохранена с другими данными. Проверьте историю товара.',
-  )
+  expect((await screen.findByRole('alert')).textContent).toContain('историю товара')
   expect(onClose).not.toHaveBeenCalled()
 })

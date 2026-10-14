@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
-import { api, unwrap } from '../../api/client'
+import { api, unwrap, withDocumentTimeout } from '../../api/client'
 import { useInvalidateReturns } from '../../api/invalidate'
 import { queryKeys, type ReturnListParams } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
@@ -41,7 +41,9 @@ export function useReturn(id: number) {
 export function usePostReturn() {
   const invalidate = useInvalidateReturns()
   return useMutation({
-    mutationFn: (body: ReturnCreate) => unwrap(api.POST('/api/returns', { body })),
+    meta: { handlesError: true },
+    mutationFn: (body: ReturnCreate) =>
+      withDocumentTimeout((signal) => unwrap(api.POST('/api/returns', { body, signal }))),
     onSuccess: invalidate,
   })
 }

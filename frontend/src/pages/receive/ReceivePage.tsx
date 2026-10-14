@@ -1,3 +1,4 @@
+import { isRequestConflict } from '../../components/flow/documentResultState'
 import {
   Alert,
   Button,
@@ -14,6 +15,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
+import { type ApiError, isServerOrNetworkError } from '../../api/errors'
 import { useMe } from '../../auth/useMe'
 import {
   CancelFlowModal,
@@ -30,6 +32,8 @@ import { ExtraSection } from '../../components/ExtraSection'
 import { MoneyInput } from '../../components/MoneyInput'
 import { PageLoader } from '../../components/PageLoader'
 import { PageContainer, PageHeader } from '../../components/ui'
+import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
+import { LineLoadNotice, UnloadedLine } from '../../components/flow/LineLoadNotice'
 import { apiErrorText } from '../../i18n/errorText'
 import { nowLocalInput } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
@@ -70,6 +74,9 @@ function ReceiveFlow({ userId }: { userId: number }) {
   const [newArticle, setNewArticle] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [saveError, setSaveError] = useState<ReactNode>(null)
+  const [checking, setChecking] = useState(false)
+  const [conflict, setConflict] = useState<ApiError | null>(null)
+  const [removed, setRemoved] = useState<string[]>([])
   const [costsSubmitted, setCostsSubmitted] = useState(false)
   const [focusCostId, setFocusCostId] = useState<number | null>(null)
   const costInputs = useRef(new Map<number, HTMLInputElement>())
@@ -103,31 +110,75 @@ function ReceiveFlow({ userId }: { userId: number }) {
       lines.map((line) => (line.productId === productId ? { ...line, ...changes } : line)),
     )
   const dropMissing = useCallback(
-    (ids: number[]) =>
-      changeLines((lines) => lines.filter((line) => !ids.includes(line.productId))),
-    [changeLines],
+    (ids: number[], products: Map<number, Product>) => {
+      setRemoved((previous) => [
+        ...new Set([
+          ...previous,
+          ...value.lines
+            .filter((line) => ids.includes(line.productId))
+            .map(
+              (line) =>
+                line.article ?? products.get(line.productId)?.article ?? t('common.notFoundShort'),
+            ),
+        ]),
+      ])
+      changeLines((lines) => lines.filter((line) => !ids.includes(line.productId)))
+    },
+    [changeLines, value.lines, t],
   )
-  const { views, isPending: loadingLines } = useLineProducts(value.lines, dropMissing)
+  const {
+    views,
+    products,
+    unresolved,
+    incomplete,
+    isPending: loadingLines,
+    hasLoadError,
+    reload,
+  } = useLineProducts(value.lines, dropMissing)
+  useEffect(() => {
+    if (
+      value.lines.some((line) => {
+        const product = products.get(line.productId)
+        return product && (line.article !== product.article || line.name !== product.name)
+      })
+    )
+      update(
+        (current) => ({
+          ...current,
+          lines: current.lines.map((line) => {
+            const product = products.get(line.productId)
+            return product ? { ...line, article: product.article, name: product.name } : line
+          }),
+        }),
+        false,
+      )
+  }, [products, value.lines, update])
 
   const addProduct = (product: Product) => {
     rememberProduct(product)
-    changeLines((lines) => addReceiptLine(lines, product.id, product.last_cost))
+    changeLines((lines) =>
+      addReceiptLine(lines, product.id, product.last_cost, {
+        article: product.article,
+        name: product.name,
+      }),
+    )
     setNewArticle(null)
   }
 
   const warnings = views.map(({ line }) => receiptLineWarning(line))
-  const kinds = views.length
-  const pieces = views.reduce(
-    (sum, { line }) => sum + (qtyError(line.qty) === null ? (line.qty as number) : 0),
+  const kinds = value.lines.length
+  const pieces = value.lines.reduce(
+    (sum, line) => sum + (qtyError(line.qty) === null ? (line.qty as number) : 0),
     0,
   )
-  const purchaseTotal = views.reduce(
-    (sum, { line }) =>
+  const purchaseTotal = value.lines.reduce(
+    (sum, line) =>
       sum + (qtyError(line.qty) === null ? (line.qty as number) * (parseMoney(line.cost) ?? 0) : 0),
     0,
   )
-  const blockedReason =
-    value.lines.length === 0 || loadingLines
+  const blockedReason = incomplete
+    ? t('flow.blocked.loading')
+    : value.lines.length === 0
       ? t('flow.blocked.empty')
       : warnings.some(Boolean)
         ? t('flow.blocked.fix')
@@ -135,6 +186,8 @@ function ReceiveFlow({ userId }: { userId: number }) {
 
   const cancel = () => {
     clear()
+    setConflict(null)
+    setRemoved([])
     setConfirmCancel(false)
     navigate('/')
   }
@@ -148,17 +201,27 @@ function ReceiveFlow({ userId }: { userId: number }) {
       return
     }
     setSaveError(null)
+    setConflict(null)
+    setChecking(value.unknown === true)
+    update((current) => ({ ...current, unknown: true }))
     post.mutate(receiptBody(value), {
       onSuccess: (receipt) => {
         clear()
         navigate(`/receive/done/${receipt.id}`)
       },
-      onError: (error) =>
+      onError: (error) => {
+        update((current) => ({ ...current, unknown: isServerOrNetworkError(error) }))
+        if (isServerOrNetworkError(error)) return
+        if (isRequestConflict(error)) {
+          setConflict(error)
+          return
+        }
         setSaveError(
           <Alert color="red" role="alert">
             {apiErrorText(error, t)}
           </Alert>,
-        ),
+        )
+      },
     })
   }
 
@@ -168,7 +231,11 @@ function ReceiveFlow({ userId }: { userId: number }) {
       {draft.restored && (
         <DraftNotice
           text={t('receive.draftRestored')}
-          onClear={clear}
+          onClear={() => {
+            clear()
+            setConflict(null)
+            setRemoved([])
+          }}
           onClose={draft.dismissRestored}
         />
       )}
@@ -213,8 +280,36 @@ function ReceiveFlow({ userId }: { userId: number }) {
           )}
 
           <Title order={2}>{t('receive.lines')}</Title>
+          <LineLoadNotice error={hasLoadError} reload={reload} removed={removed} />
+          {conflict && (
+            <RequestConflictAlert
+              error={conflict}
+              onClear={() => {
+                clear()
+                setConflict(null)
+                setRemoved([])
+              }}
+            />
+          )}
+          {value.unknown && (!post.isPending || checking) && (
+            <UnknownResult
+              onRetry={submit}
+              busy={post.isPending}
+              disabled={Boolean(blockedReason)}
+            />
+          )}
           {loadingLines && <Loader />}
-          {!loadingLines && views.length === 0 && (
+          {unresolved.map((line) => (
+            <UnloadedLine key={line.productId} article={line.article} name={line.name}>
+              <Text>
+                {t('flow.qty')}: {line.qty}
+              </Text>
+              <Text>
+                {t('receive.cost')}: {line.cost || '—'}
+              </Text>
+            </UnloadedLine>
+          ))}
+          {!loadingLines && value.lines.length === 0 && (
             <div className="flow-empty">{t('flow.empty')}</div>
           )}
           {views.map(({ line, product }, index) => {
@@ -339,6 +434,7 @@ function ReceiveFlow({ userId }: { userId: number }) {
           blockedReason={blockedReason}
           loading={post.isPending}
           error={saveError}
+          hideAction={value.unknown === true && (!post.isPending || checking)}
           onCancel={() => (value.lines.length > 0 ? setConfirmCancel(true) : cancel())}
           summary={
             <Stack gap="xs">

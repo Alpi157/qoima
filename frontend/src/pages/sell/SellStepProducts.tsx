@@ -18,6 +18,8 @@ import {
   saleLineWarning,
 } from './saleDraft'
 import { saleTotals } from './saleTotals'
+import { qtyError } from '../../lib/validation'
+import { UnloadedLine } from '../../components/flow/LineLoadNotice'
 
 interface FrequentProps {
   onAdd: (product: Product) => void
@@ -68,6 +70,7 @@ export interface SellStepProductsProps {
   views: SaleLineView[]
   /** Products of a restored draft are still loading. */
   loadingLines: boolean
+  incomplete: boolean
   query: string
   onQueryChange: (query: string) => void
   onAdd: (product: Product) => void
@@ -81,6 +84,7 @@ export function SellStepProducts({
   draft,
   views,
   loadingLines,
+  incomplete,
   query,
   onQueryChange,
   onAdd,
@@ -90,14 +94,20 @@ export function SellStepProducts({
 }: SellStepProductsProps) {
   const { t } = useTranslation()
   const totals = saleTotals(views)
+  totals.kinds = draft.lines.length
+  totals.qty = draft.lines.reduce(
+    (sum, line) => sum + (qtyError(line.qty) === null ? (line.qty as number) : 0),
+    0,
+  )
   const changeLine = (productId: number, change: Partial<SaleDraftLine>) =>
     onChangeLines((lines) =>
       lines.map((line) => (line.productId === productId ? { ...line, ...change } : line)),
     )
 
   const warnings = views.map(({ line, product }) => saleLineWarning(line, product))
-  const blockedReason =
-    draft.lines.length === 0 || loadingLines
+  const blockedReason = incomplete
+    ? t('flow.blocked.loading')
+    : draft.lines.length === 0
       ? t('flow.blocked.empty')
       : warnings.some(Boolean)
         ? t('flow.blocked.fix')
@@ -130,7 +140,19 @@ export function SellStepProducts({
 
           <Title order={2}>{t('sell.products.lines')}</Title>
           {loadingLines && <Loader />}
-          {!loadingLines && views.length === 0 && (
+          {draft.lines
+            .filter((line) => !views.some((view) => view.line.productId === line.productId))
+            .map((line) => (
+              <UnloadedLine key={line.productId} article={line.article} name={line.name}>
+                <Text>
+                  {t('flow.qty')}: {line.qty}
+                </Text>
+                <Text>
+                  {t('sell.price')}: {line.price ?? '—'}
+                </Text>
+              </UnloadedLine>
+            ))}
+          {!loadingLines && draft.lines.length === 0 && (
             <div className="flow-empty">{t('flow.empty')}</div>
           )}
           {views.map(({ line, product }, index) => {
@@ -204,8 +226,8 @@ export function SellStepProducts({
             <Stat
               size="display"
               label={t('sell.total')}
-              value={formatAmount(totals.sum)}
-              unit="₸"
+              value={incomplete ? '—' : formatAmount(totals.sum)}
+              unit={incomplete ? undefined : '₸'}
               testId="sale-total"
             />
           }

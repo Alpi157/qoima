@@ -54,7 +54,7 @@ def _existing_receipt(db: Session, data: ReceiptCreate) -> ReceiptOut | None:
         or receipt.note != data.note
         or not same_time
     ):
-        raise ReceiptRequestConflictError()
+        raise ReceiptRequestConflictError(params={"id": receipt.id, "number": receipt.number})
     return get_receipt(db, receipt.id)
 
 

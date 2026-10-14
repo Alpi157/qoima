@@ -85,7 +85,7 @@ describe('SellPage, step 1', () => {
     await user.click(await screen.findByRole('button', { name: 'Добавить OC-90' }))
     expect(qtyField('OC-90').value).toBe('2')
     expect(screen.getAllByTestId('flow-line')).toHaveLength(1)
-    expect(storedDraft()?.lines).toEqual([{ productId: 1, qty: 2, price: null }])
+    expect(storedDraft()?.lines).toMatchObject([{ productId: 1, qty: 2, price: null }])
   })
 
   it('offers frequent products while the search is empty and says when nothing is found', async () => {
@@ -335,14 +335,14 @@ describe('SellPage, step 3', () => {
     const first = renderSell('/sell?step=3')
 
     await user.click(await screen.findByRole('button', { name: 'Сохранить продажу' }))
-    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(await screen.findByTestId('unknown-result')).toBeTruthy()
     expect(storedDraft()?.requestId).toBe(REQUEST_ID)
 
     // Reload: the screen opens again from the draft.
     first.unmount()
     renderSell('/sell?step=3')
     expect(await screen.findByText('Незавершённая продажа восстановлена.')).toBeTruthy()
-    await user.click(await screen.findByRole('button', { name: 'Сохранить продажу' }))
+    await user.click(await screen.findByRole('button', { name: 'Проверить ещё раз' }))
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(2))
     expect(postBody<SaleCreate>(post, 0).request_id).toBe(REQUEST_ID)
@@ -354,15 +354,16 @@ describe('SellPage, step 3', () => {
     const user = setupUser()
     mockFlowGet({ products: PRODUCTS })
     vi.spyOn(api, 'POST').mockRejectedValue(
-      new ApiError(409, 'Конфликт', {}, 'sale_request_conflict'),
+      new ApiError(409, 'Конфликт', {}, 'sale_request_conflict', { id: 9, number: 42 }),
     )
     saveDraft({ customer: 'none' })
     renderSell('/sell?step=3')
 
     await user.click(await screen.findByRole('button', { name: 'Сохранить продажу' }))
     const alert = await screen.findByRole('alert')
-    expect(alert.textContent).toContain('Продажа могла уже пройти')
-    expect(within(alert).getByRole('link').getAttribute('href')).toBe('/sales')
+    expect(alert.textContent).toContain('№42')
+    expect(within(alert).getByRole('button', { name: 'Открыть' })).toBeTruthy()
+    expect(within(alert).getByRole('button', { name: 'Очистить' })).toBeTruthy()
   })
 
   it('a stock shortage from the server is shown above the button', async () => {

@@ -639,3 +639,208 @@ test('manual stock adjustment posts once and keeps the existing form behavior', 
   )
   expect(history.total).toBe(1)
 })
+
+test('action budget for the five everyday documents', async ({ page }) => {
+  const { Actions } = await import('./actions.js')
+  await login(page)
+  const suffix = `${width(page)}-${crypto.randomUUID().slice(0, 8)}`
+  const productResponse = await page.request.post('/api/products', {
+    data: { article: `BUDGET-${suffix}`, name: 'Әрекеттерді тексеру', sale_price: 100000 },
+  })
+  expect(productResponse.ok()).toBeTruthy()
+  const product = (await productResponse.json()) as Product
+  const customerResponse = await page.request.post('/api/customers', {
+    data: { name: `Бюджет ${suffix}` },
+  })
+  expect(customerResponse.ok()).toBeTruthy()
+  const customer = (await customerResponse.json()) as Customer
+  const seed = await page.request.post('/api/receipts', {
+    data: {
+      request_id: crypto.randomUUID(),
+      lines: [{ product_id: product.id, qty: 10, unit_cost: 50000 }],
+    },
+  })
+  expect(seed.ok()).toBeTruthy()
+  let cashSale: Sale | undefined
+  for (const debt of [false, true]) {
+    await page.goto('/sell')
+    const actions = new Actions()
+    await actions.fill(page.getByRole('searchbox', { name: SEARCH }), product.article)
+    await actions.enter(page.getByRole('searchbox', { name: SEARCH }))
+    await expect(page.getByRole('textbox', { name: `${product.article} саны` })).toBeVisible()
+    await actions.click(page.getByRole('button', { name: 'Келесі: сатып алушы' }))
+    await expect(page.getByRole('heading', { name: 'Кімге сатамыз?' })).toBeVisible()
+    await actions.fill(page.getByRole('searchbox'), customer.name)
+    await actions.click(page.locator('.flow-choice').filter({ hasText: customer.name }))
+    if (debt) await actions.click(page.getByRole('button', { name: 'Қарызға', exact: true }))
+    const response = page.waitForResponse(
+      (r) => r.url().endsWith('/api/sales') && r.request().method() === 'POST',
+    )
+    await actions.click(page.getByRole('button', { name: 'Сатылымды сақтау' }))
+    const saved = (await (await response).json()) as Sale
+    await expect(page.getByRole('heading', { name: 'Сатылым сақталды' })).toBeVisible()
+    if (!debt) cashSale = saved
+    actions.check(debt ? 'debtSale' : 'cashSale')
+  }
+  await page.goto('/receive')
+  const receipt = new Actions()
+  await receipt.fill(page.getByRole('searchbox', { name: SEARCH }), product.article)
+  await receipt.enter(page.getByRole('searchbox', { name: SEARCH }))
+  await receipt.fill(
+    page.getByRole('textbox', { name: `${product.article} сатып алу бағасы` }),
+    '500',
+  )
+  await receipt.click(page.getByRole('button', { name: 'Қоймаға қосу' }))
+  await expect(page.getByRole('heading', { name: 'Тауар қоймаға қосылды' })).toBeVisible()
+  receipt.check('receipt')
+  await page.goto(`/customers/${customer.id}`)
+  const payment = new Actions()
+  await payment.click(page.getByRole('button', { name: 'Төлем қабылдау' }))
+  const modal = page.getByRole('dialog')
+  await payment.fill(modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }), '1000')
+  await payment.click(modal.getByRole('button', { name: 'Сақтау', exact: true }))
+  await expect(modal).toHaveCount(0)
+  payment.check('payment')
+  await page.goto(`/sales/${cashSale!.id}`)
+  const goodReturn = new Actions()
+  await goodReturn.click(page.getByRole('link', { name: 'Қайтару', exact: true }))
+  await goodReturn.fill(page.getByRole('textbox', { name: `${product.article} саны` }), '1')
+  await goodReturn.click(page.getByRole('button', { name: 'Қайтаруды сақтау' }))
+  await expect(page.getByRole('heading', { name: /^Қайтару №/ })).toBeVisible()
+  goodReturn.check('goodReturn')
+})
+
+async function draftCase(page: Page, tag: string, count = 1) {
+  const suffix = `${width(page)}-${crypto.randomUUID().slice(0, 8)}`
+  const products: Product[] = []
+  for (let i = 0; i < count; i++) {
+    const response = await page.request.post('/api/products', {
+      data: {
+        article: `${tag}-${suffix}-${i}`,
+        name: 'Байланысты тексеру',
+        sale_price: 100000,
+      },
+    })
+    expect(response.ok()).toBeTruthy()
+    products.push((await response.json()) as Product)
+  }
+  const receipt = await page.request.post('/api/receipts', {
+    data: {
+      request_id: crypto.randomUUID(),
+      lines: products.map((p) => ({ product_id: p.id, qty: 1, unit_cost: 50000 })),
+    },
+  })
+  expect(receipt.ok()).toBeTruthy()
+  const response = await page.request.post('/api/customers', { data: { name: `${tag} ${suffix}` } })
+  expect(response.ok()).toBeTruthy()
+  const customer = (await response.json()) as Customer
+  await page.goto('/sell')
+  for (const product of products) await addByEnter(page, product.article)
+  return { products, customer }
+}
+
+async function reviewCase(page: Page, customer: Customer) {
+  await page.getByRole('button', { name: 'Келесі: сатып алушы' }).click()
+  await expect(page.getByRole('heading', { name: 'Кімге сатамыз?' })).toBeVisible()
+  await page.getByRole('searchbox').fill(customer.name)
+  await page.locator('.flow-choice').filter({ hasText: customer.name }).click()
+  await expect(page.getByRole('heading', { name: 'Тексеріңіз' })).toBeVisible()
+}
+
+for (const accepted of [true, false]) {
+  test(`draft safety: ${accepted ? 'server accepted, response lost' : 'abort before server and reload'}`, async ({
+    page,
+  }) => {
+    await login(page)
+    const { customer } = await draftCase(page, accepted ? 'LOST' : 'BEFORE')
+    await reviewCase(page, customer)
+    const bodies: components['schemas']['SaleCreate'][] = []
+    let savedId: number | undefined
+    await page.route('**/api/sales', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue()
+        return
+      }
+      bodies.push(route.request().postDataJSON() as components['schemas']['SaleCreate'])
+      if (bodies.length === 1) {
+        if (accepted) {
+          const response = await route.fetch()
+          expect(response.status()).toBe(201)
+          savedId = ((await response.json()) as Sale).id
+        }
+        await route.abort('failed')
+      } else await route.continue()
+    })
+    await page.getByRole('button', { name: 'Сатылымды сақтау' }).click()
+    await expect(page.getByTestId('unknown-result')).toBeVisible()
+    if (!accepted) {
+      await page.reload()
+      await expect(page.getByTestId('unknown-result')).toBeVisible()
+    }
+    await page.getByRole('button', { name: 'Қайта тексеру' }).click()
+    await expect.poll(() => bodies.length).toBe(2)
+    expect(bodies[1]).toEqual(bodies[0])
+    await expect(page.getByRole('heading', { name: 'Сатылым сақталды' })).toBeVisible()
+    const sales = await getJson<components['schemas']['SalePage']>(
+      page,
+      `/api/sales?customer_id=${customer.id}`,
+    )
+    expect(sales.total).toBe(1)
+    if (accepted) expect(sales.items[0].id).toBe(savedId)
+  })
+}
+
+test('draft safety: two visible lines without network and recovery', async ({ page }) => {
+  await login(page)
+  const { products } = await draftCase(page, 'LINES', 2)
+  const me = await getJson<components['schemas']['UserOut']>(page, '/api/auth/me')
+  const key = `qoima.draft.${me.id}.sale`
+  const before = await page.evaluate((key) => localStorage.getItem(key), key)
+  const productUrl = /\/api\/products\/\d+$/
+  await page.route(productUrl, (route) => route.abort('failed'))
+  await page.reload()
+  await expect(page.getByTestId('line-load-error')).toBeVisible()
+  await expect(page.getByTestId('flow-line')).toHaveCount(2)
+  for (const product of products)
+    await expect(page.getByText(product.article, { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Келесі: сатып алушы' })).toBeDisabled()
+  const stored = await page.evaluate((key) => localStorage.getItem(key), key)
+  expect(JSON.parse(stored!).lines).toEqual(JSON.parse(before!).lines)
+  await page.unroute(productUrl)
+  await page.getByRole('button', { name: 'Қайталау', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Келесі: сатып алушы' })).toBeEnabled()
+  await expect(page.getByTestId('flow-line')).toHaveCount(2)
+})
+
+test('draft safety: expired product session preserves the draft through login', async ({
+  page,
+}) => {
+  await login(page)
+  const { products } = await draftCase(page, 'SESSION', 2)
+  const me = await getJson<components['schemas']['UserOut']>(page, '/api/auth/me')
+  const key = `qoima.draft.${me.id}.sale`
+  const before = await page.evaluate((key) => localStorage.getItem(key), key)
+  const logout = await page.request.post('/api/auth/logout')
+  expect(logout.ok()).toBeTruthy()
+  let firstMe = true
+  // Let the product request encounter the expired session, instead of the initial auth guard.
+  await page.route('**/api/auth/me', async (route) => {
+    if (firstMe) {
+      firstMe = false
+      await route.fulfill({ json: me })
+    } else await route.continue()
+  })
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Кіру', exact: true })).toBeVisible()
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBe(before)
+  await page.getByLabel('Логин').fill('demo')
+  await page.getByLabel('Құпиясөз').fill(process.env.DEMO_PASSWORD!)
+  await page.getByRole('button', { name: 'Кіру', exact: true }).click()
+  await page.waitForURL('**/sell')
+  await expect(page.getByTestId('flow-line')).toHaveCount(2)
+  for (const product of products)
+    await expect(page.getByRole('textbox', { name: `${product.article} саны` })).toBeVisible()
+  expect(
+    JSON.parse((await page.evaluate((key) => localStorage.getItem(key), key))!).requestId,
+  ).toBe(JSON.parse(before!).requestId)
+})

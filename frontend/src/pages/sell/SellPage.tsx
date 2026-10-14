@@ -1,10 +1,11 @@
+import { isRequestConflict } from '../../components/flow/documentResultState'
 import { Alert } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
-import { hasErrorCode } from '../../api/errors'
+import { hasErrorCode, type ApiError, isServerOrNetworkError } from '../../api/errors'
 import { useMe } from '../../auth/useMe'
 import {
   CancelFlowModal,
@@ -15,10 +16,12 @@ import {
 } from '../../components/flow'
 import { PageLoader } from '../../components/PageLoader'
 import { PageContainer } from '../../components/ui'
+import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
+import { LineLoadNotice } from '../../components/flow/LineLoadNotice'
 import { apiErrorText } from '../../i18n/errorText'
 import { SellDonePage } from '../lazyPages'
 import { type Product, useRememberProduct } from '../products/api'
-import { SALE_REQUEST_CONFLICT, usePostSale } from '../sales/api'
+import { usePostSale } from '../sales/api'
 import {
   addSaleLine,
   createSaleDraft,
@@ -31,7 +34,7 @@ import {
 } from './saleDraft'
 import { SellStepCustomer } from './SellStepCustomer'
 import { SellStepProducts } from './SellStepProducts'
-import { RequestConflictAlert, SellStepReview } from './SellStepReview'
+import { SellStepReview } from './SellStepReview'
 import { saleTotals } from './saleTotals'
 
 type Step = 1 | 2 | 3
@@ -71,6 +74,9 @@ function SellFlow({ userId }: { userId: number }) {
   const [query, setQuery] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [saveError, setSaveError] = useState<ReactNode>(null)
+  const [checking, setChecking] = useState(false)
+  const [conflict, setConflict] = useState<ApiError | null>(null)
+  const [removed, setRemoved] = useState<string[]>([])
   const previousStep = useRef<Step | null>(null)
 
   const changeLines = useCallback(
@@ -81,11 +87,49 @@ function SellFlow({ userId }: { userId: number }) {
     [update],
   )
   const dropMissing = useCallback(
-    (ids: number[]) =>
-      changeLines((lines) => lines.filter((line) => !ids.includes(line.productId))),
-    [changeLines],
+    (ids: number[], products: Map<number, Product>) => {
+      setRemoved((previous) => [
+        ...new Set([
+          ...previous,
+          ...value.lines
+            .filter((line) => ids.includes(line.productId))
+            .map(
+              (line) =>
+                line.article ?? products.get(line.productId)?.article ?? t('common.notFoundShort'),
+            ),
+        ]),
+      ])
+      changeLines((lines) => lines.filter((line) => !ids.includes(line.productId)))
+    },
+    [changeLines, value.lines, t],
   )
-  const { views, isPending: loadingLines } = useLineProducts(value.lines, dropMissing)
+  const {
+    views,
+    products,
+    unresolved,
+    incomplete,
+    isPending: loadingLines,
+    hasLoadError,
+    reload,
+  } = useLineProducts(value.lines, dropMissing)
+  useEffect(() => {
+    if (
+      value.lines.some((line) => {
+        const product = products.get(line.productId)
+        return product && (line.article !== product.article || line.name !== product.name)
+      })
+    )
+      update(
+        (current) => ({
+          ...current,
+          lines: current.lines.map((line) => {
+            const product = products.get(line.productId)
+            return product ? { ...line, article: product.article, name: product.name } : line
+          }),
+        }),
+        false,
+      )
+  }, [products, value.lines, update])
 
   // The step is in the address, so the browser's Back returns to the previous one. A step
   // that has nothing to show yet (no lines, no customer) leads to the one to fill first.
@@ -117,7 +161,9 @@ function SellFlow({ userId }: { userId: number }) {
 
   const addProduct = (product: Product) => {
     rememberProduct(product)
-    changeLines((lines) => addSaleLine(lines, product.id))
+    changeLines((lines) =>
+      addSaleLine(lines, product.id, { article: product.article, name: product.name }),
+    )
   }
 
   const pickCustomer = (customer: PickedCustomer | 'none') => {
@@ -133,13 +179,24 @@ function SellFlow({ userId }: { userId: number }) {
 
   const cancel = () => {
     clear()
+    setConflict(null)
+    setRemoved([])
     setConfirmCancel(false)
     navigate('/')
   }
 
   const submit = () => {
-    if (post.isPending || salePaymentError(value.payment, saleTotals(views).sum)) return
+    if (
+      incomplete ||
+      value.lines.length === 0 ||
+      post.isPending ||
+      salePaymentError(value.payment, saleTotals(views).sum)
+    )
+      return
     setSaveError(null)
+    setConflict(null)
+    setChecking(value.unknown === true)
+    update((current) => ({ ...current, unknown: true }))
     post.mutate(saleBody(value, views), {
       onSuccess: (sale) => {
         clear()
@@ -147,8 +204,10 @@ function SellFlow({ userId }: { userId: number }) {
       },
       onError: (error) => {
         // The draft keeps its request_id: pressing the button again cannot post twice.
-        if (hasErrorCode(error, SALE_REQUEST_CONFLICT)) {
-          setSaveError(<RequestConflictAlert />)
+        update((current) => ({ ...current, unknown: isServerOrNetworkError(error) }))
+        if (isServerOrNetworkError(error)) return
+        if (isRequestConflict(error)) {
+          setConflict(error)
           return
         }
         if (hasErrorCode(error, 'insufficient_stock')) {
@@ -176,17 +235,27 @@ function SellFlow({ userId }: { userId: number }) {
           text={t('sell.draftRestored')}
           onClear={() => {
             clear()
+            setConflict(null)
+            setRemoved([])
             navigate({ search: '' }, { replace: true })
           }}
           onClose={draft.dismissRestored}
         />
       )}
 
+      <LineLoadNotice error={hasLoadError} reload={reload} removed={removed} />
+      {step !== 3 && value.unknown && (!post.isPending || checking) && (
+        <UnknownResult
+          onRetry={submit}
+          disabled={incomplete || value.customer === null || value.lines.length === 0}
+        />
+      )}
       {step === 1 && (
         <SellStepProducts
           draft={value}
           views={views}
           loadingLines={loadingLines}
+          incomplete={incomplete}
           query={query}
           onQueryChange={setQuery}
           onAdd={addProduct}
@@ -209,7 +278,32 @@ function SellFlow({ userId }: { userId: number }) {
           onBack={() => goBack(2)}
           onSubmit={submit}
           saving={post.isPending}
-          error={saveError}
+          error={
+            <>
+              {conflict && (
+                <RequestConflictAlert
+                  error={conflict}
+                  onClear={() => {
+                    clear()
+                    setConflict(null)
+                    setRemoved([])
+                    navigate({ search: '' }, { replace: true })
+                  }}
+                />
+              )}
+              {value.unknown && (!post.isPending || checking) && (
+                <UnknownResult
+                  onRetry={submit}
+                  busy={post.isPending}
+                  disabled={incomplete || value.lines.length === 0}
+                />
+              )}
+              {saveError}
+            </>
+          }
+          incomplete={incomplete}
+          unknown={value.unknown === true && (!post.isPending || checking)}
+          unresolved={unresolved}
         />
       )}
 

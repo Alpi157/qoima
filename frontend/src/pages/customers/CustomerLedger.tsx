@@ -1,5 +1,11 @@
 import { Button, Group, Stack, Text, VisuallyHidden } from '@mantine/core'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { api, unwrap } from '../../api/client'
+import { queryKeys } from '../../api/queryKeys'
+import { usePagedFocus } from '../../components/ui/usePagedFocus'
+import { Card } from '../../components/ui'
 import { useTranslation } from 'react-i18next'
 
 import { CancelDocumentModal } from '../../components/CancelDocumentModal'
@@ -12,8 +18,8 @@ import { formatDateTime } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { PAGE_SIZE } from '../../lib/pagination'
 import { useListParams } from '../../lib/useListParams'
-import { useCancelPayment } from '../payments/api'
-import { useCancelDebtAdjustment } from '../debtAdjustments/api'
+import { type Payment, useCancelPayment } from '../payments/api'
+import { type DebtAdjustment, useCancelDebtAdjustment } from '../debtAdjustments/api'
 import { type LedgerItem, useCustomerLedger } from './api'
 
 function formatDebtChange(value: number): string {
@@ -58,12 +64,88 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
   const { t } = useTranslation()
   const { page, setPage } = useListParams('ledgerPage')
   const query = useCustomerLedger(customerId, page)
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const focusToken = params.get('ledgerFocus')
+  const match = /^(payment|adjustment):([1-9][0-9]*)$/.exec(focusToken ?? '')
+  const kind = match?.[1]
+  const id = Number(match?.[2])
+  const documentQuery = useQuery<Payment | DebtAdjustment>({
+    queryKey: ['ledger-document', kind, id],
+    enabled: Boolean(match),
+    meta: { handlesError: true },
+    queryFn: () =>
+      kind === 'payment'
+        ? unwrap(api.GET('/api/payments/{payment_id}', { params: { path: { payment_id: id } } }))
+        : unwrap(
+            api.GET('/api/debt-adjustments/{debt_adjustment_id}', {
+              params: { path: { debt_adjustment_id: id } },
+            }),
+          ),
+  })
+  const saved = documentQuery.data
+  useEffect(() => {
+    if (saved && saved.customer.id !== customerId)
+      navigate(`/customers/${saved.customer.id}?ledgerFocus=${focusToken}`, { replace: true })
+  }, [saved, customerId, focusToken, navigate])
+  const fetchPage = useCallback(
+    (requested: number) =>
+      queryClient.fetchQuery({
+        queryKey: queryKeys.customerLedger(customerId, requested),
+        staleTime: 0,
+        queryFn: () =>
+          unwrap(
+            api.GET('/api/customers/{customer_id}/ledger', {
+              params: {
+                path: { customer_id: customerId },
+                query: { limit: PAGE_SIZE, offset: (requested - 1) * PAGE_SIZE },
+              },
+            }),
+          ),
+      }),
+    [queryClient, customerId],
+  )
+  const rowKey = useCallback((item: LedgerItem) => `${item.kind}-${item.id}`, [])
+  const found = useCallback(
+    (requested: number) =>
+      setParams(
+        (previous) => {
+          const next = new URLSearchParams(previous)
+          next.delete('ledgerFocus')
+          if (requested > 1) next.set('ledgerPage', String(requested))
+          else next.delete('ledgerPage')
+          return next
+        },
+        { replace: true },
+      ),
+    [setParams],
+  )
+  const focus = usePagedFocus(
+    saved?.status === 'posted' && saved.customer.id === customerId ? `${kind}-${id}` : null,
+    fetchPage,
+    rowKey,
+    found,
+  )
+  const [cancelledHighlight, setCancelledHighlight] = useState(false)
+  useEffect(() => {
+    if (saved?.status !== 'cancelled') return
+    const frame = window.requestAnimationFrame(() => setCancelledHighlight(true))
+    const row = document.getElementById('cancelled-ledger-document')
+    row?.scrollIntoView({ block: 'center' })
+    const timer = window.setTimeout(() => setCancelledHighlight(false), 4000)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+    }
+  }, [saved])
+
   const [cancelling, setCancelling] = useState<LedgerItem | null>(null)
   useEffect(() => {
     if (query.data && !query.isPlaceholderData && page > 1 && query.data.items.length === 0)
       setPage(Math.max(1, Math.ceil(query.data.total / PAGE_SIZE)))
   }, [query.data, query.isPlaceholderData, page, setPage])
-  const document = (item: LedgerItem) =>
+  const documentCell = (item: LedgerItem) =>
     item.kind === 'sale' ? (
       <RowLink to={`/sales/${item.id}`}>
         {t('customers.ledger.sale', { number: item.number })}
@@ -110,12 +192,49 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
   if (query.isError) return <QueryError error={query.error} onRetry={() => query.refetch()} />
   return (
     <Stack gap="md">
+      {documentQuery.isError && (
+        <QueryError error={documentQuery.error} onRetry={() => documentQuery.refetch()} />
+      )}
+      {Boolean(focus.error) && <QueryError error={focus.error} onRetry={focus.retry} />}
+      {saved?.status === 'cancelled' && (
+        <Card id="cancelled-ledger-document" data-highlighted={cancelledHighlight || undefined}>
+          <Stack gap="md">
+            <Text fw={600}>
+              {t(
+                kind === 'payment'
+                  ? 'flow.result.cancelledPayment'
+                  : 'flow.result.cancelledAdjustment',
+                { number: saved.number },
+              )}
+            </Text>
+            <Text>{formatDateTime('paid_at' in saved ? saved.paid_at : saved.adjusted_at)}</Text>
+            <Text>{formatMoney(saved.amount)}</Text>
+            <Text>{t('common.cancelled.reason', { reason: saved.cancel_reason })}</Text>
+            <Button
+              variant="default"
+              onClick={() =>
+                setParams(
+                  (previous) => {
+                    const next = new URLSearchParams(previous)
+                    next.delete('ledgerFocus')
+                    return next
+                  },
+                  { replace: true },
+                )
+              }
+            >
+              {t('flow.draft.close')}
+            </Button>
+          </Stack>
+        </Card>
+      )}
       {query.data.total === 0 ? (
         <Text c="dimmed">{t('customers.ledger.empty')}</Text>
       ) : (
         <>
           <DataTable
             rows={query.data.items}
+            highlightedRowKey={focus.highlighted}
             rowKey={(row) => `${row.kind}-${row.id}`}
             columns={[
               {
@@ -124,7 +243,7 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
                 cell: (row) => formatDateTime(row.occurred_at),
                 nowrap: true,
               },
-              { key: 'document', header: t('customers.ledger.document'), cell: document },
+              { key: 'document', header: t('customers.ledger.document'), cell: documentCell },
               {
                 key: 'amount',
                 header: t('customers.ledger.amount'),
@@ -151,7 +270,7 @@ export function CustomerLedger({ customerId }: { customerId: number }) {
             ]}
             mobileCard={(row) => (
               <Stack gap="xs">
-                {document(row)}
+                {documentCell(row)}
                 <Text size="sm" c="dimmed">
                   {formatDateTime(row.occurred_at)}
                 </Text>

@@ -1,12 +1,21 @@
+import { isRequestConflict } from '../../components/flow/documentResultState'
 import { Alert, Button, Group, Stack, Text, Textarea } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { hasErrorCode, isApiError, isServerOrNetworkError } from '../../api/errors'
+import { hasErrorCode, type ApiError, isApiError, isServerOrNetworkError } from '../../api/errors'
+import { useMe } from '../../auth/useMe'
+import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
+import {
+  readReturnDraft,
+  returnDraftKey,
+  writeReturnDraft,
+  type ReturnSelection,
+} from './returnDraft'
 import { ExtraSection } from '../../components/ExtraSection'
 import { QtyStepper, TotalsPanel } from '../../components/flow'
 import { PageLoader } from '../../components/PageLoader'
@@ -26,7 +35,7 @@ import { useCustomer } from '../customers/api'
 import { type Sale, useSale } from '../sales/api'
 import { type ReturnCreate, usePostReturn } from './api'
 
-type Selection = { qty: number | string; condition: 'good' | 'defective' }
+type Selection = ReturnSelection
 type Split = { credit: number; refund: number }
 const QUICK_REASONS = [
   'returns.reasons.defective',
@@ -43,33 +52,84 @@ function ReturnForm({
   sale,
   initialDebt,
   reloadDebt,
+  storageKey,
+  onClear,
 }: {
   sale: Sale
   initialDebt: number
+  storageKey: string
+  onClear: () => void
   reloadDebt: () => Promise<number>
 }) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const desktop = useMediaQuery('(min-width: 48em)')
   const post = usePostReturn()
-  const [requestId] = useState(() => crypto.randomUUID())
-  const [openedAt] = useState(() => new Date())
+  const [restored] = useState(() => readReturnDraft(storageKey, sale.id))
+  const [requestId] = useState(() => restored?.requestId ?? crypto.randomUUID())
+  const [openedAt] = useState(() => (restored ? new Date(restored.openedAt) : new Date()))
   const [selected, setSelected] = useState<Record<number, Selection>>(() =>
-    Object.fromEntries(sale.lines.map((line) => [line.id, { qty: 0, condition: 'good' }])),
+    Object.fromEntries(
+      sale.lines.map((line) => [
+        line.id,
+        restored?.selected[line.id] ?? { qty: 0, condition: 'good' },
+      ]),
+    ),
   )
   const [debt, setDebt] = useState(initialDebt)
   const [serverSplit, setServerSplit] = useState<Split | null>(null)
   const [changed, setChanged] = useState({ credit: false, refund: false })
-  const [method, setMethod] = useState<PaymentMethod>('cash')
-  const [returnedAt, setReturnedAt] = useState<string | null>(() => nowLocalInput(openedAt))
-  const [note, setNote] = useState('')
-  const [extrasOpen, setExtrasOpen] = useState(false)
+  const [method, setMethod] = useState<PaymentMethod>(restored?.method ?? 'cash')
+  const [returnedAt, setReturnedAt] = useState<string | null>(() =>
+    restored ? restored.returnedAt : nowLocalInput(openedAt),
+  )
+  const [note, setNote] = useState(restored?.note ?? '')
+  const [extrasOpen, setExtrasOpen] = useState(restored?.extrasOpen ?? false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
-  const [retrying, setRetrying] = useState(false)
+  const [retrying, setRetrying] = useState(restored?.unknown ?? false)
+  const [checking, setChecking] = useState(false)
+  const [conflict, setConflict] = useState<ApiError | null>(null)
+  const [edited, setEdited] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [debtReadError, setDebtReadError] = useState<unknown>(null)
-  const lastBody = useRef<ReturnCreate | null>(null)
+  const [lastBody, setLastBody] = useState<ReturnCreate | null>(restored?.lastBody ?? null)
+  const snapshot = {
+    requestId,
+    openedAt: openedAt.toISOString(),
+    selected,
+    method,
+    returnedAt,
+    note,
+    extrasOpen,
+    unknown: retrying,
+    lastBody: lastBody,
+  }
+  useEffect(() => {
+    writeReturnDraft(storageKey, {
+      requestId,
+      openedAt: openedAt.toISOString(),
+      selected,
+      method,
+      returnedAt,
+      note,
+      extrasOpen,
+      unknown: retrying,
+      lastBody: lastBody,
+    })
+  }, [
+    storageKey,
+    requestId,
+    openedAt,
+    selected,
+    method,
+    returnedAt,
+    note,
+    extrasOpen,
+    retrying,
+    lastBody,
+  ])
+  const exactRetry = retrying && !edited && lastBody !== null
 
   const total = sale.lines.reduce(
     (sum, line) => sum + (Number(selected[line.id]?.qty) || 0) * line.unit_price,
@@ -87,6 +147,7 @@ function ReturnForm({
   })
 
   const update = (id: number, value: Partial<Selection>) => {
+    setEdited(true)
     setSelected((prev) => ({ ...prev, [id]: { ...prev[id], ...value } }))
     setErrors((prev) => ({ ...prev, [String(id)]: '' }))
     setServerSplit(null)
@@ -122,17 +183,17 @@ function ReturnForm({
         : new Date(iso).getTime() < new Date(sale.sold_at).getTime()
           ? t('validation.returned_at_before_sale')
           : null
-    if (!retrying && dateError) {
+    if (!exactRetry && dateError) {
       setErrors({ date: dateError })
       setExtrasOpen(true)
       return
     }
-    if (!retrying && (total <= 0 || invalid)) return
+    if (!exactRetry && (total <= 0 || invalid)) return
     setMessage(null)
     const lines = sale.lines.filter((line) => Number(selected[line.id]?.qty) > 0)
     const body: ReturnCreate =
-      retrying && lastBody.current
-        ? lastBody.current
+      exactRetry && lastBody
+        ? lastBody
         : {
             request_id: requestId,
             sale_id: sale.id,
@@ -147,14 +208,25 @@ function ReturnForm({
               condition: selected[line.id].condition,
             })),
           }
-    lastBody.current = body
+    setLastBody(body)
+    setEdited(false)
+    setChecking(retrying)
+    setRetrying(true)
+    setConflict(null)
+    writeReturnDraft(storageKey, { ...snapshot, unknown: true, lastBody: body })
     post.mutate(body, {
       onSuccess: (saved) => {
+        writeReturnDraft(storageKey, null)
         notifications.show({ color: 'green', message: t('returns.saved') })
         navigate(`/returns/${saved.id}`)
       },
       onError: async (error) => {
         setRetrying(isServerOrNetworkError(error))
+        if (isServerOrNetworkError(error)) return
+        if (isRequestConflict(error)) {
+          setConflict(error)
+          return
+        }
         if (hasErrorCode(error, 'return_split_changed') && isApiError(error)) {
           const credit = error.params.debt_credit
           const refund = error.params.refund_amount
@@ -220,10 +292,7 @@ function ReturnForm({
   }
 
   const calculation = (
-    <fieldset
-      disabled={post.isPending || retrying}
-      style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}
-    >
+    <fieldset disabled={post.isPending} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
       <Stack gap="md">
         {sale.customer && (
           <Text className="return-split" data-changed={changed.credit} data-testid="return-credit">
@@ -261,7 +330,10 @@ function ReturnForm({
           <PaymentMethodChoice
             label={t('returns.refundQuestion')}
             value={method}
-            onChange={setMethod}
+            onChange={(value) => {
+              setEdited(true)
+              setMethod(value)
+            }}
           />
         )}
       </Stack>
@@ -291,8 +363,16 @@ function ReturnForm({
       />
       <div className="flow-layout">
         <Stack gap="lg">
+          {conflict && <RequestConflictAlert error={conflict} onClear={onClear} />}
+          {retrying && (!post.isPending || checking) && (
+            <UnknownResult
+              onRetry={submit}
+              busy={post.isPending}
+              disabled={!exactRetry && (total <= 0 || invalid)}
+            />
+          )}
           <fieldset
-            disabled={post.isPending || retrying}
+            disabled={post.isPending}
             style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}
           >
             <Stack gap="md">
@@ -300,6 +380,7 @@ function ReturnForm({
                 <Button
                   variant="default"
                   onClick={() => {
+                    setEdited(true)
                     setSelected((prev) =>
                       Object.fromEntries(
                         sale.lines.map((line) => [
@@ -317,7 +398,12 @@ function ReturnForm({
                 </Button>
               </Group>
               {sale.lines.map((line) => {
-                const available = line.qty - line.returned_qty
+                const available = Math.max(
+                  line.qty - line.returned_qty,
+                  retrying
+                    ? (lastBody?.lines.find((saved) => saved.sale_line_id === line.id)?.qty ?? 0)
+                    : 0,
+                )
                 const selection = selected[line.id]
                 const qty = Number(selection?.qty) || 0
                 const problem =
@@ -388,14 +474,25 @@ function ReturnForm({
                   value={returnedAt}
                   minDate={nowLocalInput(new Date(sale.sold_at))}
                   maxDate={nowLocalInput()}
-                  onChange={setReturnedAt}
+                  onChange={(value) => {
+                    setEdited(true)
+                    setReturnedAt(value)
+                  }}
                   error={errors.date}
                   styles={{ wrapper: { maxWidth: FIELD_WIDTH.date } }}
                 />
                 <Stack gap="xs">
                   <Group gap="xs" role="group" aria-label={t('returns.reasonLabel')}>
                     {QUICK_REASONS.map((key) => (
-                      <Button key={key} size="sm" variant="default" onClick={() => setNote(t(key))}>
+                      <Button
+                        key={key}
+                        size="sm"
+                        variant="default"
+                        onClick={() => {
+                          setEdited(true)
+                          setNote(t(key))
+                        }}
+                      >
                         {t(key)}
                       </Button>
                     ))}
@@ -405,7 +502,10 @@ function ReturnForm({
                     autosize
                     minRows={2}
                     value={note}
-                    onChange={(event) => setNote(event.currentTarget.value)}
+                    onChange={(event) => {
+                      setEdited(true)
+                      setNote(event.currentTarget.value)
+                    }}
                     error={errors.note}
                   />
                 </Stack>
@@ -419,12 +519,13 @@ function ReturnForm({
             <Stat size="display" label={t('returns.total')} value={formatAmount(total)} unit="₸" />
           }
           actionLabel={t('returns.save')}
+          hideAction={retrying && (!post.isPending || checking)}
           actionColor="blue"
           onAction={submit}
           blockedReason={
             debtReadError
               ? t('common.retry')
-              : !retrying && (total <= 0 || invalid)
+              : !exactRetry && (total <= 0 || invalid)
                 ? t('returns.select')
                 : null
           }
@@ -436,7 +537,15 @@ function ReturnForm({
   )
 }
 
-function CustomerReturn({ sale }: { sale: Sale }) {
+function CustomerReturn({
+  sale,
+  storageKey,
+  onClear,
+}: {
+  sale: Sale
+  storageKey: string
+  onClear: () => void
+}) {
   const customer = useCustomer(sale.customer!.id)
   if (customer.isPending) return <PageLoader />
   if (customer.isError && !customer.data)
@@ -448,6 +557,8 @@ function CustomerReturn({ sale }: { sale: Sale }) {
   return (
     <ReturnForm
       sale={sale}
+      storageKey={storageKey}
+      onClear={onClear}
       initialDebt={customer.data.debt}
       reloadDebt={async () => {
         const result = await customer.refetch()
@@ -458,9 +569,16 @@ function CustomerReturn({ sale }: { sale: Sale }) {
   )
 }
 
-function ReturnLoader({ id }: { id: number }) {
+function ReturnLoader({ id, userId }: { id: number; userId: number }) {
   const { t } = useTranslation()
   const sale = useSale(id)
+  const [revision, setRevision] = useState(0)
+  const storageKey = returnDraftKey(userId, id)
+  const restoredUnknown = readReturnDraft(storageKey, id)?.unknown === true
+  const onClear = () => {
+    writeReturnDraft(storageKey, null)
+    setRevision((value) => value + 1)
+  }
   if (sale.isPending) return <PageLoader />
   if (sale.isError)
     return (
@@ -473,8 +591,8 @@ function ReturnLoader({ id }: { id: number }) {
       </PageContainer>
     )
   if (
-    sale.data.status !== 'posted' ||
-    !sale.data.lines.some((line) => line.returned_qty < line.qty)
+    !restoredUnknown &&
+    (sale.data.status !== 'posted' || !sale.data.lines.some((line) => line.returned_qty < line.qty))
   )
     return (
       <PageContainer>
@@ -486,9 +604,16 @@ function ReturnLoader({ id }: { id: number }) {
       </PageContainer>
     )
   return sale.data.customer ? (
-    <CustomerReturn sale={sale.data} />
+    <CustomerReturn key={revision} sale={sale.data} storageKey={storageKey} onClear={onClear} />
   ) : (
-    <ReturnForm sale={sale.data} initialDebt={0} reloadDebt={async () => 0} />
+    <ReturnForm
+      key={revision}
+      sale={sale.data}
+      storageKey={storageKey}
+      onClear={onClear}
+      initialDebt={0}
+      reloadDebt={async () => 0}
+    />
   )
 }
 
@@ -498,6 +623,8 @@ export function ReturnCreatePage() {
   }, [])
   const { t } = useTranslation()
   const id = parseId(useParams().id)
+  const me = useMe()
+  if (!me.data) return <PageLoader />
   return id === null ? (
     <PageContainer>
       <PageHeader
@@ -506,6 +633,6 @@ export function ReturnCreatePage() {
       />
     </PageContainer>
   ) : (
-    <ReturnLoader key={id} id={id} />
+    <ReturnLoader key={id} id={id} userId={me.data.id} />
   )
 }

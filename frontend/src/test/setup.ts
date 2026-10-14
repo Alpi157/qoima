@@ -45,6 +45,7 @@ if (!document.fonts) {
 // texts (test/i18n.ts) gets the real resources and Russian back.
 beforeEach(async () => {
   window.localStorage.clear()
+  window.sessionStorage.clear()
   i18n.removeResourceBundle('kk', 'translation')
   i18n.addResourceBundle('kk', 'translation', kk)
   await i18n.changeLanguage('ru')

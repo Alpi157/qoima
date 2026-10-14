@@ -329,3 +329,120 @@ test('printed invoices fit one A4 page', async ({ page }, testInfo) => {
     await page.setViewportSize(originalViewport)
   }
 })
+
+test('draft safety screens in Kazakh', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  const me = await getJson<components['schemas']['UserOut']>(page, '/api/auth/me')
+  const catalog = await getJson<components['schemas']['ProductPage']>(
+    page,
+    '/api/products?limit=50',
+  )
+  const products = catalog.items.filter((product) => product.stock > 0).slice(0, 2)
+  const key = `qoima.draft.${me.id}.sale`
+  const seed = async (unknown: boolean, two = false) =>
+    page.evaluate(
+      ({ key, products, unknown, two }) => {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            version: 1,
+            requestId: crypto.randomUUID(),
+            unknown,
+            lines: products.slice(0, two ? 2 : 1).map((product) => ({
+              productId: product.id,
+              article: product.article,
+              name: product.name,
+              qty: 1,
+              price: null,
+            })),
+            customer: 'none',
+            payment: { mode: 'full', paid: '', method: 'cash' },
+          }),
+        )
+      },
+      { key, products, unknown, two },
+    )
+  await seed(true)
+  await page.goto('/sell?step=3')
+  await expect(page.getByTestId('unknown-result')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Қайта тексеру' })).toBeInViewport()
+  expect(
+    await page
+      .getByTestId('review-total')
+      .evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true)
+  await snap(page, 'draft-sale-unknown', width)
+  await page.getByTestId('unknown-result').scrollIntoViewIfNeeded()
+  await snap(page, 'draft-sale-unknown-screen', width, { fullPage: false, preserveScroll: true })
+
+  const debts = await getJson<components['schemas']['CustomerDebtsPage']>(
+    page,
+    '/api/customers/debts',
+  )
+  const customer = debts.items.find((row) => row.debt > 1000)!
+  await page.goto(`/customers/${customer.id}`)
+  await page.getByRole('button', { name: 'Төлем қабылдау', exact: true }).click()
+  await page.route('**/api/payments', (route) => route.abort('failed'))
+  const modal = page.getByRole('dialog')
+  await modal.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('10')
+  await modal.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  await expect(modal.getByTestId('unknown-result')).toBeVisible()
+  await expect(modal.getByRole('button', { name: 'Қайта тексеру' })).toBeInViewport()
+  await snap(page, 'draft-payment-unknown', width, { fullPage: false, preserveScroll: true })
+  await page.unroute('**/api/payments')
+
+  await seed(false, true)
+  const productUrl = /\/api\/products\/\d+$/
+  await page.route(productUrl, (route) => route.abort('failed'))
+  await page.goto('/sell')
+  await expect(page.getByTestId('line-load-error')).toBeVisible()
+  await expect(page.getByTestId('flow-line')).toHaveCount(2)
+  await snap(page, 'draft-lines-offline', width)
+  await snap(page, 'draft-lines-offline-screen', width, { fullPage: false })
+  await page.unroute(productUrl)
+
+  await seed(false)
+  const sales = await getJson<components['schemas']['SalePage']>(page, '/api/sales?limit=1')
+  const saved = sales.items[0]
+  await page.route('**/api/sales', async (route) => {
+    if (route.request().method() === 'POST')
+      await route.fulfill({
+        status: 409,
+        json: {
+          detail: 'Этот запрос уже использован для другой продажи',
+          code: 'sale_request_conflict',
+          params: { id: saved.id, number: saved.number },
+        },
+      })
+    else await route.continue()
+  })
+  await page.goto('/sell?step=3')
+  await page.getByRole('button', { name: 'Сатылымды сақтау' }).click()
+  await expect(page.getByTestId('request-conflict')).toContainText(`№${saved.number}`)
+  await page.getByTestId('request-conflict').scrollIntoViewIfNeeded()
+  await snap(page, 'draft-conflict', width)
+  await page.getByTestId('request-conflict').scrollIntoViewIfNeeded()
+  await expect(
+    page.getByTestId('request-conflict').getByRole('button', { name: 'Ашу' }),
+  ).toBeInViewport()
+  await snap(page, 'draft-conflict-screen', width, { fullPage: false, preserveScroll: true })
+  await page.unroute('**/api/sales')
+
+  await seed(false, true)
+  await page.route(productUrl, async (route) => {
+    const id = Number(route.request().url().split('/').at(-1))
+    if (id === products[0].id)
+      await route.fulfill({
+        status: 404,
+        json: { detail: 'Товар не найден', code: 'product_not_found', params: {} },
+      })
+    else await route.fulfill({ json: { ...products[1], is_archived: true } })
+  })
+  await page.goto('/sell')
+  await expect(page.getByTestId('removed-products')).toContainText(products[0].article)
+  await expect(page.getByTestId('removed-products')).toContainText(products[1].article)
+  await snap(page, 'draft-removed-products', width)
+  await snap(page, 'draft-removed-products-screen', width, { fullPage: false })
+})

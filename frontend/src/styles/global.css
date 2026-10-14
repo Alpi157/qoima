@@ -231,3 +231,9 @@ body {
 .q-debt-adjustment-form > :not(.q-debt-adjustment-fields) {
   flex-shrink: 0;
 }
+
+[data-highlighted='true'] {
+  background-color: #e7f1fb !important;
+  outline: 2px solid #1d5aa6;
+  outline-offset: -2px;
+}

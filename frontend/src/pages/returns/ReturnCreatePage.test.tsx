@@ -208,7 +208,7 @@ describe('ReturnCreatePage', () => {
       const user = await choose()
       await user.click(screen.getByRole('button', { name: 'Сохранить возврат' }))
       await screen.findByText('Долг изменился, проверьте расчёт.')
-      await waitFor(() => expect(get).toHaveBeenCalledTimes(3))
+      await waitFor(() => expect(get).toHaveBeenCalledTimes(4))
       expect(post).toHaveBeenCalledTimes(1)
       expect(screen.getByTestId('return-credit').getAttribute('data-changed')).toBe('true')
       expect(screen.getByTestId('return-refund').getAttribute('data-changed')).toBe('true')
@@ -253,7 +253,7 @@ describe('ReturnCreatePage', () => {
   it('does not preflight debt or stop when backend accepts unchanged split', async () => {
     const { get } = renderForm()
     const post = vi.spyOn(api, 'POST').mockImplementation(() => {
-      expect(get).toHaveBeenCalledTimes(2)
+      expect(get).toHaveBeenCalledTimes(3)
       return ok(makeReturn())
     })
     const user = await choose()
@@ -304,15 +304,13 @@ describe('ReturnCreatePage', () => {
       .mockReturnValueOnce(ok(makeReturn()))
     const user = await choose()
     await user.click(screen.getByRole('button', { name: 'Сохранить возврат' }))
-    await waitFor(() =>
-      expect(
-        screen.getByRole('textbox', { name: 'Количество OC-90' }).hasAttribute('disabled') ||
-          (screen.getByRole('textbox', { name: 'Количество OC-90' }) as HTMLInputElement).matches(
-            ':disabled',
-          ),
-      ).toBe(true),
-    )
-    await user.click(screen.getByRole('button', { name: 'Сохранить возврат' }))
+    await screen.findByTestId('unknown-result')
+    expect(
+      (screen.getByRole('textbox', { name: 'Количество OC-90' }) as HTMLInputElement).matches(
+        ':disabled',
+      ),
+    ).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Проверить ещё раз' }))
     await screen.findByText('Сохранённый возврат')
     expect(postBody<ReturnCreate>(post, 1)).toEqual(postBody<ReturnCreate>(post))
   })

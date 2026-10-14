@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 
-import { api, unwrap } from '../../api/client'
+import { api, unwrap, withDocumentTimeout } from '../../api/client'
 import { useInvalidateStock } from '../../api/invalidate'
 import { queryKeys, type ReceiptListParams } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
@@ -48,7 +48,9 @@ export function useReceipt(id: number) {
 export function usePostReceipt() {
   const invalidate = useInvalidateStock()
   return useMutation({
-    mutationFn: (body: ReceiptCreate) => unwrap(api.POST('/api/receipts', { body })),
+    meta: { handlesError: true },
+    mutationFn: (body: ReceiptCreate) =>
+      withDocumentTimeout((signal) => unwrap(api.POST('/api/receipts', { body, signal }))),
     onSuccess: invalidate,
   })
 }

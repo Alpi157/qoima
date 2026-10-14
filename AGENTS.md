@@ -78,6 +78,12 @@
   `DEMO_PASSWORD` выполнить `cd frontend && QOIMA_E2E_BUILD=1 npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "page module"`.
   Только при `QOIMA_E2E_BUILD=1` Playwright собирает frontend и запускает preview;
   обычные e2e, `make test` и `make screenshots` используют прежний запуск без дополнительной сборки.
+- Проверки черновиков и бюджета действий (после подготовки `qoima_demo` с тем же
+  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget"`.
+  Бюджет одного клика, заполнения поля и Enter хранится в `frontend/e2e/action-budget.json`;
+  штатные сценарии не должны превышать зафиксированные числа.
+- Снимки шага 23 (`draft-*`) дополнительно снимаются на kk в 1366x768 и 390x844,
+  включая вид с действующей закреплённой панелью; входят в `make screenshots`.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

@@ -1,8 +1,8 @@
+import { useDocumentResult } from '../../components/flow/documentResultState'
 import {
   Alert,
   Button,
   Group,
-  Modal,
   NumberInput,
   SegmentedControl,
   Stack,
@@ -11,10 +11,13 @@ import {
 } from '@mantine/core'
 import { useMutation } from '@tanstack/react-query'
 import { notifications } from '@mantine/notifications'
+import { DocumentModal } from '../../components/flow/DocumentModal'
+import { useDocumentModalStatus } from '../../components/flow/documentModalState'
+import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
-import { api, unwrap } from '../../api/client'
+import { api, unwrap, withDocumentTimeout } from '../../api/client'
 import { isApiError, isClientError } from '../../api/errors'
 import { useInvalidateStock } from '../../api/invalidate'
 import type { components } from '../../api/schema'
@@ -41,7 +44,9 @@ const QUICK_REASONS = [
 function useCreateAdjustment() {
   const invalidate = useInvalidateStock()
   return useMutation({
-    mutationFn: (body: AdjustmentCreate) => unwrap(api.POST('/api/stock/adjustments', { body })),
+    meta: { handlesError: true },
+    mutationFn: (body: AdjustmentCreate) =>
+      withDocumentTimeout((signal) => unwrap(api.POST('/api/stock/adjustments', { body, signal }))),
     onSuccess: invalidate,
   })
 }
@@ -55,6 +60,8 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
   const create = useCreateAdjustment()
   const { t } = useTranslation()
   const [requestId] = useState(() => crypto.randomUUID())
+  const result = useDocumentResult()
+  const modal = useDocumentModalStatus(result.unknown, create.isPending)
   const [direction, setDirection] = useState<Direction>('add')
   const [qty, setQty] = useState<number | string>(1)
   const [reason, setReason] = useState('')
@@ -67,6 +74,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
   const after = product.stock + delta
 
   const submit = () => {
+    if (create.isPending) return
     setQtyTouched(true)
     const reasonProblem = validateReason(reason)
     setReasonError(reasonProblem)
@@ -86,6 +94,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           onDone()
         },
         onError: (error) => {
+          if (result.acceptError(error)) return
           // 409 (stock would go negative) and other 4xx stay in the window.
           if (!isClientError(error) || !isApiError(error)) return
           const reasonProblem = error.fieldErrors.reason
@@ -176,6 +185,16 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           />
         </Text>
 
+        {result.conflict && (
+          <RequestConflictAlert
+            error={result.conflict}
+            onClear={() => modal?.clear()}
+            onOpen={() => modal?.openSaved()}
+          />
+        )}
+        {result.unknown && (
+          <UnknownResult onRetry={submit} busy={create.isPending} disabled={false} />
+        )}
         {formError && (
           <Alert color="red" role="alert">
             {formError}
@@ -183,16 +202,18 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
         )}
 
         <Group justify="flex-end" gap="sm" className="q-modal-actions">
-          <Button variant="default" onClick={onDone} disabled={create.isPending}>
+          <Button variant="default" onClick={() => modal?.close()} disabled={create.isPending}>
             {t('common.cancel')}
           </Button>
-          <Button
-            type="submit"
-            loading={create.isPending}
-            color={direction === 'add' ? undefined : 'red'}
-          >
-            {direction === 'add' ? t('products.adjust.add') : t('products.adjust.remove')}
-          </Button>
+          {!result.unknown && (
+            <Button
+              type="submit"
+              loading={create.isPending}
+              color={direction === 'add' ? undefined : 'red'}
+            >
+              {direction === 'add' ? t('products.adjust.add') : t('products.adjust.remove')}
+            </Button>
+          )}
         </Group>
       </Stack>
     </form>
@@ -207,14 +228,16 @@ export interface StockAdjustmentModalProps {
 
 export function StockAdjustmentModal({ product, opened, onClose }: StockAdjustmentModalProps) {
   const { t } = useTranslation()
+  const invalidate = useInvalidateStock()
   return (
-    <Modal
+    <DocumentModal
+      invalidate={invalidate}
       opened={opened}
       onClose={onClose}
       title={t('products.adjust.title', { article: product.article })}
     >
       {/* Mounted only while open, so every adjustment starts from a clean form. */}
       {opened && <AdjustmentForm product={product} onDone={onClose} />}
-    </Modal>
+    </DocumentModal>
   )
 }
