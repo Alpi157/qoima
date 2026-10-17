@@ -7,8 +7,6 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from app.receipts.schemas import ReceiptCreate
-from app.receipts.service import post_receipt
 from tests import factories
 from tests.conftest import BACKEND_DIR, test_engine
 
@@ -64,14 +62,51 @@ def test_upgrade_downgrade_preserves_existing_data(migration_case, with_data):
         with Session(engine) as db:
             user = factories.create_user(db)
             product = factories.create_product(db)
-            post_receipt(
-                db,
-                ReceiptCreate(
-                    request_id=uuid.uuid4(),
-                    lines=[{"product_id": product.id, "qty": 3, "unit_cost": 101}],
+            # Seed the historical schema with SQL: current receipt models need newer columns.
+            receipt = db.scalar(
+                text(
+                    "INSERT INTO receipts (number,request_id,created_by) VALUES "
+                    "(1,:request,:user) RETURNING id"
                 ),
-                user.id,
+                {"request": uuid.uuid4(), "user": user.id},
             )
+            db.execute(
+                text(
+                    "INSERT INTO receipt_lines "
+                    "(receipt_id,product_id,article,name,unit,qty,unit_cost) "
+                    "VALUES (:receipt,:product,:article,:name,:unit,3,101)"
+                ),
+                {
+                    "receipt": receipt,
+                    "product": product.id,
+                    "article": product.article,
+                    "name": product.name,
+                    "unit": product.unit,
+                },
+            )
+            warehouse = db.scalar(text("SELECT id FROM warehouses WHERE code='main'"))
+            db.execute(
+                text(
+                    "INSERT INTO stock_movements "
+                    "(product_id,warehouse_id,qty,kind,doc_type,doc_id,unit_cost,created_by) "
+                    "VALUES (:product,:warehouse,3,'receipt','receipt',:receipt,101,:user)"
+                ),
+                {
+                    "product": product.id,
+                    "warehouse": warehouse,
+                    "receipt": receipt,
+                    "user": user.id,
+                },
+            )
+            db.execute(
+                text(
+                    "INSERT INTO stock_balances (product_id,warehouse_id,qty,avg_cost) VALUES "
+                    "(:product,:warehouse,3,101)"
+                ),
+                {"product": product.id, "warehouse": warehouse},
+            )
+            db.execute(text("UPDATE document_counters SET last_number=1 WHERE doc_type='receipt'"))
+            db.commit()
     with engine.connect() as conn:
         before = contents(conn)
     for direction, revision in [

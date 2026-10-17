@@ -112,6 +112,7 @@ export function receiptBody(draft: ReceiptDraft): ReceiptCreate {
   const receivedAt = draft.receivedAt === null ? null : localInputToIso(draft.receivedAt)
   return {
     request_id: draft.requestId,
+    currency: 'KZT',
     supplier: draft.supplier.trim() || null,
     note: draft.note.trim() || null,
     ...(receivedAt !== null ? { received_at: receivedAt } : {}),
@@ -121,7 +122,7 @@ export function receiptBody(draft: ReceiptDraft): ReceiptCreate {
       return {
         product_id: line.productId,
         qty: line.qty as number,
-        unit_cost: cost,
+        unit_price_minor: cost,
       }
     }),
   }

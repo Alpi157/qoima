@@ -154,6 +154,7 @@ def isolated_stock_engine():
                     "('receipt',0),('sale',0),('payment',0),('return',0),('debt_adjustment',0)"
                 )
             )
+            conn.execute(text("INSERT INTO business_settings (id) VALUES (1)"))
         yield isolated
     finally:
         isolated.dispose()

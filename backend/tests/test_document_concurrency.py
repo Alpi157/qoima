@@ -157,3 +157,77 @@ def test_adjustment_validates_cost_after_receipt_lock(isolated_stock_engine, sup
         row = db.scalar(select(StockBalance).where(StockBalance.product_id == product))
         assert row.avg_cost == 100
         assert row.qty == (4 if supplied_cost is None else 3)
+
+
+def test_parallel_currency_receipt_50_runs(isolated_stock_engine):
+    from datetime import date
+    from decimal import Decimal
+
+    from app.rates.models import ExchangeRate
+    from app.receipts.models import ReceiptExpense, ReceiptExpenseAllocation
+
+    engine = isolated_stock_engine
+    with Session(engine) as db:
+        user = create_user(db).id
+        products = [create_product(db).id for _ in range(2)]
+        db.add(
+            ExchangeRate(
+                rate_date=date(2026, 10, 14), currency="CNY", rate=Decimal("70"), source="nbk"
+            )
+        )
+        db.commit()
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        for run in range(50):
+            request_id = uuid.uuid4()
+            payload = ReceiptCreate(
+                request_id=request_id,
+                received_at="2026-10-14T12:00:00Z",
+                currency="CNY",
+                exchange_rate="70",
+                rate_date="2026-10-14",
+                rate_source="nbk",
+                lines=[{"product_id": pid, "qty": 1, "unit_price_minor": 100} for pid in products],
+                expenses=[
+                    {"kind": "delivery", "amount_minor": 101},
+                    {"kind": "import_vat", "amount_minor": 13},
+                ],
+            )
+            ready = Event()
+            pids = []
+
+            def other(payload=payload, pids=pids, ready=ready):
+                with Session(engine) as db:
+                    pids.append(db.scalar(select(func.pg_backend_pid())))
+                    ready.set()
+                    return post_receipt(db, payload, user)
+
+            with Session(engine) as owner:
+                lock_request_id(owner, RECEIPT_REQUEST_LOCK, request_id)
+                future = executor.submit(other)
+                try:
+                    assert ready.wait(5)
+                    wait_until_advisory_lock_waiting(pids[0], RECEIPT_REQUEST_LOCK, request_id)
+                    first, created = post_receipt(owner, payload, user)
+                    replay, replay_created = future.result(timeout=5)
+                    assert created and not replay_created and first == replay
+                finally:
+                    owner.rollback()
+            with Session(engine) as db:
+                assert db.scalar(select(func.count()).select_from(Receipt)) == run + 1
+                assert db.scalar(select(func.count()).select_from(ReceiptExpense)) == 2 * (run + 1)
+                assert db.scalar(
+                    select(func.count()).select_from(ReceiptExpenseAllocation)
+                ) == 4 * (run + 1)
+                assert db.scalar(select(func.count()).select_from(StockMovement)) == 2 * (run + 1)
+                assert (
+                    db.scalar(
+                        select(DocumentCounter.last_number).where(
+                            DocumentCounter.doc_type == "receipt"
+                        )
+                    )
+                    == run + 1
+                )
+                assert (
+                    db.scalars(select(StockBalance.qty).order_by(StockBalance.product_id)).all()
+                    == [run + 1] * 2
+                )

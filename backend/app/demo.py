@@ -223,7 +223,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 ReceiptLineIn(
                     product_id=product_ids[item.article],
                     qty=item.initial_qty,
-                    unit_cost=item.price_tenge * 55,
+                    unit_price_minor=item.price_tenge * 55,
                 )
                 for item in PRODUCTS
                 if item.initial_qty > 0 and item.article != UNKNOWN_COST_ARTICLE
@@ -256,7 +256,9 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 supplier=supplier,
                 received_at=_local_time(now, days_ago, at),
                 lines=[
-                    ReceiptLineIn(product_id=product_ids[article], qty=qty, unit_cost=cost * 100)
+                    ReceiptLineIn(
+                        product_id=product_ids[article], qty=qty, unit_price_minor=cost * 100
+                    )
                     for article, qty, cost in receipt_lines
                 ],
             ),

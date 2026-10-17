@@ -8,7 +8,7 @@ from app.inventory.models import StockBalance, StockMovement, Warehouse
 from app.numbering import DocumentCounter
 from app.payments.models import CustomerPayment
 from app.rates.models import ExchangeRate
-from app.receipts.models import Receipt, ReceiptLine
+from app.receipts.models import Receipt, ReceiptExpense, ReceiptExpenseAllocation, ReceiptLine
 from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
 from app.settings.models import BusinessSettings
@@ -22,6 +22,8 @@ __all__ = [
     "ExchangeRate",
     "Product",
     "Receipt",
+    "ReceiptExpense",
+    "ReceiptExpenseAllocation",
     "ReceiptLine",
     "Sale",
     "SaleLine",

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, SmallInteger, Text, func, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, SmallInteger, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -24,4 +24,5 @@ class BusinessSettings(Base):
     responsible_person: Mapped[str] = _text_column()
     released_by_name: Mapped[str] = _text_column()
     chief_accountant: Mapped[str] = _text_column()
+    is_vat_payer: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

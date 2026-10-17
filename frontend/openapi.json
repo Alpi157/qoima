@@ -2996,6 +2996,29 @@
         ],
         "title": "AdjustmentOut"
       },
+      "AllocationOut": {
+        "properties": {
+          "receipt_line_id": {
+            "type": "integer",
+            "title": "Receipt Line Id"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "amount_tiyn": {
+            "type": "integer",
+            "title": "Amount Tiyn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "receipt_line_id",
+          "product_id",
+          "amount_tiyn"
+        ],
+        "title": "AllocationOut"
+      },
       "BusinessSettingsOut": {
         "properties": {
           "seller_name": {
@@ -3601,6 +3624,9 @@
           "line_product_not_found",
           "duplicate_line",
           "amount_too_large",
+          "nbk_rate_mismatch",
+          "expense_zero_weight",
+          "expense_manual_sum_mismatch",
           "receipt_request_conflict",
           "stock_adjustment_request_conflict",
           "adjustment_cost_required",
@@ -3676,6 +3702,261 @@
         ],
         "title": "ErrorOut",
         "description": "Body of every 4xx response (see \"Формат ошибок API\" in docs/architecture.md)."
+      },
+      "ExpenseIn": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency",
+            "default": "KZT"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{1,8}(\\.[0-9]{1,4})?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "customs_duty",
+              "antidumping_duty",
+              "import_vat",
+              "broker",
+              "bank",
+              "other"
+            ],
+            "title": "Kind"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "maximum": 1000000000000000.0,
+            "minimum": 1.0,
+            "title": "Amount Minor"
+          },
+          "allocation_method": {
+            "type": "string",
+            "enum": [
+              "amount",
+              "quantity",
+              "selected",
+              "manual"
+            ],
+            "title": "Allocation Method",
+            "default": "amount"
+          },
+          "product_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer",
+                  "maximum": 9.223372036854776e+18,
+                  "minimum": 1.0
+                },
+                "type": "array",
+                "maxItems": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Ids"
+          },
+          "manual": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ManualAllocationIn"
+                },
+                "type": "array",
+                "maxItems": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "amount_minor"
+        ],
+        "title": "ExpenseIn"
+      },
+      "ExpenseOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "customs_duty",
+              "antidumping_duty",
+              "import_vat",
+              "broker",
+              "bank",
+              "other"
+            ],
+            "title": "Kind"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "title": "Amount Minor"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "exchange_rate": {
+            "type": "string",
+            "title": "Exchange Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "amount_tiyn": {
+            "type": "integer",
+            "title": "Amount Tiyn"
+          },
+          "allocation_method": {
+            "type": "string",
+            "enum": [
+              "amount",
+              "quantity",
+              "selected",
+              "manual"
+            ],
+            "title": "Allocation Method"
+          },
+          "is_vat_credit": {
+            "type": "boolean",
+            "title": "Is Vat Credit"
+          },
+          "revaluation_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CNY",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revaluation Currency"
+          },
+          "revaluation_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revaluation Rate"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationOut"
+            },
+            "type": "array",
+            "title": "Allocations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "amount_minor",
+          "currency",
+          "exchange_rate",
+          "rate_date",
+          "rate_source",
+          "amount_tiyn",
+          "allocation_method",
+          "is_vat_credit",
+          "revaluation_currency",
+          "revaluation_rate",
+          "allocations"
+        ],
+        "title": "ExpenseOut"
       },
       "FieldErrorOut": {
         "properties": {
@@ -3862,6 +4143,29 @@
           "password"
         ],
         "title": "LoginIn"
+      },
+      "ManualAllocationIn": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Product Id"
+          },
+          "amount_tiyn": {
+            "type": "integer",
+            "maximum": 1000000000000000.0,
+            "minimum": 0.0,
+            "title": "Amount Tiyn"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "amount_tiyn"
+        ],
+        "title": "ManualAllocationIn"
       },
       "MovementOut": {
         "properties": {
@@ -4681,6 +4985,55 @@
       },
       "ReceiptCreate": {
         "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency",
+            "default": "KZT"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{1,8}(\\.[0-9]{1,4})?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
           "request_id": {
             "type": "string",
             "format": "uuid",
@@ -4730,6 +5083,14 @@
               }
             ],
             "title": "Received At"
+          },
+          "expenses": {
+            "items": {
+              "$ref": "#/components/schemas/ExpenseIn"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Expenses"
           }
         },
         "additionalProperties": false,
@@ -4754,19 +5115,39 @@
             "minimum": 1.0,
             "title": "Qty"
           },
+          "unit_price_minor": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price Minor"
+          },
           "unit_cost": {
-            "type": "integer",
-            "maximum": 100000000000.0,
-            "minimum": 0.0,
-            "title": "Unit Cost"
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost",
+            "deprecated": true
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "product_id",
-          "qty",
-          "unit_cost"
+          "qty"
         ],
         "title": "ReceiptLineIn"
       },
@@ -4792,6 +5173,36 @@
             "type": "integer",
             "title": "Qty"
           },
+          "unit_price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price Minor"
+          },
+          "goods_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goods Total"
+          },
+          "expenses_total": {
+            "type": "integer",
+            "title": "Expenses Total"
+          },
+          "vat_credit_total": {
+            "type": "integer",
+            "title": "Vat Credit Total"
+          },
           "unit_cost": {
             "anyOf": [
               {
@@ -4811,6 +5222,10 @@
           "name",
           "unit",
           "qty",
+          "unit_price_minor",
+          "goods_total",
+          "expenses_total",
+          "vat_credit_total",
           "unit_cost"
         ],
         "title": "ReceiptLineOut"
@@ -4840,6 +5255,15 @@
               }
             ],
             "title": "Supplier"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
           },
           "status": {
             "type": "string",
@@ -4875,6 +5299,7 @@
           "number",
           "received_at",
           "supplier",
+          "currency",
           "status",
           "lines_count",
           "total_qty",
@@ -4930,6 +5355,50 @@
               }
             ],
             "title": "Note"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "exchange_rate": {
+            "type": "string",
+            "title": "Exchange Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "vat_payer_snapshot": {
+            "type": "boolean",
+            "title": "Vat Payer Snapshot"
           },
           "status": {
             "type": "string",
@@ -4989,6 +5458,32 @@
             "type": "array",
             "title": "Lines"
           },
+          "expenses": {
+            "items": {
+              "$ref": "#/components/schemas/ExpenseOut"
+            },
+            "type": "array",
+            "title": "Expenses"
+          },
+          "goods_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goods Total"
+          },
+          "expenses_total": {
+            "type": "integer",
+            "title": "Expenses Total"
+          },
+          "vat_credit_total": {
+            "type": "integer",
+            "title": "Vat Credit Total"
+          },
           "total_qty": {
             "type": "integer",
             "title": "Total Qty"
@@ -5013,6 +5508,11 @@
           "received_at",
           "supplier",
           "note",
+          "currency",
+          "exchange_rate",
+          "rate_date",
+          "rate_source",
+          "vat_payer_snapshot",
           "status",
           "cancelled_at",
           "cancel_reason",
@@ -5020,6 +5520,10 @@
           "created_by_name",
           "created_at",
           "lines",
+          "expenses",
+          "goods_total",
+          "expenses_total",
+          "vat_credit_total",
           "total_qty",
           "total_cost"
         ],

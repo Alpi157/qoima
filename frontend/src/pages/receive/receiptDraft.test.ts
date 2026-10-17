@@ -31,7 +31,7 @@ describe('receipt draft keys', () => {
     first.lines = oldDraft.lines
     expect(receiptBody(first)).toMatchObject({
       request_id: first.requestId,
-      lines: [{ product_id: 7, qty: 3, unit_cost: 12345 }],
+      lines: [{ product_id: 7, qty: 3, unit_price_minor: 12345 }],
     })
   })
 })

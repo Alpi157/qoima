@@ -29,6 +29,9 @@ class ErrorCode(StrEnum):
     LINE_PRODUCT_NOT_FOUND = "line_product_not_found"
     DUPLICATE_LINE = "duplicate_line"
     AMOUNT_TOO_LARGE = "amount_too_large"
+    NBK_RATE_MISMATCH = "nbk_rate_mismatch"
+    EXPENSE_ZERO_WEIGHT = "expense_zero_weight"
+    EXPENSE_MANUAL_SUM_MISMATCH = "expense_manual_sum_mismatch"
     RECEIPT_REQUEST_CONFLICT = "receipt_request_conflict"
     STOCK_ADJUSTMENT_REQUEST_CONFLICT = "stock_adjustment_request_conflict"
     ADJUSTMENT_COST_REQUIRED = "adjustment_cost_required"
@@ -206,6 +209,24 @@ class AdjustmentCostNotAllowedError(AppError):
     default_message = (
         "Закупочная цена нужна только при добавлении товара с неизвестной себестоимостью"
     )
+
+
+class NbkRateMismatchError(AppError):
+    code = ErrorCode.NBK_RATE_MISMATCH
+    status_code = 422
+    default_message = "Курс не совпадает с записью Нацбанка на эту дату"
+
+
+class ExpenseZeroWeightError(AppError):
+    code = ErrorCode.EXPENSE_ZERO_WEIGHT
+    status_code = 422
+    default_message = "Нельзя распределить расход: сумма весов равна нулю"
+
+
+class ExpenseManualSumMismatchError(AppError):
+    code = ErrorCode.EXPENSE_MANUAL_SUM_MISMATCH
+    status_code = 422
+    default_message = "Сумма ручных долей не равна сумме расхода в тиынах"
 
 
 class ReceiptNotFoundError(AppError):
@@ -428,6 +449,19 @@ CUSTOM_VALIDATION_TYPES = frozenset(
         "sale_line_not_in_sale",
         "report_period_order",
         "report_period_too_long",
+        "rate_format",
+        "rate_not_allowed",
+        "rate_required",
+        "rate_date_required",
+        "rate_date_not_allowed",
+        "rate_date_after_receipt",
+        "line_price_required",
+        "line_price_both",
+        "unit_cost_kzt_only",
+        "expense_targets_required",
+        "expense_targets_not_allowed",
+        "expense_target_not_in_receipt",
+        "expense_target_duplicate",
     }
 )
 

@@ -302,7 +302,9 @@ def import_products(db: Session, path: Path, username: str, *, apply: bool = Fal
                 db.flush()
                 if row.qty > 0:
                     lines.append(
-                        ReceiptLineIn(product_id=product.id, qty=row.qty, unit_cost=row.unit_cost)
+                        ReceiptLineIn(
+                            product_id=product.id, qty=row.qty, unit_price_minor=row.unit_cost
+                        )
                     )
             current_row = None
             for start in range(0, len(lines), MAX_LINES):

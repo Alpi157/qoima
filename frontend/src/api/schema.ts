@@ -636,6 +636,15 @@ export interface components {
             /** Stock */
             stock: number;
         };
+        /** AllocationOut */
+        AllocationOut: {
+            /** Receipt Line Id */
+            receipt_line_id: number;
+            /** Product Id */
+            product_id: number;
+            /** Amount Tiyn */
+            amount_tiyn: number;
+        };
         /** BusinessSettingsOut */
         BusinessSettingsOut: {
             /** Seller Name */
@@ -842,7 +851,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -860,6 +869,76 @@ export interface components {
             };
             /** Errors */
             errors?: components["schemas"]["FieldErrorOut"][] | null;
+        };
+        /** ExpenseIn */
+        ExpenseIn: {
+            /**
+             * Currency
+             * @default KZT
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Rate Source */
+            rate_source?: ("nbk" | "manual") | null;
+            /** Rate Date */
+            rate_date?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delivery" | "customs_duty" | "antidumping_duty" | "import_vat" | "broker" | "bank" | "other";
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Allocation Method
+             * @default amount
+             * @enum {string}
+             */
+            allocation_method: "amount" | "quantity" | "selected" | "manual";
+            /** Product Ids */
+            product_ids?: number[] | null;
+            /** Manual */
+            manual?: components["schemas"]["ManualAllocationIn"][] | null;
+        };
+        /** ExpenseOut */
+        ExpenseOut: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delivery" | "customs_duty" | "antidumping_duty" | "import_vat" | "broker" | "bank" | "other";
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate: string;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Rate Source */
+            rate_source: ("nbk" | "manual") | null;
+            /** Amount Tiyn */
+            amount_tiyn: number;
+            /**
+             * Allocation Method
+             * @enum {string}
+             */
+            allocation_method: "amount" | "quantity" | "selected" | "manual";
+            /** Is Vat Credit */
+            is_vat_credit: boolean;
+            /** Revaluation Currency */
+            revaluation_currency: ("CNY" | "USD") | null;
+            /** Revaluation Rate */
+            revaluation_rate: string | null;
+            /** Allocations */
+            allocations: components["schemas"]["AllocationOut"][];
         };
         /** FieldErrorOut */
         FieldErrorOut: {
@@ -923,6 +1002,13 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /** ManualAllocationIn */
+        ManualAllocationIn: {
+            /** Product Id */
+            product_id: number;
+            /** Amount Tiyn */
+            amount_tiyn: number;
         };
         /** MovementOut */
         MovementOut: {
@@ -1196,6 +1282,18 @@ export interface components {
         /** ReceiptCreate */
         ReceiptCreate: {
             /**
+             * Currency
+             * @default KZT
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Rate Source */
+            rate_source?: ("nbk" | "manual") | null;
+            /** Rate Date */
+            rate_date?: string | null;
+            /**
              * Request Id
              * Format: uuid
              */
@@ -1208,6 +1306,8 @@ export interface components {
             note?: string | null;
             /** Received At */
             received_at?: string | null;
+            /** Expenses */
+            expenses?: components["schemas"]["ExpenseIn"][];
         };
         /** ReceiptLineIn */
         ReceiptLineIn: {
@@ -1215,8 +1315,13 @@ export interface components {
             product_id: number;
             /** Qty */
             qty: number;
-            /** Unit Cost */
-            unit_cost: number;
+            /** Unit Price Minor */
+            unit_price_minor?: number | null;
+            /**
+             * Unit Cost
+             * @deprecated
+             */
+            unit_cost?: number | null;
         };
         /** ReceiptLineOut */
         ReceiptLineOut: {
@@ -1230,6 +1335,14 @@ export interface components {
             unit: string;
             /** Qty */
             qty: number;
+            /** Unit Price Minor */
+            unit_price_minor: number | null;
+            /** Goods Total */
+            goods_total: number | null;
+            /** Expenses Total */
+            expenses_total: number;
+            /** Vat Credit Total */
+            vat_credit_total: number;
             /** Unit Cost */
             unit_cost: number | null;
         };
@@ -1246,6 +1359,11 @@ export interface components {
             received_at: string;
             /** Supplier */
             supplier: string | null;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
             /**
              * Status
              * @enum {string}
@@ -1276,6 +1394,19 @@ export interface components {
             /** Note */
             note: string | null;
             /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate: string;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Rate Source */
+            rate_source: ("nbk" | "manual") | null;
+            /** Vat Payer Snapshot */
+            vat_payer_snapshot: boolean;
+            /**
              * Status
              * @enum {string}
              */
@@ -1295,6 +1426,14 @@ export interface components {
             created_at: string;
             /** Lines */
             lines: components["schemas"]["ReceiptLineOut"][];
+            /** Expenses */
+            expenses: components["schemas"]["ExpenseOut"][];
+            /** Goods Total */
+            goods_total: number | null;
+            /** Expenses Total */
+            expenses_total: number;
+            /** Vat Credit Total */
+            vat_credit_total: number;
             /** Total Qty */
             total_qty: number;
             /** Total Cost */

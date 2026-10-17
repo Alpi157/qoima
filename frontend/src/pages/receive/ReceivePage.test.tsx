@@ -98,7 +98,9 @@ describe('ReceivePage', () => {
     renderReceive()
     await screen.findByRole('textbox', { name: 'Количество OC-90' })
     await user.click(submitButton())
-    expect(postBody<ReceiptCreate>(post).lines).toEqual([{ product_id: 1, qty: 3, unit_cost: 0 }])
+    expect(postBody<ReceiptCreate>(post).lines).toEqual([
+      { product_id: 1, qty: 3, unit_price_minor: 0 },
+    ])
   })
 
   it('shows the stock before and after the receiving under a line', async () => {
@@ -182,10 +184,11 @@ describe('ReceivePage', () => {
     expect(post.mock.calls[0][0]).toBe('/api/receipts')
     const body = postBody<ReceiptCreate>(post)
     expect(body).toEqual({
+      currency: 'KZT',
       request_id: expect.any(String),
       supplier: null,
       note: null,
-      lines: [{ product_id: 1, qty: 3, unit_cost: 90000 }],
+      lines: [{ product_id: 1, qty: 3, unit_price_minor: 90000 }],
     })
     expect('received_at' in body).toBe(false)
     await waitFor(() => expect(router.state.location.pathname).toBe('/receive/done/5'))
@@ -213,10 +216,11 @@ describe('ReceivePage', () => {
     await user.click(submitButton())
 
     expect(postBody<ReceiptCreate>(post)).toEqual({
+      currency: 'KZT',
       request_id: expect.any(String),
       supplier: 'Начальные остатки',
       note: null,
-      lines: [{ product_id: 1, qty: 3, unit_cost: 90000 }],
+      lines: [{ product_id: 1, qty: 3, unit_price_minor: 90000 }],
     })
   })
 
@@ -290,8 +294,30 @@ describe('ReceiveDonePage', () => {
       receipt: makeReceipt({
         id: 5,
         lines: [
-          { product_id: 1, article: 'OC-90', name: 'Фильтр', unit: 'шт', qty: 3, unit_cost: null },
-          { product_id: 2, article: 'W712', name: 'Фильтр', unit: 'шт', qty: 4, unit_cost: null },
+          {
+            product_id: 1,
+            article: 'OC-90',
+            name: 'Фильтр',
+            unit: 'шт',
+            qty: 3,
+            unit_cost: null,
+            unit_price_minor: null,
+            goods_total: null,
+            expenses_total: 0,
+            vat_credit_total: 0,
+          },
+          {
+            product_id: 2,
+            article: 'W712',
+            name: 'Фильтр',
+            unit: 'шт',
+            qty: 4,
+            unit_cost: null,
+            unit_price_minor: null,
+            goods_total: null,
+            expenses_total: 0,
+            vat_credit_total: 0,
+          },
         ],
         total_qty: 7,
       }),

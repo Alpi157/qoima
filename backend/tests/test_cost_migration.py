@@ -62,10 +62,17 @@ def test_cost_backfill_upgrade_downgrade_upgrade(isolated_stock_engine):
             conn.execute(
                 text(
                     "INSERT INTO receipt_lines "
-                    "(receipt_id,product_id,qty,unit_cost,article,name,unit)  "
-                    "VALUES (:r,:p,:q,:c,'MIG','Migration','шт')"
+                    "(receipt_id,product_id,qty,unit_cost,unit_price_minor,goods_total,article,"
+                    "name,unit)  "
+                    "VALUES (:r,:p,:q,:c,:c,:total,'MIG','Migration','шт')"
                 ),
-                {"r": receipt, "p": product, "q": qty, "c": cost},
+                {
+                    "r": receipt,
+                    "p": product,
+                    "q": qty,
+                    "c": cost,
+                    "total": qty * cost if cost is not None else None,
+                },
             )
         for product, qty in zip(products, [24, 2, 0], strict=True):
             conn.execute(

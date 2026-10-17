@@ -95,6 +95,10 @@ def test_post_receipt_increases_stock(
             "unit": "шт",
             "qty": 10,
             "unit_cost": 150_000,
+            "unit_price_minor": 150_000,
+            "goods_total": 1_500_000,
+            "expenses_total": 0,
+            "vat_credit_total": 0,
         },
         {
             "product_id": bosch.id,
@@ -103,6 +107,10 @@ def test_post_receipt_increases_stock(
             "unit": "шт",
             "qty": 3,
             "unit_cost": 0,
+            "unit_price_minor": 0,
+            "goods_total": 0,
+            "expenses_total": 0,
+            "vat_credit_total": 0,
         },
     ]
     assert body["total_qty"] == 13
@@ -318,6 +326,7 @@ def test_list_receipts(auth_client: TestClient, products: tuple[Product, Product
         "number": old["number"],
         "received_at": old["received_at"],
         "supplier": "Поставщик",
+        "currency": "KZT",
         "status": "posted",
         "lines_count": 2,
         "total_qty": 5,
