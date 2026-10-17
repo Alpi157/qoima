@@ -62,6 +62,17 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     assert len(statuses) == len(demo.SALES)
     assert statuses.count("cancelled") == 1
     sales = db_session.scalars(select(Sale)).all()
+    assert all(sale.seller_name == settings.seller_name for sale in sales)
+    for model in (SaleLine, ReceiptLine, SaleReturnLine):
+        for line in db_session.scalars(select(model)):
+            product = db_session.get(Product, line.product_id)
+            assert (line.article, line.name, line.unit) == (
+                product.article,
+                product.name,
+                product.unit,
+            )
+            if isinstance(line, SaleLine):
+                assert line.list_price == product.sale_price
     assert {
         count
         for _, count in db_session.execute(

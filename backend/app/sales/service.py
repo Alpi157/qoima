@@ -9,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
-from app.catalog.models import Product
 from app.catalog.service import load_line_products
 from app.customers.models import Customer
 from app.customers.service import fifo_debt_source
@@ -36,10 +35,12 @@ from app.sales.schemas import (
     SaleOut,
     SalePage,
     SalePaymentFilter,
+    SaleRequisitesOut,
     SaleReturnSummary,
     SaleStatus,
 )
 from app.schema_types import MAX_MONEY, PaymentMethod
+from app.settings.service import get_business_settings
 
 DOC_TYPE = "sale"
 REQUEST_ID_CONSTRAINT = "uq_sales_request_id"
@@ -96,6 +97,7 @@ def _is_request_id_conflict(exc: IntegrityError) -> bool:
 
 
 def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
+    customer = None
     if data.customer_id is not None:
         customer = db.execute(
             select(Customer).where(Customer.id == data.customer_id).with_for_update()
@@ -103,11 +105,16 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         if customer is None:
             raise DocumentCustomerNotFoundError()
 
-    load_line_products(db, [line.product_id for line in data.lines], "sale")
+    products = load_line_products(db, [line.product_id for line in data.lines], "sale")
+    settings = get_business_settings(db)
 
     sale_lines = [
         SaleLine(
             product_id=line.product_id,
+            article=products[line.product_id].article,
+            name=products[line.product_id].name,
+            unit=products[line.product_id].unit,
+            list_price=products[line.product_id].sale_price,
             qty=line.qty,
             unit_price=line.unit_price,
             line_total=line.qty * line.unit_price,
@@ -115,7 +122,12 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         for line in data.lines
     ]
     total = sum(line.line_total for line in sale_lines)
-    if any(line.line_total > MAX_MONEY for line in sale_lines) or total > MAX_MONEY:
+    discounts = [max(line.list_price - line.unit_price, 0) * line.qty for line in sale_lines]
+    if (
+        any(line.line_total > MAX_MONEY for line in sale_lines)
+        or total > MAX_MONEY
+        or sum(discounts) > MAX_MONEY
+    ):
         raise AmountTooLargeError()
     paid = total if data.paid_amount is None else data.paid_amount
     payment_method = _payment_method(paid, data.payment_method)
@@ -127,6 +139,13 @@ def _create_sale(db: Session, data: SaleCreate, user_id: int) -> Sale:
         number=next_number(db, DOC_TYPE),
         request_id=data.request_id,
         customer_id=data.customer_id,
+        customer_name=customer.name if customer is not None else None,
+        customer_phone=customer.phone if customer is not None else None,
+        seller_name=settings.seller_name,
+        seller_iin_bin=settings.seller_iin_bin,
+        responsible_person=settings.responsible_person,
+        released_by_name=settings.released_by_name or db.get(User, user_id).full_name,
+        chief_accountant=settings.chief_accountant,
         note=data.note,
         total=total,
         paid_at_sale=paid,
@@ -206,20 +225,18 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
             Sale,
             User.full_name,
             Canceller.full_name,
-            Customer,
             payment.c.outstanding,
             payment.c.payment_status,
         )
         .join(User, User.id == Sale.created_by)
         .outerjoin(Canceller, Canceller.id == Sale.cancelled_by)
-        .outerjoin(Customer, Customer.id == Sale.customer_id)
         .join(payment, payment.c.sale_id == Sale.id)
         .where(Sale.id == sale_id)
         .execution_options(populate_existing=True)
     ).one_or_none()
     if row is None:
         raise SaleNotFoundError()
-    sale, created_by_name, cancelled_by_name, customer, outstanding, payment_status = row
+    sale, created_by_name, cancelled_by_name, outstanding, payment_status = row
 
     returned = (
         select(SaleReturnLine.sale_line_id, func.sum(SaleReturnLine.qty).label("qty"))
@@ -233,23 +250,25 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
             id=line.id,
             returned_qty=returned_qty,
             product_id=line.product_id,
-            article=article,
-            name=name,
-            unit=unit,
+            article=line.article,
+            name=line.name,
+            unit=line.unit,
             qty=line.qty,
             unit_price=line.unit_price,
+            list_price=line.list_price,
+            discount=(
+                max(line.list_price - line.unit_price, 0) * line.qty
+                if line.list_price is not None
+                else None
+            ),
             unit_cost=line.unit_cost,
             line_total=line.line_total,
         )
-        for line, article, name, unit, returned_qty in db.execute(
+        for line, returned_qty in db.execute(
             select(
                 SaleLine,
-                Product.article,
-                Product.name,
-                Product.unit,
                 func.coalesce(returned.c.qty, 0),
             )
-            .join(Product, Product.id == SaleLine.product_id)
             .outerjoin(returned, returned.c.sale_line_id == SaleLine.id)
             .where(SaleLine.sale_id == sale.id)
             .order_by(SaleLine.id)
@@ -262,10 +281,11 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
         request_id=sale.request_id,
         sold_at=sale.sold_at,
         customer=(
-            SaleCustomerOut(id=customer.id, name=customer.name, phone=customer.phone)
-            if customer is not None
+            SaleCustomerOut(id=sale.customer_id, name=sale.customer_name, phone=sale.customer_phone)
+            if sale.customer_id is not None
             else None
         ),
+        requisites=SaleRequisitesOut.model_validate(sale),
         note=sale.note,
         status=sale.status,
         cancelled_at=sale.cancelled_at,
@@ -275,6 +295,11 @@ def get_sale(db: Session, sale_id: int) -> SaleOut:
         created_at=sale.created_at,
         lines=lines,
         total=sale.total,
+        discount_total=(
+            sum(line.discount for line in lines)
+            if all(line.discount is not None for line in lines)
+            else None
+        ),
         paid_at_sale=sale.paid_at_sale,
         payment_method=sale.payment_method,
         debt_at_sale=sale.total - sale.paid_at_sale,
@@ -339,7 +364,7 @@ def list_sales(
             Sale.id,
             Sale.number,
             Sale.sold_at,
-            Customer.name.label("customer_name"),
+            Sale.customer_name,
             Sale.status,
             totals.c.lines_count,
             totals.c.total_qty,
@@ -352,7 +377,6 @@ def list_sales(
         )
         .join(payment, payment.c.sale_id == Sale.id)
         .join(totals, totals.c.sale_id == Sale.id)
-        .outerjoin(Customer, Customer.id == Sale.customer_id)
         .where(*conditions)
         .order_by(Sale.sold_at.desc(), Sale.id.desc())
         .limit(limit)

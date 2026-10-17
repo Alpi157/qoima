@@ -178,12 +178,19 @@ function SaleDetails({ sale }: { sale: Sale }) {
                 pieces: sale.lines.reduce((sum, line) => sum + line.qty, 0),
               })}
             </Text>
-            <Stat
-              size="display"
-              label={t('sales.card.total')}
-              value={formatAmount(sale.total)}
-              unit="₸"
-            />
+            <Stack gap="xs">
+              <Stat
+                size="display"
+                label={t('sales.card.total')}
+                value={formatAmount(sale.total)}
+                unit="₸"
+              />
+              {sale.discount_total !== null && sale.discount_total > 0 && (
+                <Text size="sm" c="dimmed">
+                  {t('sell.discountTotal', { amount: formatMoney(sale.discount_total) })}
+                </Text>
+              )}
+            </Stack>
           </Group>
           <Stack gap="xs" mt="md">
             <Group>

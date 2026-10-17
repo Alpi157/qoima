@@ -81,6 +81,11 @@ def sale(db_session: Session) -> Sale:
     sale = Sale(
         number=next_number(db_session, "sale"),
         request_id=uuid.uuid4(),
+        seller_name="",
+        seller_iin_bin="",
+        responsible_person="",
+        released_by_name="Test",
+        chief_accountant="",
         total=0,
         paid_at_sale=0,
         created_by=user.id,
@@ -97,12 +102,28 @@ def test_sale_line_total_must_match_qty_times_price(db_session: Session, sale: S
         with db_session.begin_nested():
             db_session.add(
                 SaleLine(
-                    sale_id=sale.id, product_id=product.id, qty=3, unit_price=1500, line_total=4000
+                    sale_id=sale.id,
+                    product_id=product.id,
+                    article=product.article,
+                    name=product.name,
+                    unit=product.unit,
+                    qty=3,
+                    unit_price=1500,
+                    line_total=4000,
                 )
             )
             db_session.flush()
 
-    line = SaleLine(sale_id=sale.id, product_id=product.id, qty=3, unit_price=1500, line_total=4500)
+    line = SaleLine(
+        sale_id=sale.id,
+        product_id=product.id,
+        article=product.article,
+        name=product.name,
+        unit=product.unit,
+        qty=3,
+        unit_price=1500,
+        line_total=4500,
+    )
     db_session.add(line)
     db_session.flush()
     assert line.id is not None

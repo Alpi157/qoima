@@ -67,6 +67,27 @@ afterEach(() => {
 })
 
 describe('SellPage, step 1', () => {
+  it('shows the line discount with a floored percent and then the review discount', async () => {
+    const user = setupUser()
+    mockFlowGet({ products: PRODUCTS })
+    saveDraft({ lines: [{ productId: FILTER.id, qty: 2, price: '9999' }] })
+    renderSell()
+    expect(await screen.findByText('Скидка: 5 002 ₸ (20%)')).toBeTruthy()
+    await user.click(nextButton())
+    await user.click(await screen.findByRole('button', { name: 'Продолжить без покупателя' }))
+    expect(await screen.findByText('Скидка: 5 002 ₸')).toBeTruthy()
+  })
+
+  it.each(['12500', '13000'])(
+    'does not show a discount at or above the base price %s',
+    async (price) => {
+      mockFlowGet({ products: PRODUCTS })
+      saveDraft({ lines: [{ productId: FILTER.id, qty: 1, price }] })
+      renderSell()
+      await screen.findByRole('textbox', { name: 'Цена OC-90' })
+      expect(screen.queryByText(/Скидка:/)).toBeNull()
+    },
+  )
   it('Enter adds the first found product, adding it again raises the quantity', async () => {
     const user = setupUser()
     mockFlowGet({ products: PRODUCTS })

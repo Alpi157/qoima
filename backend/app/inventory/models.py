@@ -44,6 +44,7 @@ class StockMovement(Base):
     __table_args__ = (
         CheckConstraint("qty <> 0", name="qty_non_zero"),
         CheckConstraint("unit_cost >= 0", name="unit_cost_non_negative"),
+        CheckConstraint("requested_unit_cost >= 0", name="requested_unit_cost_non_negative"),
         CheckConstraint(
             "kind IN (" + ", ".join(f"'{k}'" for k in MOVEMENT_KINDS) + ")",
             name="kind_valid",
@@ -63,6 +64,7 @@ class StockMovement(Base):
     warehouse_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("warehouses.id"))
     qty: Mapped[int] = mapped_column(Integer)
     unit_cost: Mapped[int | None] = mapped_column(BigInteger)
+    requested_unit_cost: Mapped[int | None] = mapped_column(BigInteger)
     request_id: Mapped[UUID | None] = mapped_column()
     kind: Mapped[str] = mapped_column(Text)
     doc_type: Mapped[str | None] = mapped_column(Text)

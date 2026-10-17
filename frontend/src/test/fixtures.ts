@@ -145,6 +145,7 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
     request_id: '00000000-0000-4000-8000-000000000000',
     sold_at: '2026-09-27T09:00:00Z',
     customer: null,
+    requisites: makeBusinessSettings(),
     note: null,
     status: 'posted',
     cancelled_at: null,
@@ -154,6 +155,7 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
     created_at: '2026-09-27T09:00:00Z',
     lines: [],
     total: 0,
+    discount_total: null,
     paid_at_sale: 0,
     payment_method: null,
     debt_at_sale: 0,
@@ -196,6 +198,8 @@ export function makeStockSummary(
     unknown_cost_count: 0,
     out_of_stock_count: 0,
     low_stock_count: 0,
+    archived_products_count: 0,
+    archived_cost_value: 0,
     ...overrides,
   }
 }

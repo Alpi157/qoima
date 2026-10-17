@@ -71,6 +71,8 @@ class SaleLineOut(BaseModel):
     unit: str
     qty: int
     unit_price: int
+    list_price: int | None
+    discount: int | None
     unit_cost: int | None
     line_total: int
 
@@ -83,12 +85,23 @@ class SaleReturnSummary(BaseModel):
     status: SaleStatus
 
 
+class SaleRequisitesOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    seller_name: str
+    seller_iin_bin: str
+    responsible_person: str
+    released_by_name: str
+    chief_accountant: str
+
+
 class SaleOut(BaseModel):
     id: int
     number: int
     request_id: uuid.UUID
     sold_at: datetime
     customer: SaleCustomerOut | None
+    requisites: SaleRequisitesOut
     note: str | None
     status: SaleStatus
     cancelled_at: datetime | None
@@ -98,6 +111,7 @@ class SaleOut(BaseModel):
     created_at: datetime
     lines: list[SaleLineOut]
     total: int
+    discount_total: int | None
     paid_at_sale: int
     payment_method: PaymentMethod | None
     debt_at_sale: int

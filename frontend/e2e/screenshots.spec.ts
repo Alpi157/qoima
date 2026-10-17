@@ -11,6 +11,53 @@ type Sale = components['schemas']['SaleOut']
 type ReturnDocument = components['schemas']['ReturnOut']
 type ReturnListItem = components['schemas']['ReturnListItem']
 
+test('document snapshots and stock cost screens in Kazakh', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  const products = await getJson<components['schemas']['ProductPage']>(
+    page,
+    '/api/products?limit=200',
+  )
+  const product = products.items.find((item) => item.stock > 0 && item.sale_price > 0)!
+  await page.goto('/sell')
+  await page.getByRole('searchbox').fill(product.article)
+  await page.getByRole('searchbox').press('Enter')
+  await page
+    .getByRole('textbox', { name: `${product.article} бағасы` })
+    .fill(String(Math.floor(product.sale_price / 200)))
+  await expect(page.getByText(/Жеңілдік:.*%/)).toBeVisible()
+  await page.getByText(/Жеңілдік:.*%/).scrollIntoViewIfNeeded()
+  await snap(page, 'snapshot-sale-discount', width, { fullPage: false, preserveScroll: true })
+  await page.getByRole('button', { name: 'Келесі: сатып алушы' }).click()
+  await page.getByRole('button', { name: 'Сатып алушысыз жалғастыру' }).click()
+  await expect(page.getByText(/Жеңілдік:/)).toBeVisible()
+  await snap(page, 'snapshot-review-discount', width, { fullPage: false })
+  // Clear this demonstration draft without posting it or changing seeded stock.
+  await page.evaluate(() => localStorage.clear())
+  await page.goto('/stock')
+  await expect(page.getByText(/Архивте қалдығы бар:/)).toBeVisible()
+  await snap(page, 'snapshot-archived-stock', width, { fullPage: false })
+  await page.goto(`/products/${product.id}`)
+  await page.getByRole('button', { name: 'Жасыру', exact: true }).click()
+  await expect(page.getByRole('dialog').getByText(/Олар қойма құнында қала береді/)).toBeVisible()
+  await snap(page, 'snapshot-archive-warning', width, { fullPage: false })
+  await page.getByRole('dialog').getByRole('button', { name: 'Бас тарту', exact: true }).click()
+  const created = await page.request.post('/api/products', {
+    data: {
+      article: `COST-SCREEN-${width}`,
+      name: 'Сатып алу бағасы белгісіз тауар',
+      sale_price: 100000,
+    },
+  })
+  expect(created.status()).toBe(201)
+  const unknown = (await created.json()) as components['schemas']['ProductOut']
+  await page.goto(`/products/${unknown.id}`)
+  await page.getByRole('button', { name: 'Санын түзету', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Сатып алу бағасы, ₸' })).toBeVisible()
+  await snap(page, 'snapshot-adjustment-cost', width, { fullPage: false })
+})
+
 test('route error screens', async ({ page }, testInfo) => {
   const width = testInfo.project.name
   await login(page)

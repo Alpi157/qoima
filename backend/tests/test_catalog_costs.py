@@ -34,7 +34,17 @@ def test_last_cost_skips_null_and_cancelled_receipts(auth_client, db_session):
     )
     db_session.add(legacy)
     db_session.flush()
-    db_session.add(ReceiptLine(receipt_id=legacy.id, product_id=product.id, qty=1, unit_cost=None))
+    db_session.add(
+        ReceiptLine(
+            receipt_id=legacy.id,
+            product_id=product.id,
+            article=product.article,
+            name=product.name,
+            unit=product.unit,
+            qty=1,
+            unit_cost=None,
+        )
+    )
     post_movements(
         db_session,
         [MovementIn(product.id, 1, "receipt", doc_type="receipt", doc_id=legacy.id)],
@@ -73,7 +83,16 @@ def test_only_unknown_receipt_has_no_last_cost(db_session):
     receipt = Receipt(number=next_number(db_session, "receipt"), created_by=user.id)
     db_session.add(receipt)
     db_session.flush()
-    db_session.add(ReceiptLine(receipt_id=receipt.id, product_id=product.id, qty=1))
+    db_session.add(
+        ReceiptLine(
+            receipt_id=receipt.id,
+            product_id=product.id,
+            article=product.article,
+            name=product.name,
+            unit=product.unit,
+            qty=1,
+        )
+    )
     post_movements(
         db_session,
         [MovementIn(product.id, 1, "receipt", doc_type="receipt", doc_id=receipt.id)],
@@ -89,6 +108,7 @@ def test_stock_summary_filters_and_min_qty(auth_client, db_session):
     b = create_product(db_session, sale_price=200)
     zero = create_product(db_session, sale_price=100)
     archived = create_product(db_session, sale_price=700, is_archived=True)
+    create_product(db_session, sale_price=999, is_archived=True)
     a.min_qty, b.min_qty, zero.min_qty, archived.min_qty = 3, 1, 0, 100
     post_movements(
         db_session,
@@ -100,10 +120,12 @@ def test_stock_summary_filters_and_min_qty(auth_client, db_session):
         user.id,
     )
     assert auth_client.get("/api/stock/summary").json() == {
-        "products_count": 3,
-        "total_qty": 5,
-        "cost_value": 300,
-        "retail_value": 1300,
+        "products_count": 4,
+        "total_qty": 8,
+        "cost_value": 1800,
+        "retail_value": 3400,
+        "archived_products_count": 1,
+        "archived_cost_value": 1500,
         "unknown_cost_count": 1,
         "out_of_stock_count": 1,
         "low_stock_count": 1,
@@ -131,6 +153,25 @@ def test_stock_summary_filters_and_min_qty(auth_client, db_session):
 
 def test_empty_stock_summary(auth_client):
     assert set(auth_client.get("/api/stock/summary").json().values()) == {0}
+
+
+def test_archived_unknown_cost_is_counted_without_inventing_value(auth_client, db_session):
+    user = create_user(db_session)
+    product = create_product(db_session, sale_price=700, is_archived=True)
+    product.min_qty = 100
+    post_movements(db_session, [MovementIn(product.id, 3, "receipt")], user.id)
+    result = auth_client.get("/api/stock/summary").json()
+    assert result == {
+        "products_count": 1,
+        "total_qty": 3,
+        "cost_value": 0,
+        "retail_value": 2100,
+        "unknown_cost_count": 1,
+        "out_of_stock_count": 0,
+        "low_stock_count": 0,
+        "archived_products_count": 1,
+        "archived_cost_value": 0,
+    }
 
 
 def test_catalog_queries_have_no_n_plus_one(db_session):

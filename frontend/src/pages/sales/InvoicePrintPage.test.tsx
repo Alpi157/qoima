@@ -27,6 +27,8 @@ const SALE = makeSale({
       unit: 'шт',
       qty: 2,
       unit_price: 1250000,
+      list_price: null,
+      discount: null,
       id: 1,
       returned_qty: 0,
       unit_cost: null,
@@ -39,6 +41,8 @@ const SALE = makeSale({
       unit: 'компл',
       qty: 1,
       unit_price: 180050,
+      list_price: null,
+      discount: null,
       id: 1,
       returned_qty: 0,
       unit_cost: null,
@@ -51,7 +55,12 @@ const SALE = makeSale({
 function mockApi(sale: Sale = SALE, settings: BusinessSettings = makeBusinessSettings()) {
   return vi
     .spyOn(api, 'GET')
-    .mockImplementation(((path: string) => ok(path === '/api/settings' ? settings : sale)) as never)
+    .mockImplementation(((path: string) =>
+      ok(
+        path === '/api/settings'
+          ? makeBusinessSettings({ seller_name: 'Current seller' })
+          : { ...sale, requisites: settings },
+      )) as never)
 }
 
 function renderPage(route = '/sales/9/print') {
@@ -88,6 +97,29 @@ function cellTexts(row: HTMLElement): string[] {
 }
 
 describe('InvoicePrintPage', () => {
+  it('uses only the sale snapshot while current seller and customer data differ', async () => {
+    const get = vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(
+        path === '/api/sales/{sale_id}'
+          ? SALE
+          : path === '/api/settings'
+            ? makeBusinessSettings({
+                seller_name: 'Changed seller',
+                released_by_name: 'Changed release',
+              })
+            : { id: 7, name: 'Changed customer', phone: '999' },
+      )) as never)
+    renderPage()
+    const text = (await invoice()).textContent ?? ''
+    expect(text).toContain(SALE.requisites.seller_name)
+    expect(text).toContain('Ержан')
+    expect(text).not.toContain('Changed')
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(get).toHaveBeenCalledWith('/api/sales/{sale_id}', {
+      params: { path: { sale_id: 9 } },
+    })
+  })
+
   it('shows the form З-2 header, seller, document number and parties', async () => {
     mockApi()
     renderPage()
@@ -227,8 +259,11 @@ describe('InvoicePrintPage', () => {
     expect(text).toContain('Запасы получил')
   })
 
-  it('signs «Отпустил» with the user who posted the sale when the setting is empty', async () => {
-    mockApi(SALE, makeBusinessSettings({ released_by_name: '' }))
+  it('prints the frozen fallback even when the author name has changed', async () => {
+    mockApi(
+      { ...SALE, created_by_name: 'Changed author' },
+      makeBusinessSettings({ released_by_name: 'Айгерим' }),
+    )
     renderPage()
 
     await invoice()

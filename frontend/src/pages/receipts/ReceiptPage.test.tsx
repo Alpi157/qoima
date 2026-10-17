@@ -10,7 +10,16 @@ import { ReceiptPage } from './ReceiptPage'
 
 const POSTED = makeReceipt({
   supplier: 'Начальные остатки',
-  lines: [{ product_id: 1, article: 'OC-90', name: 'Фильтр масляный', qty: 3, unit_cost: 150000 }],
+  lines: [
+    {
+      product_id: 1,
+      article: 'OC-90',
+      name: 'Фильтр масляный',
+      unit: 'шт',
+      qty: 3,
+      unit_cost: 150000,
+    },
+  ],
   total_qty: 3,
   total_cost: 450000,
 })

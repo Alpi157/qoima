@@ -10,7 +10,7 @@ from app.inventory.models import StockBalance, StockMovement
 from app.numbering import DocumentCounter
 from app.receipts import service as receipt_service
 from app.receipts.models import Receipt
-from tests.factories import create_product
+from tests.factories import create_product, create_user
 
 
 @pytest.fixture
@@ -96,6 +96,7 @@ def adjustment_payload(db_session):
         "request_id": str(uuid.uuid4()),
         "product_id": create_product(db_session).id,
         "qty": 5,
+        "unit_cost": 100,
         "reason": "  Пересчёт  ",
     }
 
@@ -106,7 +107,7 @@ def test_adjustment_replay_uses_current_stock(auth_client, db_session, adjustmen
     adjustment_payload["reason"] = "Пересчёт"
     same = auth_client.post("/api/stock/adjustments", json=adjustment_payload)
     assert same.status_code == 200 and same.json() == first.json()
-    other = {**adjustment_payload, "request_id": str(uuid.uuid4()), "qty": -2}
+    other = {**adjustment_payload, "request_id": str(uuid.uuid4()), "qty": -2, "unit_cost": None}
     assert auth_client.post("/api/stock/adjustments", json=other).status_code == 201
     replay = auth_client.post("/api/stock/adjustments", json=adjustment_payload)
     assert replay.status_code == 200
@@ -150,7 +151,7 @@ def test_request_id_required(auth_client, receipt_payload, adjustment_payload, k
 
 @pytest.mark.parametrize("kind", ["receipt", "adjustment"])
 def test_unique_constraint_fallback_returns_existing(
-    auth_client, receipt_payload, adjustment_payload, monkeypatch, kind
+    auth_client, db_session, receipt_payload, adjustment_payload, monkeypatch, kind
 ):
     if kind == "receipt":
         module, lookup, payload, path = (
@@ -160,6 +161,18 @@ def test_unique_constraint_fallback_returns_existing(
             "/api/receipts",
         )
     else:
+        # Exercise the uniqueness fallback with a cost already known before the first request.
+        # A priced first adjustment legitimately becomes invalid as new input after posting.
+        stock_service.post_movements(
+            db_session,
+            [
+                stock_service.MovementIn(
+                    adjustment_payload["product_id"], 1, "receipt", unit_cost=100
+                )
+            ],
+            create_user(db_session).id,
+        )
+        adjustment_payload["unit_cost"] = None
         module, lookup, payload, path = (
             stock_service,
             "_existing_adjustment",
@@ -188,7 +201,7 @@ def test_unrelated_integrity_errors_propagate(
 ):
     failure = IntegrityError("unrelated", {}, Exception("foreign key failure"))
 
-    def fail(*args):
+    def fail(*args, **kwargs):
         raise failure
 
     if kind == "receipt":

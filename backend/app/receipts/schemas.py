@@ -55,6 +55,7 @@ class ReceiptLineOut(BaseModel):
     product_id: int
     article: str
     name: str
+    unit: str
     qty: int
     unit_cost: int | None
 

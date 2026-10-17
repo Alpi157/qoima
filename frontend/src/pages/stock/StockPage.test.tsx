@@ -29,6 +29,21 @@ afterEach(() => {
 })
 
 describe('StockPage', () => {
+  it.each([0, 2])('shows archived stock only when present: %s', async (count) => {
+    vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(
+        path === '/api/stock/summary'
+          ? makeStockSummary({ archived_products_count: count, archived_cost_value: 123450 })
+          : { items: [], total: 0 },
+      )) as never)
+    renderStock()
+    await screen.findByText('По закупочной цене')
+    expect(Boolean(screen.queryByText(/В архиве с остатком:/))).toBe(count > 0)
+    if (count > 0)
+      expect(screen.getByText(/В архиве с остатком:/).textContent?.replace(/\s/g, ' ')).toContain(
+        '1 235',
+      )
+  })
   it('shows quantities and a warning badge when nothing is left', async () => {
     vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
       ok(

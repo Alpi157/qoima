@@ -290,8 +290,8 @@ describe('ReceiveDonePage', () => {
       receipt: makeReceipt({
         id: 5,
         lines: [
-          { product_id: 1, article: 'OC-90', name: 'Фильтр', qty: 3, unit_cost: null },
-          { product_id: 2, article: 'W712', name: 'Фильтр', qty: 4, unit_cost: null },
+          { product_id: 1, article: 'OC-90', name: 'Фильтр', unit: 'шт', qty: 3, unit_cost: null },
+          { product_id: 2, article: 'W712', name: 'Фильтр', unit: 'шт', qty: 4, unit_cost: null },
         ],
         total_qty: 7,
       }),

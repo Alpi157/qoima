@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
-from app.catalog.models import Product
 from app.catalog.service import load_line_products
 from app.db_utils import RECEIPT_REQUEST_LOCK, local_date_range, lock_request_id
 from app.errors import (
@@ -67,7 +66,7 @@ def _is_request_id_conflict(exc: IntegrityError) -> bool:
 
 def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
     """Post a receipt without committing. The caller owns the transaction."""
-    load_line_products(db, [line.product_id for line in data.lines], "receipt")
+    products = load_line_products(db, [line.product_id for line in data.lines], "receipt")
     costs = [line.qty * line.unit_cost for line in data.lines]
     if any(cost > MAX_MONEY for cost in costs) or sum(costs) > MAX_MONEY:
         raise AmountTooLargeError()
@@ -88,6 +87,9 @@ def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
         ReceiptLine(
             receipt_id=receipt.id,
             product_id=line.product_id,
+            article=products[line.product_id].article,
+            name=products[line.product_id].name,
+            unit=products[line.product_id].unit,
             qty=line.qty,
             unit_cost=line.unit_cost,
         )
@@ -154,17 +156,15 @@ def get_receipt(db: Session, receipt_id: int) -> ReceiptOut:
     lines = [
         ReceiptLineOut(
             product_id=line.product_id,
-            article=article,
-            name=name,
+            article=line.article,
+            name=line.name,
+            unit=line.unit,
             qty=line.qty,
             unit_cost=line.unit_cost,
         )
-        for line, article, name in db.execute(
-            select(ReceiptLine, Product.article, Product.name)
-            .join(Product, Product.id == ReceiptLine.product_id)
-            .where(ReceiptLine.receipt_id == receipt.id)
-            .order_by(ReceiptLine.id)
-        ).all()
+        for line in db.scalars(
+            select(ReceiptLine).where(ReceiptLine.receipt_id == receipt.id).order_by(ReceiptLine.id)
+        )
     ]
 
     return ReceiptOut(

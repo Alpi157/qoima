@@ -124,7 +124,9 @@ def test_sales_payment_checks_direct_insert(db_session, payment_case, paid, meth
         db_session.execute(
             text(
                 "INSERT INTO sales (number,request_id,customer_id,total,paid_at_sale,"
-                "payment_method,created_by) VALUES (900, :r, :c, 100, :p, :m, :u)"
+                "payment_method,created_by,seller_name,seller_iin_bin,"
+                "responsible_person,released_by_name,chief_accountant) "
+                "VALUES (900, :r, :c, 100, :p, :m, :u,'','','','','')"
             ),
             {"r": uuid.uuid4(), "c": payment_case[1], "p": paid, "m": method, "u": payment_case[2]},
         )

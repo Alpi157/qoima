@@ -46,8 +46,10 @@ review:
 demo:
 	cd backend && uv run python -m app.demo seed
 
+SCREENSHOT_WORKERS ?=
+
 screenshots:
 	rm -rf review/screenshots && mkdir -p review/screenshots
 	export DEMO_PASSWORD="$${DEMO_PASSWORD:-$$(openssl rand -hex 12)}" && \
 	cd backend && uv run python -m app.demo seed && \
-	cd ../frontend && npx playwright test
+	cd ../frontend && npx playwright test $(if $(SCREENSHOT_WORKERS),--workers=$(SCREENSHOT_WORKERS))

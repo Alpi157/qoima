@@ -61,8 +61,9 @@ def test_cost_backfill_upgrade_downgrade_upgrade(isolated_stock_engine):
             )
             conn.execute(
                 text(
-                    "INSERT INTO receipt_lines (receipt_id,product_id,qty,unit_cost) "
-                    "VALUES (:r,:p,:q,:c)"
+                    "INSERT INTO receipt_lines "
+                    "(receipt_id,product_id,qty,unit_cost,article,name,unit)  "
+                    "VALUES (:r,:p,:q,:c,'MIG','Migration','шт')"
                 ),
                 {"r": receipt, "p": product, "q": qty, "c": cost},
             )
@@ -83,15 +84,18 @@ def test_cost_backfill_upgrade_downgrade_upgrade(isolated_stock_engine):
             conn.execute(
                 text(
                     "INSERT INTO sales "
-                    "(number,request_id,customer_id,total,paid_at_sale,created_by) "
-                    "VALUES (:n,gen_random_uuid(),:c,100,:p,:u)"
+                    "(number,request_id,customer_id,total,paid_at_sale,created_by,"
+                    "seller_name,seller_iin_bin,responsible_person,"
+                    "released_by_name,chief_accountant) "
+                    "VALUES (:n,gen_random_uuid(),:c,100,:p,:u,'','','','','')"
                 ),
                 {"n": number, "c": customer, "p": paid, "u": user},
             )
         conn.execute(
             text(
-                "INSERT INTO sale_lines (sale_id,product_id,qty,unit_price,line_total) "
-                "VALUES ((SELECT id FROM sales WHERE number=1),:p,1,100,100)"
+                "INSERT INTO sale_lines "
+                "(sale_id,product_id,qty,unit_price,line_total,article,name,unit) "
+                "VALUES ((SELECT id FROM sales WHERE number=1),:p,1,100,100,'MIG','Migration','шт')"
             ),
             {"p": products[0]},
         )

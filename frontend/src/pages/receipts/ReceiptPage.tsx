@@ -17,6 +17,7 @@ import {
   PageHeader,
 } from '../../components/ui'
 import { formatDateTime } from '../../lib/dates'
+import { unitLabel } from '../../lib/labels'
 import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { type Receipt, useCancelReceipt, useReceipt } from './api'
@@ -47,7 +48,7 @@ function LineCard({ line }: { line: ReceiptLineOut }) {
       <Text>{line.name}</Text>
       <Group justify="space-between">
         <Text size="sm">
-          {line.qty} × {money(line.unit_cost)}
+          {line.qty} {unitLabel(line.unit)} × {money(line.unit_cost)}
         </Text>
         <Text fw={600}>{money(lineSum(line))}</Text>
       </Group>
@@ -65,7 +66,12 @@ function LinesTable({ lines }: { lines: ReceiptLineOut[] }) {
       cell: (line) => <ProductLink line={line} />,
     },
     { key: 'name', header: t('receipts.lines.name'), cell: (line) => line.name },
-    { key: 'qty', header: t('receipts.lines.qty'), numeric: true, cell: (line) => line.qty },
+    {
+      key: 'qty',
+      header: t('receipts.lines.qty'),
+      numeric: true,
+      cell: (line) => `${line.qty} ${unitLabel(line.unit)}`,
+    },
     {
       key: 'cost',
       header: t('receipts.lines.cost'),

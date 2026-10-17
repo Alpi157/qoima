@@ -23,6 +23,9 @@ import { useInvalidateStock } from '../../api/invalidate'
 import type { components } from '../../api/schema'
 import { apiErrorText, fieldErrorText } from '../../i18n/errorText'
 import { unitLabel } from '../../lib/labels'
+import { MoneyInput } from '../../components/MoneyInput'
+import { parseMoney, tiynToInput } from '../../lib/money'
+import { FIELD_WIDTH } from '../../lib/fieldWidths'
 import { MAX_LINE_QTY, qtyError, reasonError as validateReason } from '../../lib/validation'
 import type { Product } from './api'
 
@@ -68,20 +71,40 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
   const [qtyTouched, setQtyTouched] = useState(false)
   const [reasonError, setReasonError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [cost, setCost] = useState(() =>
+    product.last_cost === null ? '' : tiynToInput(product.last_cost),
+  )
+  const [costTouched, setCostTouched] = useState(false)
 
   const qtyProblem = qtyError(qty)
+  const needsCost = direction === 'add' && product.avg_cost === null
+  const unitCost = parseMoney(cost)
+  const costProblem = needsCost
+    ? unitCost === null
+      ? t('products.adjust.costRequired')
+      : unitCost > 100_000_000_000
+        ? t('products.adjust.costRange')
+        : null
+    : null
   const delta = qtyProblem === null ? (direction === 'add' ? 1 : -1) * (qty as number) : 0
   const after = product.stock + delta
 
   const submit = () => {
     if (create.isPending) return
     setQtyTouched(true)
+    setCostTouched(true)
     const reasonProblem = validateReason(reason)
     setReasonError(reasonProblem)
-    if (qtyProblem || reasonProblem) return
+    if (qtyProblem || reasonProblem || costProblem) return
     setFormError(null)
     create.mutate(
-      { request_id: requestId, product_id: product.id, qty: delta, reason: reason.trim() },
+      {
+        request_id: requestId,
+        product_id: product.id,
+        qty: delta,
+        reason: reason.trim(),
+        ...(needsCost ? { unit_cost: unitCost } : {}),
+      },
       {
         onSuccess: (result) => {
           notifications.show({
@@ -142,6 +165,21 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           clampBehavior="none"
           error={qtyTouched ? qtyProblem : null}
         />
+        {needsCost && (
+          <MoneyInput
+            label={t('products.adjust.cost')}
+            showHint={false}
+            styles={{ wrapper: { maxWidth: FIELD_WIDTH.price } }}
+            required
+            value={cost}
+            onChange={(value) => {
+              setCost(value)
+              setFormError(null)
+            }}
+            onBlur={() => setCostTouched(true)}
+            error={costTouched ? costProblem : null}
+          />
+        )}
         <Stack gap="xs">
           <TextInput
             label={t('products.adjust.reason')}

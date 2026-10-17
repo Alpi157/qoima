@@ -8,7 +8,9 @@ from sqlalchemy import text
 from tests.conftest import test_engine
 
 
-def wait_until_lock_waiting(pid: int, table: str = "customers") -> None:
+def wait_until_lock_waiting(
+    pid: int, table: str = "customers", *, allow_insert: bool = False
+) -> None:
     """Wait for a backend to block on a PostgreSQL lock, or fail after five seconds."""
     deadline = monotonic() + 5
     poll = Event()
@@ -25,8 +27,11 @@ def wait_until_lock_waiting(pid: int, table: str = "customers") -> None:
             if (
                 state is not None
                 and state.wait_event_type == "Lock"
-                and f"FROM {table}" in state.query
-                and "FOR UPDATE" in state.query
+                and (
+                    (f"FROM {table}" in state.query and "FOR UPDATE" in state.query)
+                    # Stock rows are ensured with ON CONFLICT before SELECT FOR UPDATE.
+                    or (allow_insert and f"INSERT INTO {table}" in state.query)
+                )
             ):
                 return
             poll.wait(min(0.01, max(0, deadline - monotonic())))

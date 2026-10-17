@@ -26,6 +26,8 @@ it('restores a complete unknown return and retries the same body after all goods
         qty: 1,
         returned_qty: 0,
         unit_price: 10000,
+        list_price: null,
+        discount: null,
         line_total: 10000,
         unit_cost: 5000,
       },

@@ -93,6 +93,9 @@ def test_apply_products_receipts_costs_and_single_commit(import_db, tmp_path, mo
         for line in import_db.scalars(select(ReceiptLine))
     }
     assert lines == balances
+    for line in import_db.scalars(select(ReceiptLine)):
+        product = import_db.get(Product, line.product_id)
+        assert (line.article, line.name, line.unit) == (product.article, product.name, product.unit)
     movements = list(import_db.scalars(select(StockMovement)))
     assert len(movements) == 2
     assert all(

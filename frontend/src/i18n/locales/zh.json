@@ -118,7 +118,9 @@
     "debt_adjustment_already_cancelled": "欠款调整单已撤销。",
     "receipt_request_conflict": "此入库可能已用其他内容保存，请检查入库列表。",
     "stock_adjustment_request_conflict": "此调整可能已用其他数据保存，请检查商品记录。",
-    "amount_too_large": "金额过大"
+    "amount_too_large": "金额过大",
+    "adjustment_cost_required": "请输入采购价：商品的平均成本未知",
+    "adjustment_cost_not_allowed": "仅在增加平均成本未知的商品时需要采购价"
   },
   "validation": {
     "missing": "必填",
@@ -184,7 +186,8 @@
       "confirm": "隐藏",
       "restoreConfirm": "恢复显示",
       "text": "商品 {{article}} 将不再出现在列表和搜索里。记录和库存都会保留。",
-      "restoreText": "商品 {{article}} 会重新出现在列表和搜索里。"
+      "restoreText": "商品 {{article}} 会重新出现在列表和搜索里。",
+      "remaining": "仓库还剩 {{qty}} 件。它们仍计入库存价值。"
     },
     "card": {
       "back": "商品",
@@ -213,7 +216,10 @@
       "qty": "数量",
       "reason": "原因",
       "preview": "现在：{{before}} → 修改后：<after>{{after}}</after>",
-      "title": "修改库存数量：{{article}}"
+      "title": "修改库存数量：{{article}}",
+      "cost": "采购价，₸",
+      "costRequired": "请输入采购价",
+      "costRange": "价格不得超过 1 000 000 000 ₸"
     },
     "list": {
       "article": "零件号",
@@ -610,7 +616,9 @@
       "requiresCustomer": "赊账销售请先选择客户。",
       "chooseCustomer": "选择客户",
       "exceedsTotal": "不能超过销售金额"
-    }
+    },
+    "discountLine": "折扣：{{amount}}（{{percent}}%）",
+    "discountTotal": "折扣：{{amount}}"
   },
   "receive": {
     "title": "来了什么货？",
@@ -674,7 +682,8 @@
     "unknownCost": "无进价的商品：{{count}}",
     "out": "已售完",
     "low": "库存不足",
-    "cost": "进价"
+    "cost": "进价",
+    "archivedStock": "已归档但有库存：{{count}} 种，{{amount}}"
   },
   "debts": {
     "title": "谁欠多少？",

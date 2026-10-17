@@ -98,13 +98,20 @@ export function SellStepReview({
         <Card>
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
             <Stat label={t('sell.review.customer')} value={customerName} />
-            <Stat
-              size="display"
-              label={t('sell.total')}
-              value={incomplete ? '—' : formatAmount(totals.sum)}
-              unit={incomplete ? undefined : '₸'}
-              testId="review-total"
-            />
+            <Stack gap="xs">
+              <Stat
+                size="display"
+                label={t('sell.total')}
+                value={incomplete ? '—' : formatAmount(totals.sum)}
+                unit={incomplete ? undefined : '₸'}
+                testId="review-total"
+              />
+              {!incomplete && totals.discount > 0n && (
+                <Text size="sm" c="dimmed">
+                  {t('sell.discountTotal', { amount: formatMoney(totals.discount) })}
+                </Text>
+              )}
+            </Stack>
             <Stat label={t('sell.review.kinds')} value={totals.kinds} />
             <Stat
               label={t('sell.review.pieces')}

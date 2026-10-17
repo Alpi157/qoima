@@ -53,5 +53,8 @@ class ReceiptLine(Base):
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     receipt_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("receipts.id"), index=True)
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
+    article: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str] = mapped_column(Text)
     qty: Mapped[int] = mapped_column(Integer)
     unit_cost: Mapped[int | None] = mapped_column(BigInteger)

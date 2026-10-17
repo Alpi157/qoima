@@ -30,6 +30,8 @@ def _receipt(client: TestClient, product_id: int, qty: int) -> dict:
 
 
 def _adjust(client: TestClient, product_id: int, qty: int, reason: str = "Пересчёт") -> dict:
+    product = client.get(f"/api/products/{product_id}").json()
+    cost = {"unit_cost": 0} if qty > 0 and product["avg_cost"] is None else {}
     response = client.post(
         "/api/stock/adjustments",
         json={
@@ -37,6 +39,7 @@ def _adjust(client: TestClient, product_id: int, qty: int, reason: str = "Пер
             "product_id": product_id,
             "qty": qty,
             "reason": reason,
+            **cost,
         },
     )
     assert response.status_code == 201, response.text

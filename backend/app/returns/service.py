@@ -8,7 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
-from app.catalog.models import Product
 from app.customers.models import Customer
 from app.customers.service import current_debt
 from app.db_utils import local_date_range
@@ -101,12 +100,9 @@ def _create_return(db: Session, data: ReturnCreate, sale: Sale, user_id: int) ->
             "Дата возврата не может быть раньше даты продажи",
             returned_at.isoformat(),
         )
-    pairs = db.execute(
-        select(SaleLine, Product.article)
-        .join(Product, Product.id == SaleLine.product_id)
-        .where(SaleLine.sale_id == sale.id)
-    ).all()
-    by_id = {line.id: (line, article) for line, article in pairs}
+    by_id = {
+        line.id: line for line in db.scalars(select(SaleLine).where(SaleLine.sale_id == sale.id))
+    }
     returned = dict(
         db.execute(
             select(SaleReturnLine.sale_line_id, func.sum(SaleReturnLine.qty))
@@ -125,7 +121,8 @@ def _create_return(db: Session, data: ReturnCreate, sale: Sale, user_id: int) ->
                 "Строка не принадлежит указанной продаже",
                 requested.sale_line_id,
             )
-        line, article = by_id[requested.sale_line_id]
+        line = by_id[requested.sale_line_id]
+        article = line.article
         if line.id in seen:
             raise DuplicateLineError(
                 f"Товар {article} указан в возврате дважды",
@@ -149,6 +146,9 @@ def _create_return(db: Session, data: ReturnCreate, sale: Sale, user_id: int) ->
             SaleReturnLine(
                 sale_line_id=line.id,
                 product_id=line.product_id,
+                article=line.article,
+                name=line.name,
+                unit=line.unit,
                 qty=requested.qty,
                 unit_price=line.unit_price,
                 unit_cost=line.unit_cost,
@@ -236,9 +236,8 @@ def post_return(db: Session, data: ReturnCreate, user_id: int) -> tuple[ReturnOu
 
 def _headers():
     return (
-        select(SaleReturn, Sale.number, Customer, User.full_name, Canceller.full_name)
+        select(SaleReturn, Sale, User.full_name, Canceller.full_name)
         .join(Sale, Sale.id == SaleReturn.sale_id)
-        .outerjoin(Customer, Customer.id == SaleReturn.customer_id)
         .join(User, User.id == SaleReturn.created_by)
         .outerjoin(Canceller, Canceller.id == SaleReturn.cancelled_by)
         .execution_options(populate_existing=True)
@@ -246,14 +245,16 @@ def _headers():
 
 
 def _header_out(row) -> ReturnListItem:
-    document, sale_number, customer, creator, canceller = row
+    document, sale, creator, canceller = row
     return ReturnListItem(
         id=document.id,
         number=document.number,
         request_id=document.request_id,
-        sale=ReturnSaleOut(id=document.sale_id, number=sale_number),
-        customer=ReturnCustomerOut(id=customer.id, name=customer.name, phone=customer.phone)
-        if customer
+        sale=ReturnSaleOut(id=document.sale_id, number=sale.number),
+        customer=ReturnCustomerOut(
+            id=sale.customer_id, name=sale.customer_name, phone=sale.customer_phone
+        )
+        if sale.customer_id is not None
         else None,
         returned_at=document.returned_at,
         total=document.total,
@@ -279,21 +280,20 @@ def get_return(db: Session, return_id: int) -> ReturnOut:
             id=line.id,
             sale_line_id=line.sale_line_id,
             product_id=line.product_id,
-            article=article,
-            name=name,
-            unit=unit,
+            article=line.article,
+            name=line.name,
+            unit=line.unit,
             qty=line.qty,
             unit_price=line.unit_price,
             line_total=line.line_total,
             unit_cost=line.unit_cost,
             condition=line.condition,
         )
-        for line, article, name, unit in db.execute(
-            select(SaleReturnLine, Product.article, Product.name, Product.unit)
-            .join(Product, Product.id == SaleReturnLine.product_id)
+        for line in db.scalars(
+            select(SaleReturnLine)
             .where(SaleReturnLine.return_id == return_id)
             .order_by(SaleReturnLine.id)
-        ).all()
+        )
     ]
     return ReturnOut(**_header_out(row).model_dump(), lines=lines)
 

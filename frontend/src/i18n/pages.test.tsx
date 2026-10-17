@@ -41,6 +41,8 @@ const SALE = makeSale({
       unit: 'шт',
       qty: 3,
       unit_price: 1250000,
+      list_price: null,
+      discount: null,
       id: 1,
       returned_qty: 0,
       unit_cost: null,

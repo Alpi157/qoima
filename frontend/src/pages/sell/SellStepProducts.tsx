@@ -10,6 +10,7 @@ import { unitLabel } from '../../lib/labels'
 import { formatAmount, formatMoney } from '../../lib/money'
 import { type Product, useFrequentProducts } from '../products/api'
 import {
+  lineDiscount,
   lineSum,
   linePriceText,
   type SaleDraft,
@@ -157,6 +158,7 @@ export function SellStepProducts({
           )}
           {views.map(({ line, product }, index) => {
             const sum = lineSum(line, product)
+            const discount = lineDiscount(line, product)
             return (
               <LineCard
                 key={product.id}
@@ -203,14 +205,24 @@ export function SellStepProducts({
                     })}
                   </Text>
                 </Stack>
-                <MoneyInput
-                  showHint={false}
-                  label={t('sell.price')}
-                  aria-label={t('sell.priceOf', { article: product.article })}
-                  value={linePriceText(line, product)}
-                  onChange={(price) => changeLine(product.id, { price })}
-                  w={FIELD_WIDTH.price}
-                />
+                <Stack gap="xs">
+                  <MoneyInput
+                    showHint={false}
+                    label={t('sell.price')}
+                    aria-label={t('sell.priceOf', { article: product.article })}
+                    value={linePriceText(line, product)}
+                    onChange={(price) => changeLine(product.id, { price })}
+                    w={FIELD_WIDTH.price}
+                  />
+                  {discount && (
+                    <Text size="sm" c="dimmed">
+                      {t('sell.discountLine', {
+                        amount: formatMoney(discount.amount),
+                        percent: discount.percent,
+                      })}
+                    </Text>
+                  )}
+                </Stack>
               </LineCard>
             )
           })}

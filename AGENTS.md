@@ -74,6 +74,8 @@
   из `DEMO_PASSWORD` или генерируется на запуск). Снимок `sell-3-debt-focus`
   дополнительно проверяет фокус на 1366x768 и 390x844. Один раз поставить браузер:
   `cd frontend && npx playwright install chromium`.
+  Для последовательного прогона: `make screenshots SCREENSHOT_WORKERS=1`;
+  без параметра Playwright выбирает число workers как прежде.
 - Дополнительная проверка собранных чанков: после подготовки демо-базы с тем же
   `DEMO_PASSWORD` выполнить `cd frontend && QOIMA_E2E_BUILD=1 npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "page module"`.
   Только при `QOIMA_E2E_BUILD=1` Playwright собирает frontend и запускает preview;
@@ -84,6 +86,9 @@
   штатные сценарии не должны превышать зафиксированные числа.
 - Снимки шага 23 (`draft-*`) дополнительно снимаются на kk в 1366x768 и 390x844,
   включая вид с действующей закреплённой панелью; входят в `make screenshots`.
+- Снимки шага 24 (`snapshot-*`) на kk в 1366x768 и 390x844 показывают скидку в строке
+  и проверке продажи, архивные остатки, предупреждение архивации и цену корректировки;
+  входят в `make screenshots`. E2e также проверяет печать после переименования товара.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

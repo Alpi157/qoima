@@ -617,6 +617,7 @@ test('manual stock adjustment posts once and keeps the existing form behavior', 
   await page.getByRole('button', { name: 'Санын түзету', exact: true }).click()
   const modal = page.getByRole('dialog')
   await expect(modal.getByRole('textbox', { name: 'Себебі' })).toBeVisible()
+  await modal.getByRole('textbox', { name: 'Сатып алу бағасы, ₸' }).fill('500')
   await modal.getByRole('textbox', { name: 'Себебі' }).fill('Пересчёт')
   const responsePromise = page.waitForResponse(
     (response) =>
@@ -638,6 +639,44 @@ test('manual stock adjustment posts once and keeps the existing form behavior', 
     `/api/products/${product.id}/movements`,
   )
   expect(history.total).toBe(1)
+})
+
+test('invoice keeps the product name after editing its card', async ({ page }) => {
+  await login(page)
+  const suffix = `${width(page)}-${crypto.randomUUID().slice(0, 8)}`
+  const original = `Бұрынғы атауы ${suffix}`
+  const productResponse = await page.request.post('/api/products', {
+    data: { article: `SNAP-${suffix}`, name: original, sale_price: 100000 },
+  })
+  expect(productResponse.status()).toBe(201)
+  const product = (await productResponse.json()) as Product
+  expect(
+    (
+      await page.request.post('/api/receipts', {
+        data: {
+          request_id: crypto.randomUUID(),
+          lines: [{ product_id: product.id, qty: 3, unit_cost: 50000 }],
+        },
+      })
+    ).status(),
+  ).toBe(201)
+  const saleResponse = await page.request.post('/api/sales', {
+    data: {
+      request_id: crypto.randomUUID(),
+      lines: [{ product_id: product.id, qty: 1, unit_price: 80000 }],
+    },
+  })
+  expect(saleResponse.status()).toBe(201)
+  const sale = (await saleResponse.json()) as Sale
+  await page.goto(`/products/${product.id}`)
+  await page.getByRole('button', { name: 'Өзгерту', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('textbox', { name: 'Атауы', exact: true }).fill(`Жаңа атауы ${suffix}`)
+  await dialog.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  await page.goto(`/sales/${sale.id}/print`)
+  await expect(page.locator('.z2-items')).toContainText(original)
+  await expect(page.locator('.z2-items')).not.toContainText(`Жаңа атауы ${suffix}`)
 })
 
 test('action budget for the five everyday documents', async ({ page }) => {

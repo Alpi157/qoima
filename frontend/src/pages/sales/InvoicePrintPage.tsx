@@ -13,7 +13,6 @@ import { amountInWords, quantityInWords } from '../../lib/amountInWords'
 import { formatDate } from '../../lib/dates'
 import { formatAmount, formatInteger } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
-import { type BusinessSettings, useBusinessSettings } from '../settings/api'
 import { type Sale, useSale } from './api'
 
 // The invoice is a legal form: always in Russian, whatever the interface language.
@@ -48,7 +47,7 @@ function Slash() {
   return <span className="z2-slash">/</span>
 }
 
-function Header({ sale, settings }: { sale: Sale; settings: BusinessSettings }) {
+function Header({ sale }: { sale: Sale }) {
   const t = invoiceT()
   return (
     <>
@@ -62,9 +61,9 @@ function Header({ sale, settings }: { sale: Sale; settings: BusinessSettings }) 
 
       <div className="z2-org">
         <span className="z2-bold">{t('invoice.organization')}</span>
-        <span className="z2-org-name">{settings.seller_name || '\u00a0'}</span>
+        <span className="z2-org-name">{sale.requisites.seller_name || '\u00a0'}</span>
         <span className="z2-bold">{t('invoice.iinBin')}</span>
-        <span className="z2-iin">{settings.seller_iin_bin || '\u00a0'}</span>
+        <span className="z2-iin">{sale.requisites.seller_iin_bin || '\u00a0'}</span>
       </div>
 
       <table className="z2-table z2-doc-number">
@@ -96,9 +95,9 @@ function Header({ sale, settings }: { sale: Sale; settings: BusinessSettings }) 
         </thead>
         <tbody>
           <tr>
-            <td>{settings.seller_name}</td>
+            <td>{sale.requisites.seller_name}</td>
             <td>{sale.customer?.name ?? t('invoice.retailCustomer')}</td>
-            <td>{settings.responsible_person}</td>
+            <td>{sale.requisites.responsible_person}</td>
             <td />
             <td />
           </tr>
@@ -180,15 +179,7 @@ function ItemsTable({
   )
 }
 
-function Footer({
-  sale,
-  settings,
-  totalQty,
-}: {
-  sale: Sale
-  settings: BusinessSettings
-  totalQty: number
-}) {
+function Footer({ sale, totalQty }: { sale: Sale; totalQty: number }) {
   const t = invoiceT()
   return (
     // Kept together, and after the totals when the page allows it.
@@ -224,7 +215,7 @@ function Footer({
             <Slash />
             <SignField
               caption={t('invoice.sign.transcript')}
-              value={settings.chief_accountant}
+              value={sale.requisites.chief_accountant}
               testId="chief-accountant"
               className="z2-field-lg"
             />
@@ -236,7 +227,7 @@ function Footer({
             <Slash />
             <SignField
               caption={t('invoice.sign.transcript')}
-              value={settings.released_by_name || sale.created_by_name}
+              value={sale.requisites.released_by_name}
               testId="released-by"
               className="z2-field-lg"
             />
@@ -264,7 +255,7 @@ function Footer({
   )
 }
 
-function Invoice({ sale, settings }: { sale: Sale; settings: BusinessSettings }) {
+function Invoice({ sale }: { sale: Sale }) {
   const t = invoiceT()
   const totalQty = sale.lines.reduce((sum, line) => sum + line.qty, 0)
   return (
@@ -274,14 +265,14 @@ function Invoice({ sale, settings }: { sale: Sale; settings: BusinessSettings })
           {t('invoice.cancelledStamp')}
         </div>
       )}
-      <Header sale={sale} settings={settings} />
+      <Header sale={sale} />
       <ItemsTable lines={sale.lines} total={sale.total} totalQty={totalQty} />
-      <Footer sale={sale} settings={settings} totalQty={totalQty} />
+      <Footer sale={sale} totalQty={totalQty} />
     </div>
   )
 }
 
-function InvoiceScreen({ sale, settings }: { sale: Sale; settings: BusinessSettings }) {
+function InvoiceScreen({ sale }: { sale: Sale }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -312,7 +303,7 @@ function InvoiceScreen({ sale, settings }: { sale: Sale; settings: BusinessSetti
             {t('sales.print.back')}
           </Button>
         </Group>
-        {!settings.seller_name && (
+        {!sale.requisites.seller_name && (
           <Alert color="yellow" variant="filled" c="black" data-testid="settings-warning">
             <Trans
               i18nKey="sales.print.fillSettings"
@@ -332,7 +323,7 @@ function InvoiceScreen({ sale, settings }: { sale: Sale; settings: BusinessSetti
           </Alert>
         )}
       </div>
-      <Invoice sale={sale} settings={settings} />
+      <Invoice sale={sale} />
     </div>
   )
 }
@@ -351,22 +342,15 @@ function SaleNotFound() {
 
 function InvoiceLoader({ id }: { id: number }) {
   const sale = useSale(id)
-  const settings = useBusinessSettings()
 
   if (sale.isError && isApiError(sale.error) && sale.error.status === 404) return <SaleNotFound />
-  if (sale.isSuccess && settings.isSuccess) {
-    return <InvoiceScreen sale={sale.data} settings={settings.data} />
+  if (sale.isSuccess) {
+    return <InvoiceScreen sale={sale.data} />
   }
   // Outside the app layout: the loading and error states need their own padding.
   return (
     <Box p="md">
-      {sale.isError ? (
-        <QueryError error={sale.error} onRetry={() => sale.refetch()} />
-      ) : settings.isError ? (
-        <QueryError error={settings.error} onRetry={() => settings.refetch()} />
-      ) : (
-        <Loader />
-      )}
+      {sale.isError ? <QueryError error={sale.error} onRetry={() => sale.refetch()} /> : <Loader />}
     </Box>
   )
 }

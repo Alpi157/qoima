@@ -156,6 +156,17 @@ export function lineSum(line: SaleDraftLine, product: Product): number | null {
   return (line.qty as number) * price
 }
 
+/** Discount for the whole line, and the integer percentage of the current catalog price. */
+export function lineDiscount(line: SaleDraftLine, product: Product) {
+  const price = linePrice(line, product)
+  if (price === null || qtyError(line.qty) !== null || price >= product.sale_price) return null
+  const difference = BigInt(product.sale_price) - BigInt(price)
+  return {
+    amount: difference * BigInt(line.qty),
+    percent: Number((difference * 100n) / BigInt(product.sale_price)),
+  }
+}
+
 /** What to fix in the line before going on, in the current language; null when it is fine. */
 export function saleLineWarning(line: SaleDraftLine, product: Product): string | null {
   if (product.stock <= 0) return i18n.t('sell.warn.outOfStock')

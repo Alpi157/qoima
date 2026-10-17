@@ -31,6 +31,8 @@ class ErrorCode(StrEnum):
     AMOUNT_TOO_LARGE = "amount_too_large"
     RECEIPT_REQUEST_CONFLICT = "receipt_request_conflict"
     STOCK_ADJUSTMENT_REQUEST_CONFLICT = "stock_adjustment_request_conflict"
+    ADJUSTMENT_COST_REQUIRED = "adjustment_cost_required"
+    ADJUSTMENT_COST_NOT_ALLOWED = "adjustment_cost_not_allowed"
     RECEIPT_NOT_FOUND = "receipt_not_found"
     RECEIPT_ALREADY_CANCELLED = "receipt_already_cancelled"
     RECEIPT_CANCEL_BLOCKED = "receipt_cancel_blocked"
@@ -188,6 +190,20 @@ class StockAdjustmentRequestConflictError(AppError):
     code = ErrorCode.STOCK_ADJUSTMENT_REQUEST_CONFLICT
     status_code = 409
     default_message = "Этот запрос уже использован для другой корректировки остатка"
+
+
+class AdjustmentCostRequiredError(AppError):
+    code = ErrorCode.ADJUSTMENT_COST_REQUIRED
+    status_code = 422
+    default_message = "Укажите закупочную цену: средняя себестоимость товара неизвестна"
+
+
+class AdjustmentCostNotAllowedError(AppError):
+    code = ErrorCode.ADJUSTMENT_COST_NOT_ALLOWED
+    status_code = 422
+    default_message = (
+        "Закупочная цена нужна только при добавлении товара с неизвестной себестоимостью"
+    )
 
 
 class ReceiptNotFoundError(AppError):

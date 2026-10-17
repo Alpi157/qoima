@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseSaleDraft } from './saleDraft'
+import { lineDiscount, parseSaleDraft } from './saleDraft'
+import { makeProduct } from '../../test/fixtures'
 
 describe('sale draft payment compatibility', () => {
   it('reads the existing version without payment as full and preserves the request id', () => {
@@ -21,4 +22,20 @@ describe('sale draft payment compatibility', () => {
     expect(parseSaleDraft(raw)?.payment).toEqual(raw.payment)
     expect(parseSaleDraft({ ...raw, customer: 'none' })?.payment.mode).toBe('full')
   })
+})
+
+it('keeps a very large draft discount exact before the server rejects its amount', () => {
+  expect(
+    lineDiscount(
+      { productId: 1, qty: 100000, price: '0' },
+      makeProduct({ sale_price: 100_000_000_000 }),
+    ),
+  ).toEqual({ amount: 10_000_000_000_000_000n, percent: 100 })
+})
+
+it('does not invent discounts for a zero list price or invalid input', () => {
+  const line = { productId: 1, qty: 1, price: '0' }
+  expect(lineDiscount(line, makeProduct({ sale_price: 0 }))).toBeNull()
+  expect(lineDiscount({ ...line, price: '' }, makeProduct())).toBeNull()
+  expect(lineDiscount({ ...line, qty: '' }, makeProduct())).toBeNull()
 })

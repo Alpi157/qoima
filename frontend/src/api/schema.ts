@@ -608,6 +608,8 @@ export interface components {
             product_id: number;
             /** Qty */
             qty: number;
+            /** Unit Cost */
+            unit_cost?: number | null;
             /** Reason */
             reason: string;
         };
@@ -823,7 +825,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -1179,6 +1181,8 @@ export interface components {
             article: string;
             /** Name */
             name: string;
+            /** Unit */
+            unit: string;
             /** Qty */
             qty: number;
             /** Unit Cost */
@@ -1516,6 +1520,10 @@ export interface components {
             qty: number;
             /** Unit Price */
             unit_price: number;
+            /** List Price */
+            list_price: number | null;
+            /** Discount */
+            discount: number | null;
             /** Unit Cost */
             unit_cost: number | null;
             /** Line Total */
@@ -1573,6 +1581,7 @@ export interface components {
              */
             sold_at: string;
             customer: components["schemas"]["SaleCustomerOut"] | null;
+            requisites: components["schemas"]["SaleRequisitesOut"];
             /** Note */
             note: string | null;
             /**
@@ -1597,6 +1606,8 @@ export interface components {
             lines: components["schemas"]["SaleLineOut"][];
             /** Total */
             total: number;
+            /** Discount Total */
+            discount_total: number | null;
             /** Paid At Sale */
             paid_at_sale: number;
             /** Payment Method */
@@ -1618,6 +1629,19 @@ export interface components {
             total: number;
             /** Sum Posted */
             sum_posted: number;
+        };
+        /** SaleRequisitesOut */
+        SaleRequisitesOut: {
+            /** Seller Name */
+            seller_name: string;
+            /** Seller Iin Bin */
+            seller_iin_bin: string;
+            /** Responsible Person */
+            responsible_person: string;
+            /** Released By Name */
+            released_by_name: string;
+            /** Chief Accountant */
+            chief_accountant: string;
         };
         /** SaleReturnSummary */
         SaleReturnSummary: {
@@ -1654,6 +1678,10 @@ export interface components {
             out_of_stock_count: number;
             /** Low Stock Count */
             low_stock_count: number;
+            /** Archived Products Count */
+            archived_products_count: number;
+            /** Archived Cost Value */
+            archived_cost_value: number;
         };
         /** SummaryOut */
         SummaryOut: {

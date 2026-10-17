@@ -10,12 +10,12 @@ import { renderWithProviders } from '../../test/render'
 import { fill, setupUser } from '../../test/user'
 import { StockAdjustmentModal } from './StockAdjustmentModal'
 
-const PRODUCT = makeProduct({ id: 1, article: 'OC-90', stock: 5 })
+const PRODUCT = makeProduct({ id: 1, article: 'OC-90', stock: 5, avg_cost: 100 })
 
-function renderModal() {
+function renderModal(product = PRODUCT) {
   const onClose = vi.fn()
   const result = renderWithProviders(
-    <StockAdjustmentModal product={PRODUCT} opened onClose={onClose} />,
+    <StockAdjustmentModal product={product} opened onClose={onClose} />,
   )
   return { ...result, onClose }
 }
@@ -29,6 +29,45 @@ afterEach(() => {
 })
 
 describe('StockAdjustmentModal', () => {
+  it.each([0, 12345, null])(
+    'requires cost only for unknown positive stock, prefilling %s',
+    async (lastCost) => {
+      const user = setupUser()
+      const post = vi.spyOn(api, 'POST').mockReturnValue(ok({ stock: 6, movement: {} }))
+      renderModal(makeProduct({ ...PRODUCT, avg_cost: null, last_cost: lastCost }))
+      const price = screen.getByRole('textbox', { name: 'Закупочная цена, ₸' }) as HTMLInputElement
+      expect(price.required).toBe(true)
+      expect(price.value).toBe(lastCost === null ? '' : lastCost === 0 ? '0' : '123,45')
+      await user.click(screen.getByRole('button', { name: 'Пересчёт' }))
+      await user.clear(price)
+      await user.click(screen.getByRole('button', { name: 'Добавить' }))
+      expect(post).not.toHaveBeenCalled()
+      expect(screen.getByText('Укажите закупочную цену')).toBeTruthy()
+      await fill(user, price, '0')
+      await user.click(screen.getByRole('button', { name: 'Добавить' }))
+      await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
+      expect(postBody<components['schemas']['AdjustmentCreate']>(post).unit_cost).toBe(0)
+    },
+  )
+
+  it('hides cost on removal and does not send the hidden price', async () => {
+    const user = setupUser()
+    const post = vi.spyOn(api, 'POST').mockReturnValue(ok({ stock: 4, movement: {} }))
+    renderModal(makeProduct({ ...PRODUCT, avg_cost: null, last_cost: 15000 }))
+    expect(screen.getByRole('textbox', { name: 'Закупочная цена, ₸' })).toBeTruthy()
+    await user.click(screen.getByRole('radio', { name: 'Списать' }))
+    expect(screen.queryByRole('textbox', { name: 'Закупочная цена, ₸' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Брак' }))
+    await user.click(screen.getByRole('button', { name: 'Списать' }))
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
+    expect(postBody<components['schemas']['AdjustmentCreate']>(post).unit_cost).toBeUndefined()
+  })
+
+  it('does not show cost for a known zero average', () => {
+    renderModal(makeProduct({ ...PRODUCT, avg_cost: 0 }))
+    expect(screen.queryByRole('textbox', { name: 'Закупочная цена, ₸' })).toBeNull()
+  })
+
   it('"Списать 3" sends qty = -3 and shows the stock after', async () => {
     const user = setupUser()
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok({ stock: 2, movement: {} }))

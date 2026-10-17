@@ -4,7 +4,7 @@ from typing import Any
 from uuid import UUID
 
 from psycopg.errors import UniqueViolation
-from sqlalchemy import Numeric, Select, and_, cast, func, select, tuple_
+from sqlalchemy import Numeric, Select, and_, cast, func, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,6 +13,8 @@ from app.auth.models import User
 from app.catalog.models import Product
 from app.db_utils import STOCK_ADJUSTMENT_REQUEST_LOCK, lock_request_id
 from app.errors import (
+    AdjustmentCostNotAllowedError,
+    AdjustmentCostRequiredError,
     InsufficientStockError,
     ProductNotFoundError,
     StockAdjustmentRequestConflictError,
@@ -65,6 +67,8 @@ def _apply_cost(balance: StockBalance, movement: MovementIn) -> int | None:
     """Apply one cost transition using the quantity before this movement."""
     cost = movement.unit_cost
     qty = balance.qty
+    if movement.kind == "adjustment" and movement.qty > 0 and balance.avg_cost is None:
+        balance.avg_cost = cost
     if movement.qty > 0 and movement.kind != "adjustment" and cost is not None:
         if balance.avg_cost is None or qty == 0:
             balance.avg_cost = cost
@@ -90,7 +94,11 @@ def _apply_cost(balance: StockBalance, movement: MovementIn) -> int | None:
 
 
 def post_movements(
-    db: Session, movements: Sequence[MovementIn], user_id: int
+    db: Session,
+    movements: Sequence[MovementIn],
+    user_id: int,
+    *,
+    validate_adjustments: bool = False,
 ) -> list[StockMovement]:
     """Record movements and update balances. Never commits: the caller owns the transaction."""
     if not movements:
@@ -136,6 +144,17 @@ def post_movements(
     ).all()
     balances = {(b.product_id, b.warehouse_id): (b, article) for b, article in rows}
 
+    if validate_adjustments:
+        for m, warehouse_id in resolved:
+            if m.kind != "adjustment":
+                continue
+            balance = balances[(m.product_id, warehouse_id)][0]
+            needs_cost = m.qty > 0 and balance.avg_cost is None
+            if needs_cost and m.unit_cost is None:
+                raise AdjustmentCostRequiredError()
+            if not needs_cost and m.unit_cost is not None:
+                raise AdjustmentCostNotAllowedError()
+
     shortages = []
     for key in keys:
         balance, article = balances[key]
@@ -161,6 +180,7 @@ def post_movements(
                 warehouse_id=warehouse_id,
                 qty=m.qty,
                 unit_cost=unit_cost,
+                requested_unit_cost=m.unit_cost if m.kind == "adjustment" else None,
                 request_id=m.request_id,
                 kind=m.kind,
                 doc_type=m.doc_type,
@@ -249,6 +269,7 @@ def _existing_adjustment(db: Session, data: AdjustmentCreate) -> AdjustmentOut |
         or movement.product_id != data.product_id
         or movement.qty != data.qty
         or movement.note != data.reason
+        or movement.requested_unit_cost != data.unit_cost
     ):
         raise StockAdjustmentRequestConflictError(
             params={"movement_id": movement.id, "product_id": movement.product_id}
@@ -282,9 +303,11 @@ def create_adjustment(
                     "adjustment",
                     note=data.reason,
                     request_id=data.request_id,
+                    unit_cost=data.unit_cost,
                 )
             ],
             user_id,
+            validate_adjustments=True,
         )
         db.commit()
     except IntegrityError as exc:
@@ -301,6 +324,8 @@ def create_adjustment(
 def stock_summary(db: Session) -> StockSummary:
     main_id = select(Warehouse.id).where(Warehouse.code == MAIN_WAREHOUSE_CODE).scalar_subquery()
     qty = func.coalesce(StockBalance.qty, 0)
+    active = Product.is_archived.is_(False)
+    archived = and_(Product.is_archived.is_(True), qty > 0)
     row = db.execute(
         select(
             func.count().label("products_count"),
@@ -314,14 +339,20 @@ def stock_summary(db: Session) -> StockSummary:
             func.count()
             .filter(and_(qty > 0, StockBalance.avg_cost.is_(None)))
             .label("unknown_cost_count"),
-            func.count().filter(qty == 0).label("out_of_stock_count"),
-            func.count().filter(and_(qty > 0, qty <= Product.min_qty)).label("low_stock_count"),
+            func.count().filter(and_(active, qty == 0)).label("out_of_stock_count"),
+            func.count()
+            .filter(and_(active, qty > 0, qty <= Product.min_qty))
+            .label("low_stock_count"),
+            func.count().filter(archived).label("archived_products_count"),
+            func.coalesce(
+                func.sum(cast(qty, Numeric) * StockBalance.avg_cost).filter(archived), 0
+            ).label("archived_cost_value"),
         )
         .select_from(Product)
         .outerjoin(
             StockBalance,
             and_(StockBalance.product_id == Product.id, StockBalance.warehouse_id == main_id),
         )
-        .where(Product.is_archived.is_(False))
+        .where(or_(active, archived))
     ).one()
     return StockSummary.model_validate(row, from_attributes=True)

@@ -2888,6 +2888,19 @@
             "minimum": -100000.0,
             "title": "Qty"
           },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          },
           "reason": {
             "type": "string",
             "maxLength": 500,
@@ -3529,6 +3542,8 @@
           "amount_too_large",
           "receipt_request_conflict",
           "stock_adjustment_request_conflict",
+          "adjustment_cost_required",
+          "adjustment_cost_not_allowed",
           "receipt_not_found",
           "receipt_already_cancelled",
           "receipt_cancel_blocked",
@@ -4661,6 +4676,10 @@
             "type": "string",
             "title": "Name"
           },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
           "qty": {
             "type": "integer",
             "title": "Qty"
@@ -4682,6 +4701,7 @@
           "product_id",
           "article",
           "name",
+          "unit",
           "qty",
           "unit_cost"
         ],
@@ -5732,6 +5752,28 @@
             "type": "integer",
             "title": "Unit Price"
           },
+          "list_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Price"
+          },
+          "discount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount"
+          },
           "unit_cost": {
             "anyOf": [
               {
@@ -5758,6 +5800,8 @@
           "unit",
           "qty",
           "unit_price",
+          "list_price",
+          "discount",
           "unit_cost",
           "line_total"
         ],
@@ -5909,6 +5953,9 @@
               }
             ]
           },
+          "requisites": {
+            "$ref": "#/components/schemas/SaleRequisitesOut"
+          },
           "note": {
             "anyOf": [
               {
@@ -5982,6 +6029,17 @@
             "type": "integer",
             "title": "Total"
           },
+          "discount_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Total"
+          },
           "paid_at_sale": {
             "type": "integer",
             "title": "Paid At Sale"
@@ -6048,6 +6106,7 @@
           "request_id",
           "sold_at",
           "customer",
+          "requisites",
           "note",
           "status",
           "cancelled_at",
@@ -6057,6 +6116,7 @@
           "created_at",
           "lines",
           "total",
+          "discount_total",
           "paid_at_sale",
           "payment_method",
           "debt_at_sale",
@@ -6091,6 +6151,39 @@
           "sum_posted"
         ],
         "title": "SalePage"
+      },
+      "SaleRequisitesOut": {
+        "properties": {
+          "seller_name": {
+            "type": "string",
+            "title": "Seller Name"
+          },
+          "seller_iin_bin": {
+            "type": "string",
+            "title": "Seller Iin Bin"
+          },
+          "responsible_person": {
+            "type": "string",
+            "title": "Responsible Person"
+          },
+          "released_by_name": {
+            "type": "string",
+            "title": "Released By Name"
+          },
+          "chief_accountant": {
+            "type": "string",
+            "title": "Chief Accountant"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seller_name",
+          "seller_iin_bin",
+          "responsible_person",
+          "released_by_name",
+          "chief_accountant"
+        ],
+        "title": "SaleRequisitesOut"
       },
       "SaleReturnSummary": {
         "properties": {
@@ -6159,6 +6252,14 @@
           "low_stock_count": {
             "type": "integer",
             "title": "Low Stock Count"
+          },
+          "archived_products_count": {
+            "type": "integer",
+            "title": "Archived Products Count"
+          },
+          "archived_cost_value": {
+            "type": "integer",
+            "title": "Archived Cost Value"
           }
         },
         "type": "object",
@@ -6169,7 +6270,9 @@
           "retail_value",
           "unknown_cost_count",
           "out_of_stock_count",
-          "low_stock_count"
+          "low_stock_count",
+          "archived_products_count",
+          "archived_cost_value"
         ],
         "title": "StockSummary"
       },

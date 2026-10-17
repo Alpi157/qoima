@@ -8,17 +8,18 @@ function groupThousands(digits: string): string {
 }
 
 /** 1250000 -> "12 500", 1250050 -> "12 500,50": tiyn only when there are any, no currency sign. */
-export function formatAmount(tiyn: number): string {
+export function formatAmount(tiyn: number | bigint): string {
   const sign = tiyn < 0 ? '-' : ''
-  const abs = Math.abs(tiyn)
-  const tenge = Math.floor(abs / TIYN_PER_TENGE)
-  const rest = abs % TIYN_PER_TENGE
-  const fraction = rest === 0 ? '' : ',' + String(rest).padStart(2, '0')
+  const value = BigInt(tiyn)
+  const abs = value < 0n ? -value : value
+  const tenge = abs / BigInt(TIYN_PER_TENGE)
+  const rest = abs % BigInt(TIYN_PER_TENGE)
+  const fraction = rest === 0n ? '' : ',' + String(rest).padStart(2, '0')
   return `${sign}${groupThousands(String(tenge))}${fraction}`
 }
 
 /** 1250000 -> "12 500 ₸", 1250050 -> "12 500,50 ₸" (non-breaking spaces). */
-export function formatMoney(tiyn: number): string {
+export function formatMoney(tiyn: number | bigint): string {
   return `${formatAmount(tiyn)}${NBSP}₸`
 }
 

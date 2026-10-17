@@ -18,7 +18,7 @@ type Kind = 'payment' | 'debt' | 'stock'
 function Harness({ kind }: { kind: Kind }) {
   const [opened, setOpened] = useState(true)
   const customer = makeCustomer({ debt: 100000 })
-  const product = makeProduct({ stock: 5 })
+  const product = makeProduct({ stock: 5, avg_cost: 100 })
   return (
     <>
       <Button onClick={() => setOpened(true)}>Reopen</Button>

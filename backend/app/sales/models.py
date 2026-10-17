@@ -43,6 +43,13 @@ class Sale(Base):
     customer_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("customers.id"), index=True
     )
+    customer_name: Mapped[str | None] = mapped_column(Text)
+    customer_phone: Mapped[str | None] = mapped_column(Text)
+    seller_name: Mapped[str] = mapped_column(Text)
+    seller_iin_bin: Mapped[str] = mapped_column(Text)
+    responsible_person: Mapped[str] = mapped_column(Text)
+    released_by_name: Mapped[str] = mapped_column(Text)
+    chief_accountant: Mapped[str] = mapped_column(Text)
     sold_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
@@ -63,6 +70,7 @@ class SaleLine(Base):
     __table_args__ = (
         CheckConstraint("qty > 0", name="qty_positive"),
         CheckConstraint("unit_price >= 0", name="unit_price_non_negative"),
+        CheckConstraint("list_price >= 0", name="list_price_non_negative"),
         CheckConstraint("unit_cost >= 0", name="unit_cost_non_negative"),
         CheckConstraint("line_total >= 0", name="line_total_non_negative"),
         CheckConstraint("line_total = qty * unit_price", name="line_total_matches"),
@@ -71,6 +79,10 @@ class SaleLine(Base):
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     sale_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("sales.id"), index=True)
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
+    article: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str] = mapped_column(Text)
+    list_price: Mapped[int | None] = mapped_column(BigInteger)
     qty: Mapped[int] = mapped_column(Integer)
     unit_price: Mapped[int] = mapped_column(BigInteger)
     unit_cost: Mapped[int | None] = mapped_column(BigInteger)

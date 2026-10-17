@@ -28,8 +28,7 @@ from app.catalog.schemas import ProductCreate, ProductUpdate
 from app.config import get_settings
 from app.customers import service as customers_service
 from app.customers.schemas import CustomerCreate
-from app.inventory.schemas import AdjustmentCreate
-from app.inventory.service import create_adjustment
+from app.inventory.service import MovementIn, post_movements
 from app.payments import service as payments_service
 from app.payments.schemas import PaymentCreate
 from app.receipts import service as receipts_service
@@ -234,16 +233,20 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
     )
 
     unknown = next(item for item in PRODUCTS if item.article == UNKNOWN_COST_ARTICLE)
-    create_adjustment(
+    # Historical unknown stock remains possible; new manual adjustments require a price.
+    post_movements(
         db,
-        AdjustmentCreate(
-            request_id=uuid.uuid4(),
-            product_id=product_ids[unknown.article],
-            qty=unknown.initial_qty,
-            reason="Начальные остатки без закупочной цены",
-        ),
+        [
+            MovementIn(
+                product_ids[unknown.article],
+                unknown.initial_qty,
+                "adjustment",
+                note="Начальные остатки без закупочной цены",
+            )
+        ],
         user.id,
     )
+    db.commit()
 
     for days_ago, at, supplier, receipt_lines in RECEIPTS:
         receipts_service.post_receipt(

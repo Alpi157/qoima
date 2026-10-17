@@ -322,6 +322,11 @@ function ProductDetails({ product }: { product: Product }) {
         {product.is_archived
           ? t('products.archive.restoreText', { article: product.article })
           : t('products.archive.text', { article: product.article })}
+        {!product.is_archived && product.stock > 0 && (
+          <Text component="span" display="block" mt="md">
+            {t('products.archive.remaining', { qty: product.stock })}
+          </Text>
+        )}
       </ConfirmModal>
     </PageContainer>
   )

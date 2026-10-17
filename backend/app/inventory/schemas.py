@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_core import PydanticCustomError
 
+from app.receipts.schemas import UnitCost
 from app.schema_types import DbId, Reason
 
 MAX_ADJUSTMENT_QTY = 100_000
@@ -18,6 +19,7 @@ class AdjustmentCreate(BaseModel):
     request_id: UUID
     product_id: DbId
     qty: AdjustmentQty
+    unit_cost: UnitCost | None = None
     reason: Reason
 
     @field_validator("qty")
@@ -59,3 +61,5 @@ class StockSummary(BaseModel):
     unknown_cost_count: int
     out_of_stock_count: int
     low_stock_count: int
+    archived_products_count: int
+    archived_cost_value: int

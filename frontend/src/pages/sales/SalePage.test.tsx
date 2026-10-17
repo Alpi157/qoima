@@ -18,6 +18,8 @@ const POSTED = makeSale({
       unit: 'шт',
       qty: 3,
       unit_price: 1250000,
+      list_price: null,
+      discount: null,
       id: 1,
       returned_qty: 0,
       unit_cost: null,
@@ -45,6 +47,14 @@ afterEach(() => {
 const REASON_ERROR = 'Укажите причину, не короче 3 символов'
 
 describe('SalePage', () => {
+  it.each([null, 0, 12345])('shows only a positive known discount: %s', async (discount) => {
+    vi.spyOn(api, 'GET').mockReturnValue(ok({ ...POSTED, discount_total: discount }))
+    renderPage()
+    await screen.findByText('Итого')
+    expect(Boolean(screen.queryByText('Скидка: 123,45 ₸'))).toBe(discount === 12345)
+    if (discount !== 12345) expect(screen.queryByText(/Скидка:/)).toBeNull()
+  })
+
   it('shows current outstanding and the original payment', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(
       ok({

@@ -11,6 +11,7 @@ from app.customers.service import current_debt
 from app.db_utils import RECEIPT_REQUEST_LOCK, STOCK_ADJUSTMENT_REQUEST_LOCK, lock_request_id
 from app.debt_adjustments.schemas import DebtAdjustmentCreate
 from app.debt_adjustments.service import post_debt_adjustment
+from app.errors import AdjustmentCostNotAllowedError
 from app.inventory.models import StockBalance, StockMovement
 from app.inventory.schemas import AdjustmentCreate
 from app.inventory.service import MovementIn, create_adjustment, post_movements
@@ -108,3 +109,51 @@ def test_request_lock_namespaces_are_independent(isolated_stock_engine):
         with Session(isolated_stock_engine) as other:
             other.execute(select(func.set_config("lock_timeout", "1000", True)))
             lock_request_id(other, STOCK_ADJUSTMENT_REQUEST_LOCK, request_id)
+
+
+@pytest.mark.parametrize("supplied_cost", [None, 200])
+def test_adjustment_validates_cost_after_receipt_lock(isolated_stock_engine, supplied_cost):
+    engine = isolated_stock_engine
+    with Session(engine) as db:
+        user = create_user(db).id
+        product = create_product(db).id
+        post_movements(db, [MovementIn(product, 2, "receipt")], user)
+        db.commit()
+    ready = Event()
+    pids = []
+
+    def other():
+        with Session(engine) as db:
+            pids.append(db.scalar(select(func.pg_backend_pid())))
+            ready.set()
+            return create_adjustment(
+                db,
+                AdjustmentCreate(
+                    request_id=uuid.uuid4(),
+                    product_id=product,
+                    qty=1,
+                    unit_cost=supplied_cost,
+                    reason="Пересчёт",
+                ),
+                user,
+            )
+
+    with Session(engine) as owner, ThreadPoolExecutor(max_workers=1) as executor:
+        post_movements(owner, [MovementIn(product, 1, "receipt", unit_cost=100)], user)
+        future = executor.submit(other)
+        try:
+            assert ready.wait(5)
+            wait_until_lock_waiting(pids[0], "stock_balances", allow_insert=True)
+            owner.commit()
+            if supplied_cost is None:
+                result, created = future.result(timeout=5)
+                assert created and result.stock == 4
+            else:
+                with pytest.raises(AdjustmentCostNotAllowedError):
+                    future.result(timeout=5)
+        finally:
+            owner.rollback()
+    with Session(engine) as db:
+        row = db.scalar(select(StockBalance).where(StockBalance.product_id == product))
+        assert row.avg_cost == 100
+        assert row.qty == (4 if supplied_cost is None else 3)

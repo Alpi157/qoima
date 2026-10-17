@@ -1,10 +1,29 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { makeProduct, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { ProductPage } from './ProductPage'
+import { setupUser } from '../../test/user'
 afterEach(() => vi.restoreAllMocks())
+it.each([0, 3])('archive confirmation explains the remaining stock %s', async (stock) => {
+  const user = setupUser()
+  const patch = vi
+    .spyOn(api, 'PATCH')
+    .mockReturnValue(ok(makeProduct({ stock, is_archived: true })))
+  vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+    ok(
+      path === '/api/products/{product_id}' ? makeProduct({ stock }) : { items: [], total: 0 },
+    )) as never)
+  renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
+    route: '/products/1',
+  })
+  await user.click(await screen.findByRole('button', { name: 'В архив' }))
+  const warning = screen.queryByText('На складе осталось 3 шт. Они останутся в стоимости склада.')
+  expect(Boolean(warning)).toBe(stock > 0)
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'В архив' }))
+  await waitFor(() => expect(patch).toHaveBeenCalled())
+})
 it('translates return movements and links both to the return document', async () => {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(

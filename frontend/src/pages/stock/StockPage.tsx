@@ -70,6 +70,14 @@ function StockSummary() {
           unit="₸"
         />
       </SimpleGrid>
+      {data.archived_products_count > 0 && (
+        <Text mt="md" size="sm" c="dimmed">
+          {t('stock.archivedStock', {
+            count: data.archived_products_count,
+            amount: formatRoundedMoney(data.archived_cost_value),
+          })}
+        </Text>
+      )}
       {data.unknown_cost_count > 0 && (
         <Text mt="md" size="sm" c="dimmed">
           {t('stock.unknownCost', { count: data.unknown_cost_count })}
