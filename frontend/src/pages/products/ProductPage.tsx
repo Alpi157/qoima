@@ -324,7 +324,10 @@ function ProductDetails({ product }: { product: Product }) {
           : t('products.archive.text', { article: product.article })}
         {!product.is_archived && product.stock > 0 && (
           <Text component="span" display="block" mt="md">
-            {t('products.archive.remaining', { qty: product.stock })}
+            {t('products.archive.remaining', {
+              qty: product.stock,
+              unit: unitLabel(product.unit),
+            })}
           </Text>
         )}
       </ConfirmModal>

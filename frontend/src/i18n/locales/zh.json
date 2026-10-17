@@ -120,7 +120,9 @@
     "stock_adjustment_request_conflict": "此调整可能已用其他数据保存，请检查商品记录。",
     "amount_too_large": "金额过大",
     "adjustment_cost_required": "请输入采购价：商品的平均成本未知",
-    "adjustment_cost_not_allowed": "仅在增加平均成本未知的商品时需要采购价"
+    "adjustment_cost_not_allowed": "仅在增加平均成本未知的商品时需要采购价",
+    "rate_not_found": "未找到该日期及更早日期的汇率",
+    "rate_date_in_future": "汇率日期不能是未来日期"
   },
   "validation": {
     "missing": "必填",
@@ -187,7 +189,7 @@
       "restoreConfirm": "恢复显示",
       "text": "商品 {{article}} 将不再出现在列表和搜索里。记录和库存都会保留。",
       "restoreText": "商品 {{article}} 会重新出现在列表和搜索里。",
-      "remaining": "仓库还剩 {{qty}} 件。它们仍计入库存价值。"
+      "remaining": "仓库还剩 {{qty}} {{unit}}。它们仍计入库存价值。"
     },
     "card": {
       "back": "商品",
@@ -357,7 +359,7 @@
     "print": {
       "print": "打印",
       "back": "返回",
-      "fillSettings": "请在<settings>设置</settings>里填写公司信息"
+      "fillSettings": "此笔销售时尚未填写企业信息。请在<settings>设置</settings>中填写，供之后的销售使用。"
     },
     "paymentStatus": {
       "unpaid": "未付：{{amount}}",

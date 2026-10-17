@@ -216,7 +216,7 @@ export function SellStepProducts({
                   />
                   {discount && (
                     <Text size="sm" c="dimmed">
-                      {t('sell.discountLine', {
+                      {t(discount.percent === 0 ? 'sell.discountTotal' : 'sell.discountLine', {
                         amount: formatMoney(discount.amount),
                         percent: discount.percent,
                       })}

@@ -103,6 +103,9 @@ const ru = flatten(readJson('ru'))
 const ruBaseKeys = new Set([...ru.keys()].map(baseKey))
 const { literal, dynamic } = usedKeys()
 const problems = []
+const forbiddenKazakhStems = JSON.parse(
+  readFileSync(join(ROOT, 'scripts', 'kk-forbidden-stems.json'), 'utf8'),
+)
 
 for (const [key, where] of literal) {
   if (!ruBaseKeys.has(key)) problems.push(`missing in ru.json: ${key} (${where})`)
@@ -186,6 +189,16 @@ for (const key of ruExpected) {
 console.log(`ru: ${ru.size} keys`)
 for (const language of OTHER_LANGUAGES) {
   const texts = flatten(readJson(language))
+  if (language === 'kk') {
+    for (const [key, text] of texts) {
+      if (typeof text !== 'string') continue
+      for (const stem of forbiddenKazakhStems) {
+        if (text.toLocaleLowerCase('kk').includes(stem.toLocaleLowerCase('kk'))) {
+          problems.push(`forbidden Kazakh stem in kk.json: ${key}: ${stem}`)
+        }
+      }
+    }
+  }
   const expected = expectedKeys(language).filter(
     (key) => !RUSSIAN_ONLY.some((prefix) => key.startsWith(prefix)),
   )

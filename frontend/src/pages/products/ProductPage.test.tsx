@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react'
+import i18n from 'i18next'
 import { afterEach, expect, it, vi } from 'vitest'
 import { api } from '../../api/client'
 import { makeProduct, ok } from '../../test/fixtures'
@@ -6,6 +7,25 @@ import { renderWithDataRouter } from '../../test/render'
 import { ProductPage } from './ProductPage'
 import { setupUser } from '../../test/user'
 afterEach(() => vi.restoreAllMocks())
+it.each([
+  ['kk', 'Қоймада 3 л қалды. Олар қойма құнында қала береді.'],
+  ['ru', 'На складе осталось 3 л. Они останутся в стоимости склада.'],
+  ['zh', '仓库还剩 3 升。它们仍计入库存价值。'],
+])('archive warning uses the product unit in %s', async (language, text) => {
+  await i18n.changeLanguage(language)
+  vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+    ok(
+      path === '/api/products/{product_id}'
+        ? makeProduct({ stock: 3, unit: 'л' })
+        : { items: [], total: 0 },
+    )) as never)
+  renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
+    route: '/products/1',
+  })
+  const user = setupUser()
+  await user.click(await screen.findByRole('button', { name: i18n.t('products.card.archive') }))
+  expect(within(screen.getByRole('dialog')).getByText(text)).toBeTruthy()
+})
 it.each([0, 3])('archive confirmation explains the remaining stock %s', async (stock) => {
   const user = setupUser()
   const patch = vi

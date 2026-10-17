@@ -11,6 +11,49 @@ type Sale = components['schemas']['SaleOut']
 type ReturnDocument = components['schemas']['ReturnOut']
 type ReturnListItem = components['schemas']['ReturnListItem']
 
+test('rate preparation: non-piece archive unit and historical empty requisites', async ({
+  page,
+}, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  const products = await getJson<components['schemas']['ProductPage']>(
+    page,
+    '/api/products?limit=200',
+  )
+  const product = products.items.find((item) => item.stock > 0 && !item.is_archived)!
+  await page.route(`**/api/products/${product.id}`, async (route) => {
+    const response = await route.fetch()
+    await route.fulfill({ response, json: { ...(await response.json()), unit: 'л' } })
+  })
+  await page.goto(`/products/${product.id}`)
+  await page.getByRole('button', { name: 'Жасыру', exact: true }).click()
+  await expect(
+    page
+      .getByRole('dialog')
+      .getByText(`Қоймада ${product.stock} л қалды. Олар қойма құнында қала береді.`),
+  ).toBeVisible()
+  await snap(page, 'rates-archive-unit', width, { fullPage: false })
+  await page.unroute(`**/api/products/${product.id}`)
+  const sales = await getJson<ListPage<Sale>>(page, '/api/sales?limit=200')
+  const saleId = sales.items
+    .filter((sale) => sale.status === 'posted')
+    .sort((left, right) => left.number - right.number)[0].id
+  await page.route(`**/api/sales/${saleId}`, async (route) => {
+    const response = await route.fetch()
+    const sale = (await response.json()) as Sale
+    const requisites = Object.fromEntries(Object.keys(sale.requisites).map((key) => [key, '']))
+    await route.fulfill({ response, json: { ...sale, requisites } })
+  })
+  await page.goto(`/sales/${saleId}/print`)
+  const warning = page.getByTestId('settings-warning')
+  await expect(warning).toContainText('Келесі сатылымдар үшін')
+  // The design system's black is #16202A.
+  await expect(warning.locator('.mantine-Alert-message')).toHaveCSS('color', 'rgb(22, 32, 42)')
+  await expect(warning.getByRole('link')).toHaveAttribute('href', '/settings')
+  await snap(page, 'rates-invoice-requisites', width, { fullPage: false, h1: false })
+})
+
 test('document snapshots and stock cost screens in Kazakh', async ({ page }, testInfo) => {
   const width = testInfo.project.name
   await login(page)

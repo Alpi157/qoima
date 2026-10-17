@@ -32,6 +32,11 @@
   (язык интерфейса `LOCALE=kk|ru|zh`, по умолчанию `kk`; или
   `cd backend && uv run python -m app.cli create-user --username owner --full-name "Имя" --locale kk`)
 - Сменить пароль: `cd backend && uv run python -m app.cli set-password --username owner`
+- Загрузить курсы Нацбанка: `cd backend && uv run python -m app.cli rates-fetch --from 2026-10-11 --to 2026-10-17`
+  (обе валюты по умолчанию; можно повторить `--currency CNY --currency USD`, максимум 400 дней
+  включительно). На сервере из корня: `docker compose -f deploy/docker-compose.prod.yml exec api python -m app.cli rates-fetch --from 2026-10-11 --to 2026-10-17`.
+  Уже записанные курсы не загружаются; код 0 — все есть, 1 — хотя бы одного точного курса нет,
+  2 — ошибка аргументов. Команда за последние 7 дней — в deploy/README.md.
 - Импорт товаров и начальных остатков: `make import-products FILE=import/qoima-import.xlsx USER=owner`
   (пробный прогон); для записи добавить `APPLY=1`. CLI:
   `cd backend && uv run python -m app.cli import-products ../import/qoima-import.xlsx --user owner [--apply]`.
@@ -46,7 +51,9 @@
 - Проверка ключей переводов: `cd frontend && npm run i18n:check` (падает, если ключа из кода нет
   в `ru.json` или в `ru.json` есть лишний ключ; если в `kk.json`/`zh.json` не хватает ключа, есть
   лишний или другой набор `{{переменных}}` и `<тегов>`, чем в русской строке; формы множественного
-  числа по `Intl.PluralRules` языка, `invoice.*` в kk и zh не нужны; печатает процент перевода)
+  числа по `Intl.PluralRules` языка, `invoice.*` в kk и zh не нужны; печатает процент перевода;
+  также ищет в kk.json запрещённые основы из `frontend/scripts/kk-forbidden-stems.json`
+  как подстроки без учёта регистра; список пояснён в `docs/glossary.md`)
 - Форматирование backend: `cd backend && uv run ruff format .`
 - Форматирование frontend: `cd frontend && npm run format`
 - Сборка frontend: `cd frontend && npm run build`
@@ -89,6 +96,8 @@
 - Снимки шага 24 (`snapshot-*`) на kk в 1366x768 и 390x844 показывают скидку в строке
   и проверке продажи, архивные остатки, предупреждение архивации и цену корректировки;
   входят в `make screenshots`. E2e также проверяет печать после переименования товара.
+- Снимки шага 25 (`rates-*`): окно архивации с единицей «л» и накладная с пустым
+  историческим снимком реквизитов, на kk в 1366x768 и 390x844; входят в `make screenshots`.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

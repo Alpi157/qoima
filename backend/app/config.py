@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     # false in production: /docs, /redoc and /openapi.json are not served.
     enable_docs: bool = True
+    nbk_rates_url: str = "https://nationalbank.kz/rss/get_rates.cfm"
 
 
 @lru_cache

@@ -1,7 +1,10 @@
 """Admin commands. Usage: uv run python -m app.cli <command> ..."""
 
 import argparse
+import logging
 import sys
+import time
+from datetime import date, timedelta
 from getpass import getpass
 from pathlib import Path
 
@@ -13,8 +16,10 @@ from app.auth import service
 from app.auth.models import DEFAULT_LOCALE
 from app.auth.schemas import LOCALES
 from app.db import SessionLocal
-from app.errors import AppError
+from app.errors import AppError, RateNotFoundError
 from app.importer import ImportFailure, import_products
+from app.rates import service as rates_service
+from app.rates.schemas import CURRENCIES, Currency
 
 
 def _read_password() -> str | None:
@@ -92,6 +97,42 @@ def import_products_command(db: Session, path: Path, username: str, apply: bool 
     return 0
 
 
+def rates_fetch_command(date_from: date, date_to: date, currencies: list[Currency]) -> int:
+    fetched = False
+
+    def before_fetch() -> None:
+        nonlocal fetched
+        if fetched:
+            time.sleep(1)
+        fetched = True
+
+    print("Дата        Валюта  Курс, ₸ за единицу")
+    missing = False
+    for offset in range((date_to - date_from).days + 1):
+        day = date_from + timedelta(days=offset)
+        for currency in dict.fromkeys(currencies):
+            try:
+                rate = rates_service.get_rate(
+                    currency, day, session_factory=SessionLocal, before_fetch=before_fetch
+                )
+            except RateNotFoundError:
+                rate = None
+            if rate is None or not rate.exact:
+                value = "нет ответа"
+                missing = True
+            else:
+                value = format(rate.rate, ".4f")
+            print(f"{day.isoformat()}  {currency:<6}  {value}")
+    return int(missing)
+
+
+def _rate_date_argument(value: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Укажите дату в формате ГГГГ-ММ-ДД") from exc
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="app.cli", description="Администрирование Qoima")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -118,7 +159,21 @@ def main(argv: list[str] | None = None) -> int:
         "--apply", action="store_true", help="записать импорт; без флага только проверка"
     )
 
+    rates = commands.add_parser("rates-fetch", help="загрузить курсы Нацбанка за период")
+    rates.add_argument("--from", dest="date_from", type=_rate_date_argument, required=True)
+    rates.add_argument("--to", dest="date_to", type=_rate_date_argument, required=True)
+    rates.add_argument("--currency", action="append", choices=CURRENCIES)
+
     args = parser.parse_args(argv)
+    if args.command == "rates-fetch":
+        if args.date_from > args.date_to:
+            rates.error("Дата --from не может быть позже --to")
+        if (args.date_to - args.date_from).days >= 400:
+            rates.error("Диапазон не может быть больше 400 дней включительно")
+        if args.date_to > rates_service.today_local():
+            rates.error("Дата курса не может быть в будущем")
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+        return rates_fetch_command(args.date_from, args.date_to, args.currency or list(CURRENCIES))
     with SessionLocal() as db:
         if args.command == "create-user":
             return create_user_command(db, args.username, args.full_name, args.locale)

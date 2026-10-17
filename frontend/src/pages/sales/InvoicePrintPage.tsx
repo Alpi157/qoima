@@ -304,7 +304,13 @@ function InvoiceScreen({ sale }: { sale: Sale }) {
           </Button>
         </Group>
         {!sale.requisites.seller_name && (
-          <Alert color="yellow" variant="filled" c="black" data-testid="settings-warning">
+          <Alert
+            color="yellow"
+            variant="filled"
+            c="black"
+            styles={{ message: { color: 'var(--mantine-color-black)' } }}
+            data-testid="settings-warning"
+          >
             <Trans
               i18nKey="sales.print.fillSettings"
               components={{

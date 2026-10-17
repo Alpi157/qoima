@@ -490,6 +490,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Rate */
+        get: operations["get_rate_api_rates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/summary": {
         parameters: {
             query?: never;
@@ -825,7 +842,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -1142,6 +1159,34 @@ export interface components {
             note?: string | null;
             /** Is Archived */
             is_archived?: boolean | null;
+        };
+        /** RateOut */
+        RateOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "CNY" | "USD";
+            /**
+             * Requested Date
+             * Format: date
+             */
+            requested_date: string;
+            /**
+             * Rate Date
+             * Format: date
+             */
+            rate_date: string;
+            /** Rate */
+            rate: string;
+            /**
+             * Source
+             * @default nbk
+             * @constant
+             */
+            source: "nbk";
+            /** Exact */
+            exact: boolean;
         };
         /** ReceiptCancel */
         ReceiptCancel: {
@@ -3018,6 +3063,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BusinessSettingsOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_rate_api_rates_get: {
+        parameters: {
+            query: {
+                currency: "CNY" | "USD";
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateOut"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react'
+import i18n from 'i18next'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
@@ -67,6 +68,18 @@ afterEach(() => {
 })
 
 describe('SellPage, step 1', () => {
+  it.each(['kk', 'ru', 'zh'])(
+    'shows a small discount without zero percent in %s',
+    async (language) => {
+      await i18n.changeLanguage(language)
+      mockFlowGet({ products: PRODUCTS })
+      saveDraft({ lines: [{ productId: FILTER.id, qty: 1, price: '12400' }] })
+      renderSell()
+      const text = i18n.t('sell.discountTotal', { amount: '100 ₸' })
+      expect(await screen.findByText(text)).toBeTruthy()
+      expect(screen.queryByText(/0[%％]/)).toBeNull()
+    },
+  )
   it('shows the line discount with a floored percent and then the review discount', async () => {
     const user = setupUser()
     mockFlowGet({ products: PRODUCTS })

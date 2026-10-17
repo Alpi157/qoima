@@ -1,5 +1,6 @@
 import os
 import subprocess
+import urllib.request
 import uuid
 from collections.abc import Generator
 from pathlib import Path
@@ -15,6 +16,8 @@ from app.config import get_settings
 from app.db import Base, get_db
 from app.inventory.service import MovementIn, post_movements
 from app.main import app
+from app.rates import router as rates_router
+from app.rates import service as rates_service
 from tests import factories
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -96,6 +99,18 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture(autouse=True)
 def reset_login_rate_limit() -> None:
     login_rate_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def forbid_http_network(monkeypatch):
+    def forbidden(*args, **kwargs):
+        pytest.fail("Unexpected HTTP network request: replace the transport with a fixture")
+
+    monkeypatch.setattr(urllib.request, "urlopen", forbidden)
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", forbidden)
+    monkeypatch.setattr(rates_service, "_failures", {})
+    # Even an accidental /api/rates call in another test must never use the main DB.
+    monkeypatch.setattr(rates_router, "SessionLocal", TestSessionLocal)
 
 
 @pytest.fixture

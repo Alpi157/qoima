@@ -322,10 +322,29 @@ describe('InvoicePrintPage', () => {
 
     await invoice()
     const warning = screen.getByTestId('settings-warning')
-    expect(warning.textContent).toBe('Заполните реквизиты в настройках')
+    expect(warning.textContent).toBe(
+      'На момент этой продажи реквизиты не были заполнены. Для следующих продаж заполните их в настройках.',
+    )
     expect(warning.closest('.no-print')).not.toBeNull()
     expect(screen.getByRole('link', { name: 'настройках' }).getAttribute('href')).toBe('/settings')
   })
+
+  it.each(['kk', 'ru', 'zh'])(
+    'explains missing historical details in %s despite filled current settings',
+    async (language) => {
+      await i18n.changeLanguage(language)
+      const get = mockApi(SALE, makeBusinessSettings({ seller_name: '' }))
+      renderPage()
+      await invoice()
+      const warning = screen.getByTestId('settings-warning')
+      expect(warning.textContent).toBe(
+        i18n.t('sales.print.fillSettings').replace(/<\/?settings>/g, ''),
+      )
+      expect(within(warning).getByRole('link').getAttribute('href')).toBe('/settings')
+      expect(warning.closest('.no-print')).not.toBeNull()
+      expect(get).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it('Назад without history goes to the sale card', async () => {
     const user = setupUser()

@@ -2333,6 +2333,67 @@
         ]
       }
     },
+    "/api/rates": {
+      "get": {
+        "tags": [
+          "rates"
+        ],
+        "summary": "Get Rate",
+        "operationId": "get_rate_api_rates_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "CNY",
+                "USD"
+              ],
+              "type": "string",
+              "title": "Currency"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/reports/summary": {
       "get": {
         "tags": [
@@ -3571,6 +3632,8 @@
           "sale_has_returns",
           "not_found",
           "method_not_allowed",
+          "rate_not_found",
+          "rate_date_in_future",
           "http_error"
         ],
         "title": "ErrorCode",
@@ -4554,6 +4617,51 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ProductUpdate"
+      },
+      "RateOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "requested_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Requested Date"
+          },
+          "rate_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Rate Date"
+          },
+          "rate": {
+            "type": "string",
+            "title": "Rate"
+          },
+          "source": {
+            "type": "string",
+            "const": "nbk",
+            "title": "Source",
+            "default": "nbk"
+          },
+          "exact": {
+            "type": "boolean",
+            "title": "Exact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "requested_date",
+          "rate_date",
+          "rate",
+          "exact"
+        ],
+        "title": "RateOut"
       },
       "ReceiptCancel": {
         "properties": {
