@@ -7,6 +7,7 @@ const STOCK_QUERY_PREFIXES = [
   'products',
   'product',
   'product-movements',
+  'product-purchases',
   'stock-summary',
 ]
 

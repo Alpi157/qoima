@@ -62,6 +62,11 @@ export function apiErrorText(error: unknown, t: TFunction = i18n.t): string {
   if (!error.code || !i18n.exists(key)) return error.detail
 
   const values = interpolationValues(error.params, t)
+  if (error.code === 'expense_manual_sum_mismatch') {
+    for (const key of ['expected', 'actual']) {
+      if (typeof values[key] === 'number') values[key] = formatMoney(values[key])
+    }
+  }
   if (error.code === 'paid_exceeds_total' && typeof values.total === 'number') {
     values.total = formatMoney(values.total)
   }

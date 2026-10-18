@@ -32,6 +32,38 @@ afterEach(() => {
 })
 
 describe('SettingsPage', () => {
+  it('saves VAT and the rate threshold in the same request as invoice details', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(ok(makeBusinessSettings()))
+    const put = vi
+      .spyOn(api, 'PUT')
+      .mockReturnValue(ok(makeBusinessSettings({ is_vat_payer: true, rate_warning_percent: 15 })))
+    renderWithProviders(<SettingsPage />)
+    const user = setupUser()
+    await user.click(await screen.findByRole('checkbox', { name: 'Мы плательщик НДС' }))
+    const threshold = screen.getByRole('textbox', { name: 'Предупреждать о разнице курса, %' })
+    await user.clear(threshold)
+    await fill(user, threshold, '15')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(put).toHaveBeenCalledTimes(1))
+    expect((put.mock.calls[0][1] as { body: BusinessSettingsUpdate }).body).toMatchObject({
+      is_vat_payer: true,
+      rate_warning_percent: 15,
+      seller_name: '3А Аuto Parts.KZ',
+    })
+  })
+  it('rejects rate thresholds outside 1–100 without losing the entered value', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(ok(makeBusinessSettings()))
+    const put = vi.spyOn(api, 'PUT')
+    renderWithProviders(<SettingsPage />)
+    const user = setupUser()
+    const field = await screen.findByRole('textbox', { name: 'Предупреждать о разнице курса, %' })
+    await user.clear(field)
+    await fill(user, field, '101')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(put).not.toHaveBeenCalled()
+    expect((field as HTMLInputElement).value).toBe('101')
+    expect(screen.getByText('Введите целое число от 1 до 100.')).toBeTruthy()
+  })
   it('«Нет бухгалтера» writes the phrase for the invoice', async () => {
     const user = setupUser()
     vi.spyOn(api, 'GET').mockReturnValue(ok(makeBusinessSettings({ chief_accountant: 'Иванова' })))
@@ -68,6 +100,8 @@ describe('SettingsPage', () => {
     const [path, init] = put.mock.calls[0] as unknown as [string, { body: BusinessSettingsUpdate }]
     expect(path).toBe('/api/settings')
     expect(init.body).toStrictEqual({
+      is_vat_payer: false,
+      rate_warning_percent: 10,
       seller_name: '3А Аuto Parts.KZ',
       seller_iin_bin: '900101300123',
       responsible_person: 'Кәкеш Арман',

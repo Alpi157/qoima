@@ -72,3 +72,20 @@ class ProductOut(BaseModel):
 class ProductPage(BaseModel):
     items: list[ProductOut]
     total: int
+
+
+class ProductPurchaseOut(BaseModel):
+    receipt_id: int
+    receipt_number: int
+    received_at: datetime
+    currency: Literal["KZT", "CNY", "USD"]
+    exchange_rate: str
+    unit_price_minor: int | None
+    qty: int
+    unit_cost: int | None
+    total: int | None
+
+
+class ProductPurchasePage(BaseModel):
+    items: list[ProductPurchaseOut]
+    total: int

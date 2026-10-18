@@ -72,6 +72,9 @@
   (или `cd backend && uv run python -m app.demo seed`); API на демо-базе:
   `cd backend && uv run python -m app.demo serve --port 8011`. Пользователь `demo`, язык kk,
   пароль из переменной `DEMO_PASSWORD`, в git его нет.
+  Демо содержит CNY 67.6200 и USD 452.1200 за последние 31 день и валютный приход
+  с доставкой и пошлиной. `app.demo serve` принудительно использует закрытый локальный
+  адрес ленты: внешних запросов Нацбанку из демо и e2e нет.
 - Локальный сценарий валютного прихода 26a-2 (после подготовки demo и запуска API на 8011):
   `cd backend && DEMO_PASSWORD=... uv run python ../scripts/check_receipt_26a2.py`.
   Записывает курс 70.0000 только в локальную `qoima_demo`, проверяет preview и ответы
@@ -92,7 +95,7 @@
   Только при `QOIMA_E2E_BUILD=1` Playwright собирает frontend и запускает preview;
   обычные e2e, `make test` и `make screenshots` используют прежний запуск без дополнительной сборки.
 - Проверки черновиков и бюджета действий (после подготовки `qoima_demo` с тем же
-  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget"`.
+  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget|currency receipt"`.
   Бюджет одного клика, заполнения поля и Enter хранится в `frontend/e2e/action-budget.json`;
   штатные сценарии не должны превышать зафиксированные числа.
 - Снимки шага 23 (`draft-*`) дополнительно снимаются на kk в 1366x768 и 390x844,
@@ -102,6 +105,9 @@
   входят в `make screenshots`. E2e также проверяет печать после переименования товара.
 - Снимки шага 25 (`rates-*`): окно архивации с единицей «л» и накладная с пустым
   историческим снимком реквизитов, на kk в 1366x768 и 390x844; входят в `make screenshots`.
+- Снимки шага 26b (`currency-*`): валюта, ручной и отсутствующий курс, расходы,
+  ручная раскладка, проверка, предупреждения (включая KZT 409), карточка прихода,
+  история закупок и настройки на kk в 1366x768 и 390x844; входят в `make screenshots`.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

@@ -22,6 +22,7 @@ import { formatMoney } from '../../lib/money'
 import { parseId } from '../../lib/routeParams'
 import { type Receipt, useCancelReceipt, useReceipt } from './api'
 import { ReceiptStatusBadge } from './ReceiptStatusBadge'
+import { ReceiptCosts, ReceiptRate } from './ReceiptCosts'
 
 type ReceiptLineOut = Receipt['lines'][number]
 
@@ -30,7 +31,7 @@ function money(tiyn: number | null): string {
 }
 
 function lineSum(line: ReceiptLineOut): number | null {
-  return line.unit_cost !== null ? line.unit_cost * line.qty : null
+  return line.goods_total !== null ? line.goods_total + line.expenses_total : null
 }
 
 function ProductLink({ line }: { line: ReceiptLineOut }) {
@@ -129,6 +130,9 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
       <Card>
         <Stack gap="xs">
           <Text>{t('receipts.card.supplier', { supplier: receipt.supplier ?? '—' })}</Text>
+          {(receipt.currency !== 'KZT' || receipt.expenses.length > 0) && (
+            <ReceiptRate receipt={receipt} />
+          )}
           {receipt.note && (
             <Text style={{ whiteSpace: 'pre-wrap' }}>
               {t('receipts.card.note', { note: receipt.note })}
@@ -138,7 +142,11 @@ function ReceiptDetails({ receipt }: { receipt: Receipt }) {
       </Card>
 
       <Stack gap="md">
-        <LinesTable lines={receipt.lines} />
+        {receipt.currency !== 'KZT' || receipt.expenses.length > 0 ? (
+          <ReceiptCosts receipt={receipt} />
+        ) : (
+          <LinesTable lines={receipt.lines} />
+        )}
         <Card>
           <Group justify="space-between" gap="md">
             <Text>{t('receipts.card.positions', { count: receipt.lines.length })}</Text>

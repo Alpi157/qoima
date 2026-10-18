@@ -4,7 +4,13 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.catalog import service
-from app.catalog.schemas import ProductCreate, ProductOut, ProductPage, ProductUpdate
+from app.catalog.schemas import (
+    ProductCreate,
+    ProductOut,
+    ProductPage,
+    ProductPurchasePage,
+    ProductUpdate,
+)
 from app.db import get_db
 from app.schema_types import DbId
 
@@ -39,6 +45,16 @@ def get_product(product_id: DbId, db: Session = Depends(get_db)) -> ProductOut:
 @router.post("", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 def create_product(payload: ProductCreate, db: Session = Depends(get_db)) -> ProductOut:
     return service.create_product(db, payload)
+
+
+@router.get("/{product_id}/purchases", response_model=ProductPurchasePage)
+def product_purchases(
+    product_id: DbId,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> ProductPurchasePage:
+    return service.product_purchases(db, product_id, limit, offset)
 
 
 @router.patch("/{product_id}", response_model=ProductOut)

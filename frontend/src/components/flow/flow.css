@@ -262,6 +262,12 @@
   background: var(--q-color-surface);
 }
 
+/* Receipt confirmations may contain many paragraphs; never pin them over input fields. */
+.flow-side-notice,
+.flow-aside-notice {
+  position: static;
+}
+
 /* Step 3: on a phone the save button on top, full width, «back» under it. */
 @media (max-width: 48em) {
   .flow-review-actions {

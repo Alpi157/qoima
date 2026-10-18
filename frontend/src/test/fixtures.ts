@@ -96,8 +96,9 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
     min_qty: null,
     avg_cost: null,
     last_cost: null,
-    last_purchase_currency: null,
-    last_purchase_price_minor: null,
+    last_purchase_currency:
+      overrides.last_cost !== undefined && overrides.last_cost !== null ? 'KZT' : null,
+    last_purchase_price_minor: overrides.last_cost ?? null,
     ...overrides,
   }
 }

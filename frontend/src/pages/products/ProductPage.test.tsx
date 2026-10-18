@@ -15,9 +15,11 @@ it.each([
   await i18n.changeLanguage(language)
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(
-      path === '/api/products/{product_id}'
-        ? makeProduct({ stock: 3, unit: 'л' })
-        : { items: [], total: 0 },
+      path === '/api/products/{product_id}/purchases'
+        ? { items: [], total: 0 }
+        : path === '/api/products/{product_id}'
+          ? makeProduct({ stock: 3, unit: 'л' })
+          : { items: [], total: 0 },
     )) as never)
   renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
     route: '/products/1',
@@ -33,7 +35,11 @@ it.each([0, 3])('archive confirmation explains the remaining stock %s', async (s
     .mockReturnValue(ok(makeProduct({ stock, is_archived: true })))
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(
-      path === '/api/products/{product_id}' ? makeProduct({ stock }) : { items: [], total: 0 },
+      path === '/api/products/{product_id}/purchases'
+        ? { items: [], total: 0 }
+        : path === '/api/products/{product_id}'
+          ? makeProduct({ stock })
+          : { items: [], total: 0 },
     )) as never)
   renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
     route: '/products/1',
@@ -47,23 +53,25 @@ it.each([0, 3])('archive confirmation explains the remaining stock %s', async (s
 it('translates return movements and links both to the return document', async () => {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(
-      path === '/api/products/{product_id}'
-        ? makeProduct()
-        : {
-            items: ['return', 'return_cancel'].map((kind, i) => ({
-              id: i + 1,
-              created_at: '2026-09-27T09:00:00Z',
-              kind,
-              qty: i ? -1 : 1,
-              balance_after: 1,
-              doc_type: 'return',
-              doc_id: 4,
-              doc_number: 10,
-              created_by_name: 'Владелец',
-              note: null,
-            })),
-            total: 2,
-          },
+      path === '/api/products/{product_id}/purchases'
+        ? { items: [], total: 0 }
+        : path === '/api/products/{product_id}'
+          ? makeProduct()
+          : {
+              items: ['return', 'return_cancel'].map((kind, i) => ({
+                id: i + 1,
+                created_at: '2026-09-27T09:00:00Z',
+                kind,
+                qty: i ? -1 : 1,
+                balance_after: 1,
+                doc_type: 'return',
+                doc_id: 4,
+                doc_number: 10,
+                created_by_name: 'Владелец',
+                note: null,
+              })),
+              total: 2,
+            },
     )) as never)
   renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
     route: '/products/1',
@@ -77,9 +85,11 @@ it('translates return movements and links both to the return document', async ()
 it.each([null, 0, 100050])('shows costs %s and an explicit unset threshold', async (cost) => {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(
-      path === '/api/products/{product_id}'
-        ? makeProduct({ avg_cost: cost, last_cost: cost })
-        : { items: [], total: 0 },
+      path === '/api/products/{product_id}/purchases'
+        ? { items: [], total: 0 }
+        : path === '/api/products/{product_id}'
+          ? makeProduct({ avg_cost: cost, last_cost: cost })
+          : { items: [], total: 0 },
     )) as never)
   renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
     route: '/products/1',
@@ -94,9 +104,11 @@ it.each([null, 0, 100050])('shows costs %s and an explicit unset threshold', asy
 it('rounds only average cost, preserving last cost and the sale price', async () => {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(
-      path === '/api/products/{product_id}'
-        ? makeProduct({ avg_cost: 68750, last_cost: 90050, sale_price: 150005 })
-        : { items: [], total: 0 },
+      path === '/api/products/{product_id}/purchases'
+        ? { items: [], total: 0 }
+        : path === '/api/products/{product_id}'
+          ? makeProduct({ avg_cost: 68750, last_cost: 90050, sale_price: 150005 })
+          : { items: [], total: 0 },
     )) as never)
   renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
     route: '/products/1',
@@ -126,15 +138,17 @@ it('finds the saved adjustment on the second history page and highlights it', as
     init?: { params?: { query?: { offset?: number } } },
   ) =>
     ok(
-      path === '/api/products/{product_id}'
-        ? makeProduct()
-        : {
-            items: movements.slice(
-              init?.params?.query?.offset ?? 0,
-              (init?.params?.query?.offset ?? 0) + 50,
-            ),
-            total: 51,
-          },
+      path === '/api/products/{product_id}/purchases'
+        ? { items: [], total: 0 }
+        : path === '/api/products/{product_id}'
+          ? makeProduct()
+          : {
+              items: movements.slice(
+                init?.params?.query?.offset ?? 0,
+                (init?.params?.query?.offset ?? 0) + 50,
+              ),
+              total: 51,
+            },
     )) as never)
   const { router } = renderWithDataRouter([{ path: '/products/:id', element: <ProductPage /> }], {
     route: '/products/1?movementFocus=51',

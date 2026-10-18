@@ -5,6 +5,103 @@ import { REPORT_MODULE } from './pageModules.js'
 import { todayLocal } from '../src/lib/dates.js'
 import { formatMoney } from '../src/lib/money.js'
 import type { components } from '../src/api/schema.js'
+import {
+  currencyProducts,
+  currencyLanguage,
+  fillCurrencyReceipt,
+  verifyCurrencyReview,
+  verifySavedCurrency,
+  currencyTexts,
+  type Receipt as CurrencyReceipt,
+} from './currencyReceipt.js'
+
+test.beforeEach(async ({ page }) => {
+  // Each page owns its default: parallel currency scenarios must not change the KZT budget.
+  await page.route('**/api/receipts/defaults*', (route) =>
+    route.fulfill({ json: { currency: 'KZT', source: 'default' } }),
+  )
+})
+
+for (const language of ['kk', 'ru'] as const) {
+  test(`currency receipt: reference 1 and action budget ${language}`, async ({ page }) => {
+    await login(page)
+    if (page.viewportSize()!.width === 1366)
+      await page.setViewportSize({ width: 1366, height: 768 })
+    await currencyLanguage(page, language)
+    const products = await currencyProducts(page)
+    const actions = await fillCurrencyReceipt(page, products, language)
+    const text = currencyTexts[language]
+    await actions.click(page.getByRole('button', { name: text.next, exact: true }))
+    await expect(page.getByRole('heading', { name: text.review, exact: true })).toBeVisible()
+    await verifyCurrencyReview(page)
+    const savedResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/receipts') && response.request().method() === 'POST',
+    )
+    await actions.click(page.getByRole('button', { name: text.save, exact: true }))
+    const receipt = (await (await savedResponse).json()) as CurrencyReceipt
+    await expect(page.getByRole('heading', { name: text.done, exact: true })).toBeVisible()
+    actions.check('currencyReceipt')
+    expect(actions.count).toBe(16)
+    await verifySavedCurrency(page, receipt, products, language)
+  })
+  test(`currency receipt: manual rate warning confirmation ${language}`, async ({ page }) => {
+    await login(page)
+    await currencyLanguage(page, language)
+    const products = await currencyProducts(page)
+    await fillCurrencyReceipt(page, products, language)
+    await page.getByRole('textbox', { name: 'Курс, ₸' }).fill('80')
+    const text = currencyTexts[language]
+    await page.getByRole('button', { name: text.next, exact: true }).click()
+    await expect(page.getByTestId('receipt-warnings')).toContainText('80.0000')
+    await expect(page.getByTestId('receipt-warnings')).toContainText('67.6200')
+    const response = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/receipts') && response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: text.confirm, exact: true }).click()
+    const result = await response
+    expect(result.status()).toBe(201)
+    const body = result.request().postDataJSON() as components['schemas']['ReceiptCreate']
+    expect(body.confirmed_warnings?.some((key) => key.startsWith('rate_deviation:receipt:'))).toBe(
+      true,
+    )
+    await expect(page.getByRole('heading', { name: text.done, exact: true })).toBeVisible()
+  })
+}
+for (const accepted of [true, false]) {
+  test(`draft safety currency receipt: ${accepted ? 'accepted response lost' : 'request aborted before server'} and reload`, async ({
+    page,
+  }) => {
+    await login(page)
+    const products = await currencyProducts(page)
+    await fillCurrencyReceipt(page, products)
+    await page.getByRole('button', { name: 'Келесі', exact: true }).click()
+    await verifyCurrencyReview(page)
+    const bodies: components['schemas']['ReceiptCreate'][] = []
+    await page.route('**/api/receipts', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      bodies.push(route.request().postDataJSON() as components['schemas']['ReceiptCreate'])
+      if (bodies.length === 1) {
+        if (accepted) expect((await route.fetch()).status()).toBe(201)
+        await route.abort('failed')
+      } else await route.continue()
+    })
+    await page.getByRole('button', { name: 'Сақтау', exact: true }).click()
+    await expect(page.getByTestId('unknown-result')).toBeVisible()
+    await page.reload()
+    await expect(page.getByTestId('unknown-result')).toBeVisible()
+    await page.getByRole('button', { name: 'Қайта тексеру', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Тауар қоймаға қосылды' })).toBeVisible()
+    expect(bodies).toHaveLength(2)
+    expect(bodies[1]).toEqual(bodies[0])
+    const history = await getJson<components['schemas']['ProductPurchasePage']>(
+      page,
+      `/api/products/${products[0].id}/purchases`,
+    )
+    expect(history.total).toBe(1)
+  })
+}
 
 type Product = components['schemas']['ProductOut']
 type Sale = components['schemas']['SaleOut']

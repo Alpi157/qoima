@@ -13,6 +13,7 @@ from app.customers.models import Customer
 from app.customers.service import current_debt
 from app.inventory.service import stock_summary
 from app.payments.models import CustomerPayment
+from app.rates.models import ExchangeRate
 from app.receipts.models import Receipt, ReceiptLine
 from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
@@ -55,7 +56,7 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
 
     assert db_session.scalar(select(func.count()).select_from(Customer)) == len(demo.CUSTOMERS)
     receipts = db_session.scalars(select(Receipt).order_by(Receipt.received_at)).all()
-    assert len(receipts) == len(demo.RECEIPTS) + 1
+    assert len(receipts) == len(demo.RECEIPTS) + 2
     assert receipts[0].supplier == "Бастапқы қалдық"
 
     statuses = db_session.scalars(select(Sale.status)).all()
@@ -147,3 +148,40 @@ def test_seed_before_opening_hours_keeps_sales_in_the_past(db_session: Session) 
     demo.seed(db_session, "demo-password", now=now)
 
     assert max(db_session.scalars(select(Sale.sold_at))) < now
+
+
+def test_demo_rates_cover_31_days_and_currency_receipt_is_exact(db_session):
+    now = datetime(2026, 9, 27, 22, 0, tzinfo=UTC)
+    demo.seed(db_session, "demo-password", now=now)
+    rates = db_session.scalars(select(ExchangeRate)).all()
+    assert len(rates) == 62
+    assert min(rate.rate_date for rate in rates) == date(2026, 8, 29)
+    assert max(rate.rate_date for rate in rates) == date(2026, 9, 28)
+    assert all(rate.rate == demo.DEMO_RATES[rate.currency] for rate in rates)
+    receipt = db_session.scalar(select(Receipt).where(Receipt.currency == "CNY"))
+    from app.receipts.service import get_receipt
+
+    saved = get_receipt(db_session, receipt.id)
+    assert (saved.goods_total, saved.expenses_total, saved.total_cost) == (
+        101430000,
+        15750000,
+        117180000,
+    )
+    assert [line.unit_cost for line in saved.lines] == [781200, 195300]
+
+
+def test_demo_serve_forces_closed_local_feed(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        demo,
+        "get_settings",
+        lambda: SimpleNamespace(database_url="postgresql+psycopg://demo:local@localhost/qoima"),
+    )
+    monkeypatch.setenv("NBK_RATES_URL", "https://example.invalid/feed")
+    monkeypatch.setattr(demo.os, "chdir", lambda _: None)
+    captured = {}
+    monkeypatch.setattr(demo.os, "execve", lambda binary, args, env: captured.update(env))
+    demo._serve_command(8011)
+    assert captured["NBK_RATES_URL"] == "http://127.0.0.1:9/nbk"
+    assert captured["DATABASE_URL"].endswith("/qoima_demo")

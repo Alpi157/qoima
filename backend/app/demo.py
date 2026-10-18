@@ -14,6 +14,7 @@ import sys
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
+from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -31,8 +32,9 @@ from app.customers.schemas import CustomerCreate
 from app.inventory.service import MovementIn, post_movements
 from app.payments import service as payments_service
 from app.payments.schemas import PaymentCreate
+from app.rates.models import ExchangeRate
 from app.receipts import service as receipts_service
-from app.receipts.schemas import ReceiptCreate, ReceiptLineIn
+from app.receipts.schemas import ExpenseIn, ReceiptCreate, ReceiptLineIn
 from app.returns import service as returns_service
 from app.returns.schemas import ReturnCreate, ReturnLineIn
 from app.sales import service as sales_service
@@ -45,6 +47,8 @@ DEMO_USERNAME = "demo"
 DEMO_PASSWORD_ENV = "DEMO_PASSWORD"
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 LOCAL_TZ = ZoneInfo("Asia/Almaty")
+DEMO_RATES = {"CNY": Decimal("67.6200"), "USD": Decimal("452.1200")}
+DEMO_NBK_URL = "http://127.0.0.1:9/nbk"
 
 # Fixed namespace: the same seed always produces the same request ids.
 _REQUEST_NS = uuid.UUID("5d7c1d52-8a0e-4c1c-9d8f-3f7f6b1f0a16")
@@ -81,6 +85,8 @@ PRODUCTS = [
     DemoProduct("58101-2SA70", "Колодки тормозные передние", "Hyundai", 14800, 5),
     DemoProduct("D1060-JN00A", "Колодки тормозные передние", "Nissan", 15900, 4),
     DemoProduct("04466-02070", "Колодки тормозные задние", "Toyota", 12500, 3, archived=True),
+    DemoProduct("CNY-DEMO-100", "Валютный приём: первый товар", None, 14000, 0),
+    DemoProduct("CNY-DEMO-25", "Валютный приём: второй товар", None, 3500, 0),
 ]
 
 CUSTOMERS = [
@@ -190,6 +196,16 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
     """Fill an empty database with demo data through the regular services."""
     now = now or datetime.now(UTC)
 
+    for days_ago in range(31):
+        day = now.astimezone(LOCAL_TZ).date() - timedelta(days=days_ago)
+        for currency, rate in DEMO_RATES.items():
+            db.add(
+                ExchangeRate(
+                    rate_date=day, currency=currency, rate=rate, source="nbk", published_date=day
+                )
+            )
+    db.flush()
+
     settings_service.update_business_settings(db, BUSINESS_SETTINGS)
     user = auth_service.create_user(db, DEMO_USERNAME, "Кәкеш Арман", password, locale="kk")
 
@@ -247,6 +263,32 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         user.id,
     )
     db.commit()
+
+    currency_at = _local_time(now, 10, (9, 0))
+    receipts_service.post_receipt(
+        db,
+        ReceiptCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "currency-receipt"),
+            supplier="CNY Demo",
+            received_at=currency_at,
+            currency="CNY",
+            exchange_rate="67.6200",
+            rate_source="nbk",
+            rate_date=currency_at.astimezone(LOCAL_TZ).date(),
+            lines=[
+                ReceiptLineIn(product_id=product_ids[article], qty=qty, unit_price_minor=price)
+                for article, qty, price in [
+                    ("CNY-DEMO-100", 100, 10000),
+                    ("CNY-DEMO-25", 200, 2500),
+                ]
+            ],
+            expenses=[
+                ExpenseIn(kind=kind, amount_minor=amount)
+                for kind, amount in [("delivery", 10500000), ("customs_duty", 5250000)]
+            ],
+        ),
+        user.id,
+    )
 
     for days_ago, at, supplier, receipt_lines in RECEIPTS:
         receipts_service.post_receipt(
@@ -375,7 +417,11 @@ def _seed_command() -> int:
 def _serve_command(port: int) -> int:
     # Replaces this process, so app.db builds its engine from the demo URL and stopping
     # the command stops the server.
-    env = {**os.environ, "DATABASE_URL": demo_database_url(get_settings().database_url)}
+    env = {
+        **os.environ,
+        "DATABASE_URL": demo_database_url(get_settings().database_url),
+        "NBK_RATES_URL": DEMO_NBK_URL,
+    }
     os.chdir(BACKEND_DIR)
     args = [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(port)]
     os.execve(sys.executable, args, env)

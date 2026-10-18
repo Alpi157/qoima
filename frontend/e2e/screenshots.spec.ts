@@ -6,6 +6,105 @@ import { breakReportRender, REPORT_MODULE } from './pageModules.js'
 import { PAGE_RELOAD_KEY } from '../src/lib/pageReload.js'
 import type { components } from '../src/api/schema.js'
 import { todayLocal } from '../src/lib/dates.js'
+import { fillCurrencyReceipt, verifyCurrencyReview } from './currencyReceipt.js'
+
+test('currency receipt screens in Kazakh', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  await page.route('**/api/receipts/defaults*', (route) =>
+    route.fulfill({ json: { currency: 'KZT', source: 'default' } }),
+  )
+  const catalog = await getJson<components['schemas']['ProductPage']>(
+    page,
+    '/api/products?limit=200',
+  )
+  const products = ['CNY-DEMO-100', 'CNY-DEMO-25'].map((article) =>
+    catalog.items.find((product) => product.article === article)!,
+  )
+  await fillCurrencyReceipt(page, products)
+  await page.getByRole('button', { name: 'Әкелу шығындары', exact: true }).click()
+  await snap(page, 'currency-receive-lines', width)
+  await snap(page, 'currency-receive-lines-screen', width, { fullPage: false })
+  await page.getByRole('textbox', { name: 'Курс, ₸' }).fill('80')
+  await snap(page, 'currency-manual-rate', width)
+  await page.route('**/api/rates?*', (route) =>
+    route.fulfill({
+      status: 404,
+      json: { code: 'rate_not_found', detail: 'Нет курса', params: {} },
+    }),
+  )
+  await page.getByRole('button', { name: '$ Доллар', exact: true }).click()
+  await expect(
+    page.getByText('Ұлттық банк курсын алу мүмкін болмады. Курсты қолмен енгізіңіз.'),
+  ).toBeVisible()
+  await snap(page, 'currency-no-rate', width)
+  await page.unroute('**/api/rates?*')
+  await page.getByRole('button', { name: '¥ Юань', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Курс, ₸' })).toHaveValue('67.6200')
+  await page.getByRole('button', { name: 'Шығын қосу', exact: true }).click()
+  await page.getByRole('button', { name: 'Банк комиссиясы', exact: true }).click()
+  await snap(page, 'currency-expenses', width)
+  await page
+    .getByTestId('receipt-expense')
+    .last()
+    .getByRole('button', { name: 'Алып тастау', exact: true })
+    .click()
+  const firstExpense = page.getByTestId('receipt-expense').first()
+  await firstExpense.getByRole('button', { name: 'Тағы', exact: true }).click()
+  await firstExpense.getByRole('combobox', { name: 'Шығындарды бөлу', exact: true }).click()
+  await page.getByRole('option', { name: 'Қолмен', exact: true }).click()
+  await expect(firstExpense.getByTestId('expense-allocation-total')).toContainText(
+    '105\u00a0000\u00a0₸ / 105\u00a0000\u00a0₸',
+  )
+  await snap(page, 'currency-allocation', width)
+  await page.getByRole('button', { name: 'Келесі', exact: true }).click()
+  await verifyCurrencyReview(page)
+  await snap(page, 'currency-review', width)
+  await snap(page, 'currency-review-screen', width, { fullPage: false })
+  await page.getByRole('button', { name: 'Артқа', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Курс, ₸' }).fill('80')
+  await page.getByRole('button', { name: 'Келесі', exact: true }).click()
+  await expect(page.getByTestId('receipt-warnings')).toBeVisible()
+  await snap(page, 'currency-warnings', width)
+  await page.getByTestId('receipt-warnings').scrollIntoViewIfNeeded()
+  await snap(page, 'currency-warnings-screen', width, { fullPage: false, preserveScroll: true })
+  const me = await getJson<components['schemas']['UserOut']>(page, '/api/auth/me')
+  await page.evaluate((id) => localStorage.removeItem(`qoima.draft.${id}.receipt`), me.id)
+  await page.goto('/receive')
+  await page.getByRole('searchbox').fill(products[0].article)
+  await page.getByRole('searchbox').press('Enter')
+  await page
+    .getByRole('textbox', { name: `${products[0].article} сатып алу бағасы`, exact: true })
+    .fill('20000')
+  await page.getByRole('button', { name: 'Қоймаға қосу', exact: true }).click()
+  await expect(page.getByTestId('receipt-warnings')).toBeVisible()
+  await snap(page, 'currency-kzt-warnings', width)
+  await page.getByTestId('receipt-warnings').scrollIntoViewIfNeeded()
+  await snap(page, 'currency-kzt-warnings-screen', width, { fullPage: false, preserveScroll: true })
+  const receipts = await getJson<components['schemas']['ReceiptPage']>(
+    page,
+    '/api/receipts?limit=200',
+  )
+  const receipt = receipts.items.find((document) => document.supplier === 'CNY Demo')!
+  await page.goto(`/receipts/${receipt.id}`)
+  await snap(page, 'currency-receipt-card', width)
+  await page.goto(`/products/${products[0].id}`)
+  await page
+    .getByRole('heading', { name: 'Сатып алу тарихы', exact: true })
+    .scrollIntoViewIfNeeded()
+  await snap(page, 'currency-purchases', width)
+  await page
+    .getByRole('heading', { name: 'Сатып алу тарихы', exact: true })
+    .scrollIntoViewIfNeeded()
+  await snap(page, 'currency-purchases-screen', width, { fullPage: false, preserveScroll: true })
+  await page.goto('/settings')
+  await snap(page, 'currency-settings', width)
+  await page
+    .getByRole('checkbox', { name: 'Біз ҚҚС төлейміз', exact: true })
+    .scrollIntoViewIfNeeded()
+  await snap(page, 'currency-settings-screen', width, { fullPage: false, preserveScroll: true })
+})
 
 type Sale = components['schemas']['SaleOut']
 type ReturnDocument = components['schemas']['ReturnOut']

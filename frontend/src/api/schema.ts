@@ -126,6 +126,23 @@ export interface paths {
         patch: operations["update_product_api_products__product_id__patch"];
         trace?: never;
     };
+    "/api/products/{product_id}/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product Purchases */
+        get: operations["product_purchases_api_products__product_id__purchases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/customers": {
         parameters: {
             query?: never;
@@ -1298,6 +1315,40 @@ export interface components {
         ProductPage: {
             /** Items */
             items: components["schemas"]["ProductOut"][];
+            /** Total */
+            total: number;
+        };
+        /** ProductPurchaseOut */
+        ProductPurchaseOut: {
+            /** Receipt Id */
+            receipt_id: number;
+            /** Receipt Number */
+            receipt_number: number;
+            /**
+             * Received At
+             * Format: date-time
+             */
+            received_at: string;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate: string;
+            /** Unit Price Minor */
+            unit_price_minor: number | null;
+            /** Qty */
+            qty: number;
+            /** Unit Cost */
+            unit_cost: number | null;
+            /** Total */
+            total: number | null;
+        };
+        /** ProductPurchasePage */
+        ProductPurchasePage: {
+            /** Items */
+            items: components["schemas"]["ProductPurchaseOut"][];
             /** Total */
             total: number;
         };
@@ -2494,6 +2545,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    product_purchases_api_products__product_id__purchases_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductPurchasePage"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

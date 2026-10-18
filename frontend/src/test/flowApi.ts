@@ -43,6 +43,8 @@ export function mockFlowGet(data: FlowData = {}) {
     const q = init?.params?.query?.q ?? ''
     const id = Object.values(init?.params?.path ?? {})[0]
     switch (path) {
+      case '/api/receipts/defaults':
+        return ok({ currency: 'KZT', source: 'default' })
       case '/api/auth/me':
         return ok(owner)
       case '/api/products': {

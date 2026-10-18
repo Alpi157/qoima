@@ -42,6 +42,7 @@ import {
 } from './api'
 import { ProductFormModal } from './ProductFormModal'
 import { StockAdjustmentModal } from './StockAdjustmentModal'
+import { PurchaseHistory } from './PurchaseHistory'
 
 const DOCUMENT_PATHS: Record<string, string> = {
   receipt: '/receipts',
@@ -299,6 +300,8 @@ function ProductDetails({ product }: { product: Product }) {
       </Card>
 
       {product.note && <Text style={{ whiteSpace: 'pre-wrap' }}>{product.note}</Text>}
+
+      <PurchaseHistory productId={product.id} unit={product.unit} />
 
       <Stack gap="md">
         <SectionTitle>{t('products.movements.title')}</SectionTitle>

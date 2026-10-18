@@ -46,6 +46,33 @@ afterEach(() => {
 const REASON_ERROR = 'Укажите причину, не короче 3 символов'
 
 describe('ReceiptPage', () => {
+  it('reference 5 shows saved goods_total instead of qty times rounded unit_cost', async () => {
+    vi.spyOn(api, 'GET').mockReturnValue(
+      ok(
+        makeReceipt({
+          currency: 'CNY',
+          exchange_rate: '67.8300',
+          rate_source: 'nbk',
+          rate_date: '2026-10-01',
+          lines: [
+            {
+              ...POSTED.lines[0],
+              qty: 3,
+              unit_price_minor: 3333,
+              goods_total: 678232,
+              unit_cost: 226077,
+            },
+          ],
+          goods_total: 678232,
+          total_cost: 678232,
+        }),
+      ),
+    )
+    renderPage()
+    await screen.findByRole('heading', { name: /Приход №12 от/ })
+    expect(screen.getByRole('table').textContent).toContain('6\u00a0782,32\u00a0₸')
+    expect(screen.getByRole('table').textContent).not.toContain('6\u00a0782,31\u00a0₸')
+  })
   it('shows the receipt with its lines and totals', async () => {
     vi.spyOn(api, 'GET').mockReturnValue(ok(POSTED))
     renderPage()

@@ -9,7 +9,14 @@ from sqlalchemy.orm import Session
 
 from app.catalog.models import Product
 from app.catalog.normalize import normalize_article
-from app.catalog.schemas import ProductCreate, ProductOut, ProductPage, ProductUpdate
+from app.catalog.schemas import (
+    ProductCreate,
+    ProductOut,
+    ProductPage,
+    ProductPurchaseOut,
+    ProductPurchasePage,
+    ProductUpdate,
+)
 from app.db_utils import LIKE_ESCAPE, contains_pattern
 from app.errors import (
     DuplicateArticleError,
@@ -143,6 +150,46 @@ def get_product(db: Session, product_id: int) -> ProductOut:
     if row is None:
         raise ProductNotFoundError()
     return _to_out(*row)
+
+
+def product_purchases(db: Session, product_id: int, limit: int, offset: int) -> ProductPurchasePage:
+    """Saved purchase lines, including historical unknown costs; never recalculate totals."""
+    if db.scalar(select(Product.id).where(Product.id == product_id)) is None:
+        raise ProductNotFoundError()
+    conditions = (ReceiptLine.product_id == product_id, Receipt.status == "posted")
+    total = db.scalar(
+        select(func.count())
+        .select_from(ReceiptLine)
+        .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
+        .where(*conditions)
+    )
+    rows = db.execute(
+        select(ReceiptLine, Receipt)
+        .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
+        .where(*conditions)
+        .order_by(Receipt.received_at.desc(), ReceiptLine.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return ProductPurchasePage(
+        items=[
+            ProductPurchaseOut(
+                receipt_id=receipt.id,
+                receipt_number=receipt.number,
+                received_at=receipt.received_at,
+                currency=receipt.currency,
+                exchange_rate=format(receipt.exchange_rate, ".4f"),
+                unit_price_minor=line.unit_price_minor,
+                qty=line.qty,
+                unit_cost=line.unit_cost,
+                total=(line.goods_total + line.expenses_total)
+                if line.goods_total is not None
+                else None,
+            )
+            for line, receipt in rows
+        ],
+        total=total,
+    )
 
 
 # Document type -> the word completing «Товар X указан в … дважды».

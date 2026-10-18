@@ -12,7 +12,7 @@ import type { ProductCreate } from '../products/api'
 import type { ReceiptCreate } from '../receipts/api'
 import { ReceiveDonePage } from './ReceiveDonePage'
 import { ReceivePage } from './ReceivePage'
-import type { ReceiptDraft } from './receiptDraft'
+import { createReceiptDraft, type ReceiptDraft } from './receiptDraft'
 
 const FILTER = makeProduct({ id: 1, article: 'OC-90', name: 'Фильтр масляный', stock: 5 })
 const RECEIPT_KEY = draftKey(1, 'receipt')
@@ -30,9 +30,9 @@ function renderReceive(route = '/receive') {
 
 function saveDraft(draft: Partial<ReceiptDraft>, key = RECEIPT_KEY) {
   const full: ReceiptDraft = {
-    version: 2,
+    ...createReceiptDraft(),
     requestId: crypto.randomUUID(),
-    lines: [{ productId: 1, qty: 3, cost: '' }],
+    lines: [{ productId: 1, priceCurrency: 'KZT', qty: 3, cost: '' }],
     supplier: '',
     note: '',
     receivedAt: null,
@@ -63,8 +63,8 @@ describe('ReceivePage', () => {
     const post = vi.spyOn(api, 'POST')
     saveDraft({
       lines: [
-        { productId: 1, qty: 3, cost: '' },
-        { productId: 2, qty: 1, cost: '' },
+        { productId: 1, priceCurrency: 'KZT', qty: 3, cost: '' },
+        { productId: 2, priceCurrency: 'KZT', qty: 1, cost: '' },
       ],
     })
     renderReceive()
@@ -94,7 +94,7 @@ describe('ReceivePage', () => {
     const user = setupUser()
     mockFlowGet({ products: [FILTER] })
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt()))
-    saveDraft({ lines: [{ productId: 1, qty: 3, cost: '0' }] })
+    saveDraft({ lines: [{ productId: 1, priceCurrency: 'KZT', qty: 3, cost: '0' }] })
     renderReceive()
     await screen.findByRole('textbox', { name: 'Количество OC-90' })
     await user.click(submitButton())
@@ -149,7 +149,9 @@ describe('ReceivePage', () => {
     })
     expect(await screen.findByRole('textbox', { name: 'Количество PE5R' })).toBeTruthy()
     expect(screen.queryByTestId('new-product-form')).toBeNull()
-    expect(storedDraft()?.lines).toMatchObject([{ productId: 30, qty: 1, cost: '' }])
+    expect(storedDraft()?.lines).toMatchObject([
+      { productId: 30, priceCurrency: 'KZT', qty: 1, cost: '' },
+    ])
   })
 
   it('an existing article in the new product form is shown under the field', async () => {
@@ -175,7 +177,7 @@ describe('ReceivePage', () => {
     const user = setupUser()
     mockFlowGet({ products: [FILTER] })
     const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt({ id: 5 })))
-    saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
+    saveDraft({ lines: [{ productId: 1, priceCurrency: 'KZT', qty: 3, cost: '900' }] })
     const { router } = renderReceive()
 
     await screen.findByRole('textbox', { name: 'Количество OC-90' })
@@ -185,6 +187,7 @@ describe('ReceivePage', () => {
     const body = postBody<ReceiptCreate>(post)
     expect(body).toEqual({
       currency: 'KZT',
+      confirmed_warnings: [],
       request_id: expect.any(String),
       supplier: null,
       note: null,
@@ -217,6 +220,7 @@ describe('ReceivePage', () => {
 
     expect(postBody<ReceiptCreate>(post)).toEqual({
       currency: 'KZT',
+      confirmed_warnings: [],
       request_id: expect.any(String),
       supplier: 'Начальные остатки',
       note: null,
@@ -340,7 +344,16 @@ describe('receiving costs in lines', () => {
     'prefills last_cost %s only when adding a new line',
     async (last_cost) => {
       const user = setupUser()
-      mockFlowGet({ products: [makeProduct({ ...FILTER, last_cost })] })
+      mockFlowGet({
+        products: [
+          makeProduct({
+            ...FILTER,
+            last_cost,
+            last_purchase_currency: last_cost === null ? null : 'KZT',
+            last_purchase_price_minor: last_cost,
+          }),
+        ],
+      })
       renderReceive()
       const search = await screen.findByRole('searchbox')
       await fill(user, search, 'OC')
@@ -354,7 +367,12 @@ describe('receiving costs in lines', () => {
       await fill(user, search, 'OC')
       await user.keyboard('{Enter}')
       await waitFor(() =>
-        expect(storedDraft()?.lines[0]).toMatchObject({ productId: 1, qty: 2, cost: '700' }),
+        expect(storedDraft()?.lines[0]).toMatchObject({
+          productId: 1,
+          priceCurrency: 'KZT',
+          qty: 2,
+          cost: '700',
+        }),
       )
     },
   )
@@ -364,7 +382,7 @@ describe('receiving costs in lines', () => {
     async (cost) => {
       const user = setupUser()
       mockFlowGet({ products: [FILTER] })
-      saveDraft({ lines: [{ productId: 1, qty: 2, cost }] })
+      saveDraft({ lines: [{ productId: 1, priceCurrency: 'KZT', qty: 2, cost }] })
       const post = vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt()))
       renderReceive()
       const warning = await screen.findByText(/Не дороже ли цены продажи/)
@@ -392,8 +410,8 @@ describe('receiving costs in lines', () => {
       JSON.stringify({
         version: 1,
         lines: [
-          { productId: 1, qty: 2, cost: '900,50' },
-          { productId: 2, qty: 3 },
+          { productId: 1, priceCurrency: 'KZT', qty: 2, cost: '900,50' },
+          { productId: 2, priceCurrency: 'KZT', qty: 3 },
         ],
       }),
     )
@@ -412,8 +430,8 @@ it('adds all valid line costs to the purchase total in integer tiyn', async () =
   mockFlowGet({ products: [FILTER, makeProduct({ id: 2, article: 'W712' })] })
   saveDraft({
     lines: [
-      { productId: 1, qty: 2, cost: '900,50' },
-      { productId: 2, qty: 3, cost: '700' },
+      { productId: 1, priceCurrency: 'KZT', qty: 2, cost: '900,50' },
+      { productId: 2, priceCurrency: 'KZT', qty: 3, cost: '700' },
     ],
   })
   renderReceive()
@@ -426,7 +444,7 @@ it('upgrades an old draft and keeps its key through network errors and reload', 
   mockFlowGet({ products: [FILTER] })
   const old = {
     version: 1,
-    lines: [{ productId: 1, qty: 3, cost: '900' }],
+    lines: [{ productId: 1, priceCurrency: 'KZT', qty: 3, cost: '900' }],
     supplier: 'Supplier',
     note: '',
     receivedAt: null,
@@ -437,7 +455,7 @@ it('upgrades an old draft and keeps its key through network errors and reload', 
   const rendered = renderReceive()
   await screen.findByRole('textbox', { name: 'Количество OC-90' })
   const migrated = storedDraft()!
-  expect(migrated).toMatchObject({ ...old, version: 2, requestId: expect.any(String) })
+  expect(migrated).toMatchObject({ ...old, version: 3, requestId: expect.any(String) })
   await user.click(submitButton())
   await screen.findByTestId('unknown-result')
   expect(postBody<ReceiptCreate>(post).request_id).toBe(migrated.requestId)
@@ -453,7 +471,7 @@ it('upgrades an old draft and keeps its key through network errors and reload', 
 it('starts with a new key after a successful receipt', async () => {
   const user = setupUser()
   mockFlowGet({ products: [FILTER] })
-  saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
+  saveDraft({ lines: [{ productId: 1, priceCurrency: 'KZT', qty: 3, cost: '900' }] })
   const originalKey = storedDraft()!.requestId
   vi.spyOn(api, 'POST').mockReturnValue(ok(makeReceipt()))
   const { router } = renderReceive()
@@ -472,7 +490,7 @@ it('starts with a new key after a successful receipt', async () => {
 it('shows the receipt conflict without clearing the draft', async () => {
   const user = setupUser()
   mockFlowGet({ products: [FILTER] })
-  saveDraft({ lines: [{ productId: 1, qty: 3, cost: '900' }] })
+  saveDraft({ lines: [{ productId: 1, priceCurrency: 'KZT', qty: 3, cost: '900' }] })
   vi.spyOn(api, 'POST').mockRejectedValue(
     new ApiError(409, 'detail', {}, 'receipt_request_conflict', { id: 5, number: 42 }),
   )

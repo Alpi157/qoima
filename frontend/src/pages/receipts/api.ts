@@ -10,6 +10,20 @@ export type Receipt = components['schemas']['ReceiptOut']
 export type ReceiptListItem = components['schemas']['ReceiptListItem']
 export type ReceiptCreate = components['schemas']['ReceiptCreate']
 export type ReceiptStatus = ReceiptListItem['status']
+export type ReceiptPreview = components['schemas']['ReceiptPreviewOut']
+export type ReceiptWarning = ReceiptPreview['warnings'][number]
+
+export function fetchReceiptPreview(body: components['schemas']['ReceiptPreviewIn']) {
+  return unwrap(api.POST('/api/receipts/preview', { body }))
+}
+
+export function fetchReceiptDefaults(supplier: string) {
+  return unwrap(api.GET('/api/receipts/defaults', { params: { query: { supplier } } }))
+}
+
+export function fetchRate(currency: 'CNY' | 'USD', date: string) {
+  return unwrap(api.GET('/api/rates', { params: { query: { currency, date } } }))
+}
 
 export function isReceiptStatus(value: string): value is ReceiptStatus {
   return value === 'posted' || value === 'cancelled'

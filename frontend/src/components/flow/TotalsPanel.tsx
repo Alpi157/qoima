@@ -10,6 +10,8 @@ export interface TotalsPanelProps {
   children?: ReactNode
   /** Calculation to review before saving, placed between the main sum and the action. */
   belowSummary?: ReactNode
+  /** Long notices stay in document flow, above the action. */
+  beforeAction?: ReactNode
   /** The main button of the step, size lg. */
   actionLabel: string
   actionColor: 'green' | 'blue'
@@ -32,6 +34,7 @@ export function TotalsPanel({
   summary,
   children,
   belowSummary,
+  beforeAction,
   actionLabel,
   actionColor,
   onAction,
@@ -43,10 +46,15 @@ export function TotalsPanel({
 }: TotalsPanelProps) {
   const { t } = useTranslation()
   return (
-    <div className="flow-side">
-      <Card className="flow-aside" component="aside" aria-label={t('flow.totals')}>
+    <div className={beforeAction ? 'flow-side flow-side-notice' : 'flow-side'}>
+      <Card
+        className={beforeAction ? 'flow-aside flow-aside-notice' : 'flow-aside'}
+        component="aside"
+        aria-label={t('flow.totals')}
+      >
         <Stack gap="md">
           {children && <div className="flow-aside-details">{children}</div>}
+          {beforeAction}
           <StickyActions className="flow-totals-actions">
             {summary}
             {belowSummary}

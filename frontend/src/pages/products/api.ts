@@ -17,6 +17,23 @@ export type Product = components['schemas']['ProductOut']
 export type ProductCreate = components['schemas']['ProductCreate']
 export type ProductUpdate = components['schemas']['ProductUpdate']
 export type Movement = components['schemas']['MovementOut']
+export type ProductPurchase = components['schemas']['ProductPurchaseOut']
+
+export function useProductPurchases(id: number, page: number) {
+  return useQuery({
+    queryKey: ['product-purchases', id, page],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/products/{product_id}/purchases', {
+          params: {
+            path: { product_id: id },
+            query: { limit: PAGE_SIZE, offset: pageOffset(page) },
+          },
+        }),
+      ),
+    placeholderData: keepPreviousData,
+  })
+}
 
 export function useProducts(params: ProductListParams) {
   return useQuery({
