@@ -2,10 +2,10 @@ import re
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
-from app.schema_types import Trimmed
+from app.schema_types import Trimmed, reject_explicit_nulls
 
 IIN_BIN_PATTERN = re.compile(r"[0-9]{12}")
 IIN_BIN_MESSAGE = "ИИН/БИН должен состоять из 12 цифр"
@@ -17,7 +17,7 @@ IinBin = Annotated[str, Trimmed]
 
 
 class BusinessSettingsUpdate(BaseModel):
-    """PUT body: every field is required, an empty string clears it."""
+    """Invoice fields are required; omitted receipt settings keep their values."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -27,6 +27,13 @@ class BusinessSettingsUpdate(BaseModel):
     # Empty: the invoice shows the name of the user who posted the sale.
     released_by_name: Name
     chief_accountant: Name
+    is_vat_payer: bool | None = None
+    rate_warning_percent: Annotated[int, Field(strict=True, ge=1, le=100)] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_nulls(cls, data: object) -> object:
+        return reject_explicit_nulls(data, ("is_vat_payer", "rate_warning_percent"))
 
     @field_validator("seller_iin_bin")
     @classmethod
@@ -44,4 +51,6 @@ class BusinessSettingsOut(BaseModel):
     responsible_person: str
     released_by_name: str
     chief_accountant: str
+    is_vat_payer: bool
+    rate_warning_percent: int
     updated_at: datetime

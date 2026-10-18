@@ -1075,6 +1075,107 @@
         }
       }
     },
+    "/api/receipts/defaults": {
+      "get": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Receipt Defaults",
+        "operationId": "receipt_defaults_api_receipts_defaults_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "supplier",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Supplier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDefaultsOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/receipts/preview": {
+      "post": {
+        "tags": [
+          "receipts"
+        ],
+        "summary": "Preview Receipt",
+        "operationId": "preview_receipt_api_receipts_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptPreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptPreviewOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
     "/api/receipts/{receipt_id}": {
       "get": {
         "tags": [
@@ -3041,6 +3142,14 @@
             "type": "string",
             "title": "Chief Accountant"
           },
+          "is_vat_payer": {
+            "type": "boolean",
+            "title": "Is Vat Payer"
+          },
+          "rate_warning_percent": {
+            "type": "integer",
+            "title": "Rate Warning Percent"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -3054,6 +3163,8 @@
           "responsible_person",
           "released_by_name",
           "chief_accountant",
+          "is_vat_payer",
+          "rate_warning_percent",
           "updated_at"
         ],
         "title": "BusinessSettingsOut"
@@ -3083,6 +3194,30 @@
             "type": "string",
             "maxLength": 255,
             "title": "Chief Accountant"
+          },
+          "is_vat_payer": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Vat Payer"
+          },
+          "rate_warning_percent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Warning Percent"
           }
         },
         "additionalProperties": false,
@@ -3095,7 +3230,115 @@
           "chief_accountant"
         ],
         "title": "BusinessSettingsUpdate",
-        "description": "PUT body: every field is required, an empty string clears it."
+        "description": "Invoice fields are required; omitted receipt settings keep their values."
+      },
+      "CostJumpParams": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "unit_cost": {
+            "type": "integer",
+            "title": "Unit Cost"
+          },
+          "previous_cost": {
+            "type": "integer",
+            "title": "Previous Cost"
+          },
+          "previous_received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Previous Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "unit_cost",
+          "previous_cost",
+          "previous_received_at"
+        ],
+        "title": "CostJumpParams"
+      },
+      "CostJumpWarning": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "code": {
+            "type": "string",
+            "const": "cost_jump",
+            "title": "Code",
+            "default": "cost_jump"
+          },
+          "params": {
+            "$ref": "#/components/schemas/CostJumpParams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "params"
+        ],
+        "title": "CostJumpWarning"
+      },
+      "CostNotBelowPriceParams": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "unit_cost": {
+            "type": "integer",
+            "title": "Unit Cost"
+          },
+          "sale_price": {
+            "type": "integer",
+            "title": "Sale Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "unit_cost",
+          "sale_price"
+        ],
+        "title": "CostNotBelowPriceParams"
+      },
+      "CostNotBelowPriceWarning": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "code": {
+            "type": "string",
+            "const": "cost_not_below_price",
+            "title": "Code",
+            "default": "cost_not_below_price"
+          },
+          "params": {
+            "$ref": "#/components/schemas/CostNotBelowPriceParams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "params"
+        ],
+        "title": "CostNotBelowPriceWarning"
       },
       "CustomerCreate": {
         "properties": {
@@ -3628,6 +3871,7 @@
           "expense_zero_weight",
           "expense_manual_sum_mismatch",
           "receipt_request_conflict",
+          "receipt_warnings",
           "stock_adjustment_request_conflict",
           "adjustment_cost_required",
           "adjustment_cost_not_allowed",
@@ -4526,6 +4770,24 @@
         ],
         "title": "PaymentPage"
       },
+      "PreviewAllocationOut": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "amount_tiyn": {
+            "type": "integer",
+            "title": "Amount Tiyn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "amount_tiyn"
+        ],
+        "title": "PreviewAllocationOut"
+      },
       "ProductCreate": {
         "properties": {
           "article": {
@@ -4698,6 +4960,33 @@
               }
             ],
             "title": "Last Cost"
+          },
+          "last_purchase_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "KZT",
+                  "CNY",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Purchase Currency"
+          },
+          "last_purchase_price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Purchase Price Minor"
           }
         },
         "type": "object",
@@ -4716,7 +5005,9 @@
           "stock",
           "min_qty",
           "avg_cost",
-          "last_cost"
+          "last_cost",
+          "last_purchase_currency",
+          "last_purchase_price_minor"
         ],
         "title": "ProductOut"
       },
@@ -4922,6 +5213,92 @@
         "type": "object",
         "title": "ProductUpdate"
       },
+      "RateDeviationParams": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "enum": [
+              "receipt",
+              "expense"
+            ],
+            "title": "Target"
+          },
+          "index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Index"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "rate": {
+            "type": "string",
+            "title": "Rate"
+          },
+          "nbk_rate": {
+            "type": "string",
+            "title": "Nbk Rate"
+          },
+          "nbk_rate_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Nbk Rate Date"
+          },
+          "nbk_exact": {
+            "type": "boolean",
+            "title": "Nbk Exact"
+          },
+          "percent": {
+            "type": "integer",
+            "title": "Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target",
+          "currency",
+          "rate",
+          "nbk_rate",
+          "nbk_rate_date",
+          "nbk_exact",
+          "percent"
+        ],
+        "title": "RateDeviationParams"
+      },
+      "RateDeviationWarning": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "code": {
+            "type": "string",
+            "const": "rate_deviation",
+            "title": "Code",
+            "default": "rate_deviation"
+          },
+          "params": {
+            "$ref": "#/components/schemas/RateDeviationParams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "params"
+        ],
+        "title": "RateDeviationWarning"
+      },
       "RateOut": {
         "properties": {
           "currency": {
@@ -5034,11 +5411,6 @@
             ],
             "title": "Rate Date"
           },
-          "request_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Request Id"
-          },
           "lines": {
             "items": {
               "$ref": "#/components/schemas/ReceiptLineIn"
@@ -5091,15 +5463,64 @@
             "type": "array",
             "maxItems": 50,
             "title": "Expenses"
+          },
+          "confirmed_warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "type": "array",
+                "maxItems": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Warnings"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "request_id",
-          "lines"
+          "lines",
+          "request_id"
         ],
         "title": "ReceiptCreate"
+      },
+      "ReceiptDefaultsOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "last",
+              "default"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "source"
+        ],
+        "title": "ReceiptDefaultsOut"
       },
       "ReceiptLineIn": {
         "properties": {
@@ -5549,6 +5970,425 @@
           "total"
         ],
         "title": "ReceiptPage"
+      },
+      "ReceiptPreviewExpenseOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "customs_duty",
+              "antidumping_duty",
+              "import_vat",
+              "broker",
+              "bank",
+              "other"
+            ],
+            "title": "Kind"
+          },
+          "amount_tiyn": {
+            "type": "integer",
+            "title": "Amount Tiyn"
+          },
+          "is_vat_credit": {
+            "type": "boolean",
+            "title": "Is Vat Credit"
+          },
+          "revaluation_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CNY",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revaluation Currency"
+          },
+          "revaluation_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revaluation Rate"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewAllocationOut"
+            },
+            "type": "array",
+            "title": "Allocations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "amount_tiyn",
+          "is_vat_credit",
+          "revaluation_currency",
+          "revaluation_rate",
+          "allocations"
+        ],
+        "title": "ReceiptPreviewExpenseOut"
+      },
+      "ReceiptPreviewIn": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency",
+            "default": "KZT"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{1,8}(\\.[0-9]{1,4})?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Rate"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptLineIn"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Lines"
+          },
+          "supplier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
+          },
+          "expenses": {
+            "items": {
+              "$ref": "#/components/schemas/ExpenseIn"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Expenses"
+          },
+          "confirmed_warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "type": "array",
+                "maxItems": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Warnings"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lines"
+        ],
+        "title": "ReceiptPreviewIn"
+      },
+      "ReceiptPreviewLineOut": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "unit_price_minor": {
+            "type": "integer",
+            "title": "Unit Price Minor"
+          },
+          "goods_total": {
+            "type": "integer",
+            "title": "Goods Total"
+          },
+          "expenses_total": {
+            "type": "integer",
+            "title": "Expenses Total"
+          },
+          "vat_credit_total": {
+            "type": "integer",
+            "title": "Vat Credit Total"
+          },
+          "unit_cost": {
+            "type": "integer",
+            "title": "Unit Cost"
+          },
+          "sale_price": {
+            "type": "integer",
+            "title": "Sale Price"
+          },
+          "previous_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Cost"
+          },
+          "markup_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markup Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "unit_price_minor",
+          "goods_total",
+          "expenses_total",
+          "vat_credit_total",
+          "unit_cost",
+          "sale_price",
+          "previous_cost",
+          "markup_percent"
+        ],
+        "title": "ReceiptPreviewLineOut"
+      },
+      "ReceiptPreviewOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "exchange_rate": {
+            "type": "string",
+            "title": "Exchange Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "vat_payer": {
+            "type": "boolean",
+            "title": "Vat Payer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptPreviewLineOut"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "expenses": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptPreviewExpenseOut"
+            },
+            "type": "array",
+            "title": "Expenses"
+          },
+          "goods_total": {
+            "type": "integer",
+            "title": "Goods Total"
+          },
+          "expenses_total": {
+            "type": "integer",
+            "title": "Expenses Total"
+          },
+          "vat_credit_total": {
+            "type": "integer",
+            "title": "Vat Credit Total"
+          },
+          "total_cost": {
+            "type": "integer",
+            "title": "Total Cost"
+          },
+          "warnings": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/RateDeviationWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/CostJumpWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/CostNotBelowPriceWarning"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "code",
+                "mapping": {
+                  "cost_jump": "#/components/schemas/CostJumpWarning",
+                  "cost_not_below_price": "#/components/schemas/CostNotBelowPriceWarning",
+                  "rate_deviation": "#/components/schemas/RateDeviationWarning"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "exchange_rate",
+          "rate_date",
+          "rate_source",
+          "vat_payer",
+          "lines",
+          "expenses",
+          "goods_total",
+          "expenses_total",
+          "vat_credit_total",
+          "total_cost",
+          "warnings"
+        ],
+        "title": "ReceiptPreviewOut"
       },
       "ReceivedOut": {
         "properties": {

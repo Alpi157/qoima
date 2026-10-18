@@ -1,5 +1,6 @@
 from collections import Counter
-from datetime import timedelta
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import ColumnElement, case, false, func, literal, or_, select
@@ -51,15 +52,19 @@ def _avg_cost_expr() -> ColumnElement[int]:
     )
 
 
-def _last_cost_expr() -> ColumnElement[int]:
+def _purchase_query(*columns):
     return (
-        select(ReceiptLine.unit_cost)
+        select(*columns)
+        .select_from(ReceiptLine)
         .join(Receipt, Receipt.id == ReceiptLine.receipt_id)
-        .where(
-            ReceiptLine.product_id == Product.id,
-            Receipt.status == "posted",
-            ReceiptLine.unit_cost.is_not(None),
-        )
+        .where(Receipt.status == "posted", ReceiptLine.unit_cost.is_not(None))
+    )
+
+
+def _last_purchase_expr(column):
+    return (
+        _purchase_query(column)
+        .where(ReceiptLine.product_id == Product.id)
         .order_by(Receipt.received_at.desc(), ReceiptLine.id.desc())
         .limit(1)
         .correlate(Product)
@@ -67,18 +72,71 @@ def _last_cost_expr() -> ColumnElement[int]:
     )
 
 
+def _last_cost_expr() -> ColumnElement[int]:
+    return _last_purchase_expr(ReceiptLine.unit_cost)
+
+
+@dataclass(frozen=True)
+class LastPurchase:
+    unit_cost: int
+    received_at: datetime
+
+
+def load_last_purchases(db: Session, product_ids: list[int]) -> dict[int, LastPurchase]:
+    ranked = (
+        _purchase_query(
+            ReceiptLine.product_id,
+            ReceiptLine.unit_cost,
+            Receipt.received_at,
+            func.row_number()
+            .over(
+                partition_by=ReceiptLine.product_id,
+                order_by=(Receipt.received_at.desc(), ReceiptLine.id.desc()),
+            )
+            .label("rank"),
+        )
+        .where(ReceiptLine.product_id.in_(product_ids))
+        .subquery()
+    )
+    rows = db.execute(select(ranked).where(ranked.c.rank == 1))
+    return {row.product_id: LastPurchase(row.unit_cost, row.received_at) for row in rows}
+
+
+def _product_columns():
+    return (
+        Product,
+        _stock_expr(),
+        _avg_cost_expr(),
+        _last_cost_expr(),
+        _last_purchase_expr(Receipt.currency),
+        _last_purchase_expr(ReceiptLine.unit_price_minor),
+    )
+
+
 def _to_out(
-    product: Product, stock: int, avg_cost: int | None, last_cost: int | None
+    product: Product,
+    stock: int,
+    avg_cost: int | None,
+    last_cost: int | None,
+    last_purchase_currency: str | None,
+    last_purchase_price_minor: int | None,
 ) -> ProductOut:
     columns = {c.key: getattr(product, c.key) for c in Product.__table__.columns}
     return ProductOut.model_validate(
-        {**columns, "stock": stock, "avg_cost": avg_cost, "last_cost": last_cost}
+        {
+            **columns,
+            "stock": stock,
+            "avg_cost": avg_cost,
+            "last_cost": last_cost,
+            "last_purchase_currency": last_purchase_currency,
+            "last_purchase_price_minor": last_purchase_price_minor,
+        }
     )
 
 
 def get_product(db: Session, product_id: int) -> ProductOut:
     row = db.execute(
-        select(Product, _stock_expr(), _avg_cost_expr(), _last_cost_expr())
+        select(*_product_columns())
         .where(Product.id == product_id)
         .execution_options(populate_existing=True)
     ).one_or_none()
@@ -252,7 +310,7 @@ def search_products(
     total = db.execute(select(func.count()).select_from(Product).where(*conditions)).scalar_one()
 
     query = (
-        select(Product, _stock_expr(), _avg_cost_expr(), _last_cost_expr())
+        select(*_product_columns())
         .where(*conditions)
         .order_by(*order_by)
         .limit(limit)
@@ -266,7 +324,7 @@ def frequent_products(db: Session, limit: int) -> list[ProductOut]:
     """Products by the number of posted sales over the last FREQUENT_PERIOD, then by article."""
     sale_count = func.count(Sale.id.distinct())
     query = (
-        select(Product, _stock_expr(), _avg_cost_expr(), _last_cost_expr())
+        select(*_product_columns())
         .join(SaleLine, SaleLine.product_id == Product.id)
         .join(Sale, Sale.id == SaleLine.sale_id)
         .where(

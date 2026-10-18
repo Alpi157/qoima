@@ -11,6 +11,7 @@ from app.catalog.schemas import MAX_SALE_PRICE
 from app.inventory.models import StockBalance, StockMovement
 from app.numbering import DocumentCounter
 from app.rates.models import ExchangeRate
+from app.rates.schemas import RateOut
 from app.receipts import service
 from app.receipts.models import Receipt, ReceiptExpense, ReceiptExpenseAllocation, ReceiptLine
 from app.schema_types import MAX_MONEY
@@ -19,6 +20,17 @@ from tests.factories import create_product
 
 DAY = date(2026, 10, 14)
 AT = "2026-10-14T20:30:00Z"
+
+
+@pytest.fixture(autouse=True)
+def receipt_comparison(monkeypatch):
+    monkeypatch.setattr(
+        service,
+        "get_rate",
+        lambda currency, day, **kwargs: RateOut(
+            currency=currency, requested_date=day, rate_date=day, rate=Decimal("70"), exact=True
+        ),
+    )
 
 
 @pytest.fixture
@@ -677,5 +689,5 @@ def test_manual_allocation_strict(auth_client, currency_payload, value):
     assert response.json()["errors"][0]["field"] == "expenses.0.manual.0.amount_tiyn"
 
 
-def test_vat_setting_not_in_settings_api(auth_client):
-    assert "is_vat_payer" not in auth_client.get("/api/settings").json()
+def test_vat_setting_in_settings_api(auth_client):
+    assert auth_client.get("/api/settings").json()["is_vat_payer"] is False

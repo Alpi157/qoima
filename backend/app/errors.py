@@ -33,6 +33,7 @@ class ErrorCode(StrEnum):
     EXPENSE_ZERO_WEIGHT = "expense_zero_weight"
     EXPENSE_MANUAL_SUM_MISMATCH = "expense_manual_sum_mismatch"
     RECEIPT_REQUEST_CONFLICT = "receipt_request_conflict"
+    RECEIPT_WARNINGS = "receipt_warnings"
     STOCK_ADJUSTMENT_REQUEST_CONFLICT = "stock_adjustment_request_conflict"
     ADJUSTMENT_COST_REQUIRED = "adjustment_cost_required"
     ADJUSTMENT_COST_NOT_ALLOWED = "adjustment_cost_not_allowed"
@@ -96,6 +97,12 @@ class AppError(Exception):
         self.message = message or self.default_message
         self.params = params or {}
         super().__init__(self.message)
+
+
+class ReceiptWarningsError(AppError):
+    code = ErrorCode.RECEIPT_WARNINGS
+    status_code = 409
+    default_message = "Проверьте и подтвердите предупреждения прихода"
 
 
 class InvalidArticleError(AppError):

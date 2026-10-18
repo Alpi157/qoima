@@ -185,6 +185,40 @@ def test_equal_and_higher_cost_warnings(import_db, tmp_path):
     ]
 
 
+@pytest.mark.parametrize("purchase", [1000, 1100])
+def test_apply_cost_not_below_sale_price_needs_no_confirmation(
+    import_db, tmp_path, monkeypatch, purchase
+):
+    path = write_products(
+        tmp_path / "equal.xlsx",
+        [
+            product_row(
+                **{
+                    "Цена продажи, ₸": 1000,
+                    "Закупочная цена, ₸": purchase,
+                    "Остаток": 2,
+                }
+            )
+        ],
+    )
+    commit = Mock(wraps=import_db.commit)
+    monkeypatch.setattr(import_db, "commit", commit)
+    result = import_products(import_db, path, "owner", apply=True)
+    commit.assert_called_once_with()
+    assert len(result.warnings) == 1
+    receipt = import_db.scalars(select(Receipt)).one()
+    assert receipt.status == "posted" and receipt.supplier == "X2"
+    assert result.receipt_numbers == [receipt.number]
+    line = import_db.scalars(select(ReceiptLine)).one()
+    balance = import_db.scalars(select(StockBalance)).one()
+    assert (line.qty, line.unit_cost, balance.qty, balance.avg_cost) == (
+        2,
+        purchase * 100,
+        2,
+        purchase * 100,
+    )
+
+
 @pytest.mark.parametrize(
     "column", ["Цена продажи, ₸", "Закупочная цена, ₸", "Остаток", "Мин. остаток"]
 )

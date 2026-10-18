@@ -4,6 +4,7 @@ import re
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from xml.etree.ElementTree import ParseError
@@ -308,16 +309,14 @@ def import_products(db: Session, path: Path, username: str, *, apply: bool = Fal
                     )
             current_row = None
             for start in range(0, len(lines), MAX_LINES):
-                receipt = receipt_service._post_receipt(
-                    db,
-                    ReceiptCreate(
-                        request_id=uuid.uuid4(),
-                        lines=lines[start : start + MAX_LINES],
-                        supplier="X2",
-                        note="Бастапқы қалдық, X2-ден көшіру",
-                    ),
-                    user_id,
+                data = ReceiptCreate(
+                    request_id=uuid.uuid4(),
+                    lines=lines[start : start + MAX_LINES],
+                    supplier="X2",
+                    note="Бастапқы қалдық, X2-ден көшіру",
                 )
+                prepared = receipt_service._prepare_receipt(db, data, datetime.now(UTC), {})
+                receipt = receipt_service._post_receipt(db, data, user_id, prepared)
                 numbers.append(receipt.number)
             db.commit()
         except (AppError, SQLAlchemyError) as exc:

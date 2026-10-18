@@ -290,8 +290,10 @@ PK (`product_id`, `warehouse_id`), `qty int not null check (qty >= 0)`,
 значении в снимок новой продажи записывается имя автора), `chief_accountant` (расшифровка подписи
 главного бухгалтера) - `text not null default ''` (пустая строка = не заполнено);
 `updated_at timestamptz`. `is_vat_payer boolean not null default false` добавлен в 26a-1
-для снимка прихода; в API настроек пока отсутствует (будет в 26a-2).
-API: `GET /api/settings`, `PUT /api/settings` (все поля обязательны, строки обрезаются;
+для снимка прихода. `rate_warning_percent INTEGER NOT NULL DEFAULT 10`, CHECK 1–100,
+добавлен в 26a-2. GET возвращает оба поля. В PUT они необязательны: пропуск сохраняет
+значение, явный NULL запрещён. Смена НДС не пересчитывает сохранённые снимки приходов.
+API: `GET /api/settings`, `PUT /api/settings` (пять полей реквизитов обязательны, строки обрезаются;
 ИИН/БИН пустой или ровно 12 цифр; остальные поля до 255 символов).
 
 ### exchange_rates (25)
@@ -326,7 +328,10 @@ quant и общую date. Decimal с запретом Inexact обеспечив
 знаков; float не используется. Корректные CNY/USD из одного ответа сохраняются вместе.
 
 Ошибка сети, HTTP, размера, XML или нужной валюты даёт одну строку лога с причиной.
-При частично годном ответе годная валюта сохраняется. Ошибка подавляет следующую загрузку
+При частично годном ответе годная валюта сохраняется.
+Перед сохранением проверяется published_date: NULL или диапазон от requested_date − 7 дней
+до requested_date включительно. Более старая или будущая дата отбрасывает весь ответ,
+включая обе валюты: лог с причиной, подавление на 600 секунд и обычный fallback. Ошибка подавляет следующую загрузку
 этой даты на 600 секунд в памяти процесса (monotonic, доступ защищён mutex). Точная запись
 в БД проверяется перед этим ограничением. Затем берётся последний курс той же валюты
 с rate_date <= requested_date; при отсутствии — 404 rate_not_found. exact=false означает
@@ -593,10 +598,12 @@ received_at сравнивается как момент времени, тол�
 и reason после обрезки пробелов.
 Её повтор возвращает то же движение и текущий остаток, который мог измениться позже.
 
-Перед поиском повтора берётся транзакционная блокировка
+Для корректировки перед поиском повтора берётся транзакционная блокировка
 pg_advisory_xact_lock(namespace, hashtext(request_id::text)):
 namespace 2201 для приёма, 2202 для корректировки остатка. Она удерживается до
-завершения транзакции. Затем выполняются проверки, номер и складские блокировки
+завершения транзакции. Приём с 26a-2 ищет повтор до получения курсов и блокировки,
+а затем повторяет поиск после advisory-lock. Пока ожидается лента, в сессии проведения
+допускаются только чтения повтора: никаких записей и FOR UPDATE. Затем выполняются проверки, номер и складские блокировки
 в прежнем порядке. Коллизия хеша только сериализует независимые UUID;
 поиск и сравнение всегда используют полный UUID.
 Уникальность страхуют uq_receipts_request_id и частичный индекс
@@ -723,13 +730,13 @@ returned при net_total 0, иначе paid.
 SaleOut.lines содержит id и returned_qty только по posted-возвратам;
 SaleOut.returns содержит id, number, returned_at, total, status всех возвратов.
 
-## Приход в валюте (26a-1; продолжение 26a-2 и 26b)
+## Приход в валюте (26a-1 и 26a-2; интерфейс — 26b)
 
 В 26a-1 реализованы модель, чистый расчёт, проведение KZT/CNY/USD-прихода с расходами,
 повтор request_id, чтение и отмена. Все суммы и доли сохраняются в одной транзакции.
 Интерфейс пока создаёт прежние KZT-приходы, отправляя unit_price_minor.
 
-26a-2 добавит preview, три предупреждения и повторное подтверждение, вызов get_rate
+26a-2 добавляет preview, три предупреждения и повторное подтверждение, вызов get_rate
 при проведении и новый порядок блокировок, API настройки «Мы плательщик НДС» и порога,
 подсказки интерфейсу и проверку published_date в ленте. Валютный интерфейс — 26b.
 Расчёт «купить сегодня» остаётся планом шага 28.
@@ -879,7 +886,8 @@ unit_price_minor либо устаревший unit_cost; последний р�
 Цена — strict int 0..MAX_SALE_PRICE; сумма расхода — strict int 1..MAX_MONEY.
 Расход содержит kind, currency, поля курса и allocation_method (по умолчанию amount).
 product_ids разрешён и обязателен только для selected; manual — только для manual.
-Оба списка непустые, без повторов; товары должны присутствовать в строках прихода.
+Обязательный список непустой, без повторов; товары должны присутствовать в строках прихода.
+Явный NULL у неиспользуемого product_ids/manual равен отсутствию поля.
 Ручная доля — strict int >= 0; сумма долей должна точно равняться C.
 
 exchange_rate — строгая строка по шаблону `^[0-9]{1,8}(\.[0-9]{1,4})?$`, значение > 0.
@@ -890,11 +898,19 @@ exchange_rate — строгая строка по шаблону `^[0-9]{1,8}(\
 Дата nbk не может быть позже неё: поле rate_date либо expenses.<index>.rate_date получает
 тип rate_date_after_receipt. Затем обычным SELECT в сессии документа проверяются наличие
 exchange_rates(rate_date,currency) и точное Decimal-равенство курса; иначе nbk_rate_mismatch.
-Сеть и get_rate при проведении в 26a-1 не вызываются.
+Курс nbk по-прежнему только сверяется с сохранённой записью. Для manual до блокировок
+вызывается get_rate на местную дату прихода, с независимой фабрикой сессий.
+Одинаковые пары (валюта, дата), включая AppError, кешируются в рамках запроса.
+Любая AppError означает отсутствие сравнения, ошибки БД распространяются.
+KZT и nbk get_rate не вызывают.
 
-Порядок: advisory-lock → повтор → load_line_products → настройки is_vat_payer →
-проверка курсов → чистый расчёт → номер → шапка, строки, расходы, доли → post_movements →
-один commit. Снимки article/name/unit и vat_payer_snapshot фиксируются при проведении.
+Порядок: момент и местная дата → повтор без блокировки → get_rate для manual →
+advisory-lock → повторная проверка request_id → общая подготовка → подтверждения →
+номер → шапка, строки, расходы, доли → post_movements → один commit.
+До advisory-lock сессия проведения выполняет только чтения повтора.
+Общая _prepare_receipt загружает товары, читает настройки без восстановления отсутствующей
+строки (по умолчанию НДС false, порог 10), проверяет курсы, вызывает calculate_receipt_costs,
+пакетом читает предыдущие закупки и строит предупреждения. Ничего не пишет и не блокирует. Снимки article/name/unit и vat_payer_snapshot фиксируются при проведении.
 IntegrityError обрабатывается только для uq_receipts_request_id.
 
 ReceiptOut возвращает валютные поля (курс строкой с четырьмя знаками), снимок НДС,
@@ -914,11 +930,57 @@ receipts и receipt_expenses и отказывает при валютных п�
 сообщая количества и необходимость восстановления из бэкапа через deploy/restore.sh.
 KZT-приходы без расходов допускают downgrade и повторный upgrade без потери значений.
 
-### Предпросмотр (26a-2, план) и request_id (26a-1)
+### Предпросмотр и предупреждения (26a-2)
 
-POST /api/receipts/preview будет считать те же значения, что проведение, общей чистой
-функцией без записи. Предупреждения из month-plan (курс, скачок себестоимости, цена продажи)
-не запрещают проведение и требуют подтверждения в 26b. В 26a-1 такого эндпоинта нет.
+Защищённый POST /api/receipts/preview принимает тот же состав, request_id необязателен,
+confirmed_warnings не проверяется. Подготовка общая с проведением: числа и ошибки 422
+совпадают. Никаких записей документов, строк, расходов, долей, движений, остатков,
+счётчиков или настроек, блокировок и commit сессии preview. Независимый get_rate может
+сохранять exchange_rates своей короткой транзакцией.
+
+ReceiptPreviewOut возвращает currency, exchange_rate (четыре знака), rate_date,
+rate_source, vat_payer, строки и расходы в порядке ввода и warnings. Строки содержат
+product_id, article, name, unit, qty, unit_price_minor, goods_total, expenses_total,
+vat_credit_total, unit_cost, sale_price, previous_cost и markup_percent.
+Расходы: index, kind, amount_tiyn, is_vat_credit, revaluation_currency, revaluation_rate,
+allocations [{product_id, amount_tiyn}]. Итоги: goods_total, expenses_total,
+vat_credit_total, total_cost = goods_total + expenses_total.
+Наценка: sign(sale_price−u) × round_half_up(abs(100 × (sale_price−u)), u), NULL при u=0.
+Половина округляется от нуля: 962500 и цена 1450000 дают 51%, а не 50%.
+
+Предупреждение имеет key, code, params. Курсы в параметрах и ключах — строки с четырьмя
+знаками, деньги — целые тиыны. Порядок: курс шапки, курсы расходов по index,
+затем по входным строкам cost_jump и cost_not_below_price.
+
+| code | Условие и params | key |
+|---|---|---|
+| rate_deviation | Только manual: abs(m−n) × 100 > rate_warning_percent × n (Decimal). target=receipt/expense, index (NULL у шапки), currency, rate, nbk_rate, nbk_rate_date, nbk_exact, percent. Дата и exact из RateOut, включая fallback; percent округляется половиной вверх. | rate_deviation:{target}:{index или -}:{currency}:{rate}:{nbk_rate} |
+| cost_jump | prev > 0 и (u >= 2×prev либо 2×u <= prev). product_id, article, unit_cost, previous_cost, previous_received_at. | cost_jump:{product_id}:{u}:{prev} |
+| cost_not_below_price | u >= текущая sale_price, включая 0. product_id, article, unit_cost, sale_price. | cost_not_below_price:{product_id}:{u}:{sale_price} |
+
+Прошлая закупка: последняя posted-строка с известной unit_cost по received_at DESC,
+receipt_lines.id DESC, без ограничения датой нового прихода. Отменённые и неизвестные
+строки исключены; prev=0 не даёт cost_jump.
+
+ReceiptCreate.confirmed_warnings — необязательный nullable список до 100 строк,
+каждая до 200 символов. Переданный список (включая пустой) должен содержать ключи
+всех текущих предупреждений. Иначе 409 receipt_warnings с params {warnings: все текущие}:
+номер не расходуется, документ не создаётся. Лишние ключи игнорируются.
+Отсутствие поля и NULL пропускают проверку: текущий интерфейс, XLSX/X2-импорт и demo
+проводят приходы без подтверждений, в том числе при закупочной цене не ниже продажной.
+
+### Подсказки для 26b
+
+ProductOut содержит nullable last_purchase_currency и last_purchase_price_minor той же
+последней известной posted-строки, что last_cost. Старые известные строки дают KZT и
+unit_price_minor=unit_cost; без закупки оба поля NULL. Список, поиск и частые товары
+получают поля в существующем SQL без N+1.
+GET /api/receipts/defaults?supplier=... возвращает {currency,source}:
+последний posted-приход совпавшего после trim и без регистра поставщика — supplier;
+иначе последний posted-приход — last; иначе KZT и default. Пустой поставщик пропускает
+первый поиск. Сортировка received_at DESC, id DESC.
+
+### Request_id
 
 Повтор сначала возвращает уже записанный приход до новой загрузки курса и чтения текущих
 настроек. В состав сравнения входят supplier/note после нормализации, явно заданный received_at,
@@ -929,7 +991,9 @@ currency, exchange_rate (точное десятичное значение), ra
 У manual серверная дата не сравнивается. Устаревший unit_cost приводится к unit_price_minor.
 В KZT дата/источник NULL. Валютный курс передаётся как снимок подтверждённого ввода.
 Серверные снимки товара, vat_payer_snapshot, рассчитанные доли/итоги и сегодняшние курсы
-не входят в сравнение; смена настроек не делает прежний повтор конфликтом.
+не входят в сравнение; confirmed_warnings также не сравнивается. Смена настроек
+не делает прежний повтор конфликтом. Повтор возвращается до get_rate, подготовки
+и проверки подтверждений, включая повтор после отмены.
 Блокировка request_id, уникальность и единственный commit документа сохраняются.
 
 ### Эталоны из month-plan.md
@@ -974,7 +1038,9 @@ PATCH  /api/customers/{id}
 GET    /api/customers/debts?limit=&offset=   долг не равен нулю, итоги по всей выборке
 GET    /api/customers/{id}/ledger?limit=&offset=   продажи, оплаты, возвраты и корректировки, долг после каждой записи
 
-POST   /api/receipts                    KZT/CNY/USD и расходы; 201 новый, 200 повтор request_id (26a-1)
+POST   /api/receipts                    KZT/CNY/USD и расходы; 201 новый, 200 повтор request_id
+POST   /api/receipts/preview            расчёт без записи документа, предупреждения
+GET    /api/receipts/defaults           валюта по поставщику или последнему приходу
 GET    /api/receipts?date_from=&date_to=&status=   даты YYYY-MM-DD по Asia/Almaty, date_to включительно
 GET    /api/receipts/{id}
 POST   /api/receipts/{id}/cancel
@@ -1132,6 +1198,7 @@ NULL. У прежних видов ledger reason NULL. Только posted-до�
 | `nbk_rate_mismatch` | 422 | `currency`, `rate_date` | точной записи НБК нет или курс отличается |
 | `expense_zero_weight` | 422 | `index` | сумма весов расхода равна нулю |
 | `expense_manual_sum_mismatch` | 422 | `index`, `expected`, `actual` | ручные доли не равны сумме расхода в тиынах |
+| `receipt_warnings` | 409 | `warnings` (все текущие) | передан список confirmed_warnings, но не все ключи подтверждены |
 | `receipt_request_conflict` | 409 | `id`, `number` | request_id использован приёмом с другим составом |
 | `stock_adjustment_request_conflict` | 409 | `movement_id`, `product_id` | request_id использован корректировкой остатка с другим составом |
 | `insufficient_stock` | 409 | `items` | не хватает товара на остатке |

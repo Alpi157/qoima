@@ -3,8 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
 import pytest
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import event, func, select
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.customers.models import Customer
 from app.customers.service import current_debt
@@ -159,14 +159,25 @@ def test_adjustment_validates_cost_after_receipt_lock(isolated_stock_engine, sup
         assert row.qty == (4 if supplied_cost is None else 3)
 
 
-def test_parallel_currency_receipt_50_runs(isolated_stock_engine):
+@pytest.mark.parametrize("source", ["nbk", "manual"])
+def test_parallel_currency_receipt_50_runs(isolated_stock_engine, monkeypatch, source):
     from datetime import date
     from decimal import Decimal
 
     from app.rates.models import ExchangeRate
+    from app.rates.schemas import RateOut
+    from app.receipts import service as receipt_service
     from app.receipts.models import ReceiptExpense, ReceiptExpenseAllocation
 
     engine = isolated_stock_engine
+    factory = sessionmaker(bind=engine)
+    monkeypatch.setattr(
+        receipt_service,
+        "get_rate",
+        lambda currency, day, **kwargs: RateOut(
+            currency=currency, requested_date=day, rate_date=day, rate=Decimal("70"), exact=True
+        ),
+    )
     with Session(engine) as db:
         user = create_user(db).id
         products = [create_product(db).id for _ in range(2)]
@@ -184,8 +195,8 @@ def test_parallel_currency_receipt_50_runs(isolated_stock_engine):
                 received_at="2026-10-14T12:00:00Z",
                 currency="CNY",
                 exchange_rate="70",
-                rate_date="2026-10-14",
-                rate_source="nbk",
+                rate_date="2026-10-14" if source == "nbk" else None,
+                rate_source=source,
                 lines=[{"product_id": pid, "qty": 1, "unit_price_minor": 100} for pid in products],
                 expenses=[
                     {"kind": "delivery", "amount_minor": 101},
@@ -199,7 +210,7 @@ def test_parallel_currency_receipt_50_runs(isolated_stock_engine):
                 with Session(engine) as db:
                     pids.append(db.scalar(select(func.pg_backend_pid())))
                     ready.set()
-                    return post_receipt(db, payload, user)
+                    return post_receipt(db, payload, user, session_factory=factory)
 
             with Session(engine) as owner:
                 lock_request_id(owner, RECEIPT_REQUEST_LOCK, request_id)
@@ -207,7 +218,7 @@ def test_parallel_currency_receipt_50_runs(isolated_stock_engine):
                 try:
                     assert ready.wait(5)
                     wait_until_advisory_lock_waiting(pids[0], RECEIPT_REQUEST_LOCK, request_id)
-                    first, created = post_receipt(owner, payload, user)
+                    first, created = post_receipt(owner, payload, user, session_factory=factory)
                     replay, replay_created = future.result(timeout=5)
                     assert created and not replay_created and first == replay
                 finally:
@@ -231,3 +242,85 @@ def test_parallel_currency_receipt_50_runs(isolated_stock_engine):
                     db.scalars(select(StockBalance.qty).order_by(StockBalance.product_id)).all()
                     == [run + 1] * 2
                 )
+
+
+def test_manual_rate_precedes_advisory_lock_and_document_writes(isolated_stock_engine, monkeypatch):
+    from datetime import date
+    from decimal import Decimal
+
+    from app.rates.schemas import RateOut
+    from app.receipts import service as receipt_service
+
+    engine = isolated_stock_engine
+    factory = sessionmaker(bind=engine)
+    with factory() as db:
+        user = create_user(db).id
+        product = create_product(db).id
+        db.commit()
+    payload = ReceiptCreate(
+        request_id=uuid.uuid4(),
+        currency="CNY",
+        exchange_rate="80",
+        rate_source="manual",
+        received_at="2026-10-14T12:00:00Z",
+        lines=[{"product_id": product, "qty": 1, "unit_price_minor": 100}],
+    )
+    fetched, ready = Event(), Event()
+    statements, pids = [], []
+    phase = {"locked": False}
+
+    def compare(currency, day, *, session_factory):
+        assert session_factory is factory
+        fetched.set()
+        return RateOut(
+            currency=currency,
+            requested_date=day,
+            rate_date=date(2026, 10, 14),
+            rate=Decimal("70"),
+            exact=True,
+        )
+
+    monkeypatch.setattr(receipt_service, "get_rate", compare)
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        sql = " ".join(statement.upper().split())
+        if "PG_ADVISORY_XACT_LOCK" in sql:
+            phase["locked"] = True
+        if not phase["locked"]:
+            assert sql.startswith("SELECT "), sql
+            assert not any(
+                token in sql
+                for token in (
+                    "FOR UPDATE",
+                    "FOR SHARE",
+                    "FOR NO KEY UPDATE",
+                    "FOR KEY SHARE",
+                    "PG_ADVISORY",
+                )
+            ), sql
+            statements.append(sql)
+
+    def other():
+        with factory() as db:
+            pids.append(db.scalar(select(func.pg_backend_pid())))
+            connection = db.connection()
+            event.listen(connection, "before_cursor_execute", record)
+            ready.set()
+            try:
+                return post_receipt(db, payload, user, session_factory=factory)
+            finally:
+                event.remove(connection, "before_cursor_execute", record)
+
+    with factory() as owner, ThreadPoolExecutor(max_workers=1) as executor:
+        lock_request_id(owner, RECEIPT_REQUEST_LOCK, payload.request_id)
+        future = executor.submit(other)
+        try:
+            assert ready.wait(5)
+            assert fetched.wait(5), "get_rate must finish before waiting on the advisory lock"
+            wait_until_advisory_lock_waiting(pids[0], RECEIPT_REQUEST_LOCK, payload.request_id)
+            assert len(statements) == 1 and "FROM RECEIPTS" in statements[0]
+            first, created = post_receipt(owner, payload, user, session_factory=factory)
+            replay, replay_created = future.result(timeout=5)
+            assert created and not replay_created and replay == first
+        finally:
+            owner.rollback()

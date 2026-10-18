@@ -5,7 +5,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, DecimalException, Inexact, localcontext
 from http.client import HTTPException
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -147,6 +147,12 @@ def get_rate(
             if before_fetch is not None:
                 before_fetch()
             feed = _fetch_rates(requested_date)
+            if feed.published_date is not None and not (
+                requested_date - timedelta(days=7) <= feed.published_date <= requested_date
+            ):
+                published_date = feed.published_date
+                feed = None
+                raise ValueError(f"published_date {published_date} outside requested date window")
             if feed.problems:
                 problem = "; ".join(feed.problems)
         except (

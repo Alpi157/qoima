@@ -16,13 +16,21 @@ def _settings_row(db: Session) -> BusinessSettings:
     return settings
 
 
-def get_business_settings(db: Session) -> BusinessSettings:
-    return _settings_row(db)
+def get_business_settings(db: Session, *, read_only: bool = False) -> BusinessSettings:
+    if not read_only:
+        return _settings_row(db)
+    settings = db.get(BusinessSettings, SETTINGS_ID)
+    # A preview must not recreate a missing singleton row.
+    return (
+        settings
+        if settings is not None
+        else BusinessSettings(id=SETTINGS_ID, is_vat_payer=False, rate_warning_percent=10)
+    )
 
 
 def update_business_settings(db: Session, data: BusinessSettingsUpdate) -> BusinessSettings:
     settings = _settings_row(db)
-    for field, value in data.model_dump().items():
+    for field, value in data.model_dump(exclude_unset=True).items():
         setattr(settings, field, value)
     settings.updated_at = func.now()
     db.commit()

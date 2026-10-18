@@ -163,6 +163,52 @@ def test_requested_date_does_not_follow_published_date(rate_factory, feed):
     assert len(feed) == 1
 
 
+@pytest.mark.parametrize("offset", [1, -8])
+def test_published_date_window_rejects_entire_feed_and_suppresses(
+    rate_factory, monkeypatch, caplog, offset
+):
+    seed(rate_factory, DAY - timedelta(days=1))
+    published = DAY + timedelta(days=offset)
+    download = []
+    clock = [1000]
+    monkeypatch.setattr(service, "_clock", lambda: clock[0])
+
+    def feed(*args, **kwargs):
+        download.append(1)
+        return Response(xml(published=published.strftime("%d.%m.%Y")))
+
+    monkeypatch.setattr(urllib.request, "urlopen", feed)
+    with caplog.at_level(logging.WARNING, logger=service.logger.name):
+        result = service.get_rate("CNY", DAY, session_factory=rate_factory)
+        assert not result.exact and result.rate_date == DAY - timedelta(days=1)
+        clock[0] += 599
+        assert service.get_rate("CNY", DAY, session_factory=rate_factory) == result
+        assert len(download) == 1 and len(caplog.records) == 1
+        assert "published_date" in caplog.records[0].getMessage()
+        with rate_factory() as db:
+            assert db.scalar(select(func.count()).select_from(ExchangeRate)) == 1
+        clock[0] += 1
+        service.get_rate("CNY", DAY, session_factory=rate_factory)
+        assert len(download) == 2
+
+
+@pytest.mark.parametrize("offset", [-7, None])
+def test_published_date_seven_days_or_missing_is_allowed(rate_factory, monkeypatch, offset):
+    published = DAY + timedelta(days=offset) if offset is not None else None
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *a, **k: Response(
+            xml(published=published.strftime("%d.%m.%Y") if published else "")
+        ),
+    )
+    result = service.get_rate("CNY", DAY, session_factory=rate_factory)
+    assert result.exact
+    with rate_factory() as db:
+        rows = db.scalars(select(ExchangeRate)).all()
+        assert len(rows) == 2 and all(row.published_date == published for row in rows)
+
+
 @pytest.mark.parametrize(
     "failure", ["offline", "http", "xml", "missing", "zero", "large", "date", "encoding"]
 )
@@ -243,13 +289,13 @@ def test_concurrent_insert_fifty_times(rate_factory, monkeypatch):
     with ThreadPoolExecutor(max_workers=2) as workers:
         for offset in range(50):
             barrier = Barrier(2)
+            day = DAY - timedelta(days=offset)
 
-            def download(*args, barrier=barrier, **kwargs):
+            def download(*args, barrier=barrier, day=day, **kwargs):
                 index = barrier.wait(timeout=5)
-                return Response(xml(cny=str(67 + index)))
+                return Response(xml(cny=str(67 + index), published=day.strftime("%d.%m.%Y")))
 
             monkeypatch.setattr(urllib.request, "urlopen", download)
-            day = DAY - timedelta(days=offset)
             futures = [
                 workers.submit(service.get_rate, "CNY", day, session_factory=rate_factory)
                 for _ in range(2)

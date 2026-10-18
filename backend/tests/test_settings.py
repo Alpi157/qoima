@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 EMPTY = {
+    "is_vat_payer": False,
+    "rate_warning_percent": 10,
     "seller_name": "",
     "seller_iin_bin": "",
     "responsible_person": "",
@@ -9,6 +11,8 @@ EMPTY = {
     "chief_accountant": "",
 }
 FILLED = {
+    "is_vat_payer": False,
+    "rate_warning_percent": 10,
     "seller_name": "3А Аuto Parts.KZ",
     "seller_iin_bin": "900101300123",
     "responsible_person": "Кәкеш Арман",
@@ -58,7 +62,9 @@ def test_save_settings(auth_client: TestClient) -> None:
 
 def test_save_trims_strings_and_allows_clearing(auth_client: TestClient) -> None:
     auth_client.put("/api/settings", json=FILLED)
-    padded = {key: f"  {value}  " for key, value in FILLED.items()}
+    padded = {
+        key: f"  {value}  " if isinstance(value, str) else value for key, value in FILLED.items()
+    }
 
     response = auth_client.put("/api/settings", json=padded)
     assert _fields(response.json()) == FILLED
@@ -118,3 +124,41 @@ def test_put_updates_updated_at(auth_client: TestClient) -> None:
     after = auth_client.put("/api/settings", json=FILLED).json()["updated_at"]
     # now() is the transaction start, and the test shares one transaction: it can only not go back.
     assert after >= before
+
+
+def test_receipt_settings_and_legacy_five_field_put(auth_client):
+    body = {key: value for key, value in FILLED.items() if isinstance(value, str)}
+    saved = auth_client.put(
+        "/api/settings",
+        json={
+            **body,
+            "is_vat_payer": True,
+            "rate_warning_percent": 25,
+        },
+    )
+    assert saved.status_code == 200
+    assert saved.json()["is_vat_payer"] is True
+    assert saved.json()["rate_warning_percent"] == 25
+    legacy = auth_client.put("/api/settings", json=body)
+    assert legacy.status_code == 200
+    assert legacy.json()["is_vat_payer"] is True
+    assert legacy.json()["rate_warning_percent"] == 25
+    assert auth_client.get("/api/settings").json() == legacy.json()
+
+
+@pytest.mark.parametrize("value", [0, 101, -1, None, True, "10", 1.5])
+def test_receipt_threshold_rejects_invalid_values(auth_client, value):
+    response = auth_client.put("/api/settings", json={**FILLED, "rate_warning_percent": value})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("value", [1, 100])
+def test_receipt_threshold_accepts_boundaries(auth_client, value):
+    response = auth_client.put("/api/settings", json={**FILLED, "rate_warning_percent": value})
+    assert response.status_code == 200 and response.json()["rate_warning_percent"] == value
+
+
+def test_vat_null_rejected(auth_client):
+    assert (
+        auth_client.put("/api/settings", json={**FILLED, "is_vat_payer": None}).status_code == 422
+    )

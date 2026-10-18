@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -65,6 +65,8 @@ class ProductOut(BaseModel):
     min_qty: int | None
     avg_cost: int | None
     last_cost: int | None
+    last_purchase_currency: Literal["KZT", "CNY", "USD"] | None
+    last_purchase_price_minor: int | None
 
 
 class ProductPage(BaseModel):

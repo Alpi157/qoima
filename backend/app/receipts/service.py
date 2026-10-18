@@ -1,6 +1,7 @@
 from collections import Counter
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from fastapi.exceptions import RequestValidationError
@@ -10,31 +11,50 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 from app.auth.models import User
-from app.catalog.service import load_line_products
+from app.catalog.models import Product
+from app.catalog.service import LastPurchase, load_last_purchases, load_line_products
 from app.db_utils import LOCAL_TZ, RECEIPT_REQUEST_LOCK, local_date_range, lock_request_id
 from app.errors import (
+    AppError,
     InsufficientStockError,
     NbkRateMismatchError,
     ReceiptAlreadyCancelledError,
     ReceiptCancelError,
     ReceiptNotFoundError,
     ReceiptRequestConflictError,
+    ReceiptWarningsError,
 )
-from app.inventory.service import MovementIn, post_movements
+from app.inventory.service import MovementIn, post_movements, round_half_up
 from app.numbering import next_number
 from app.rates.models import ExchangeRate
-from app.receipts.costing import CostExpense, CostLine, calculate_receipt_costs
+from app.rates.schemas import RateOut
+from app.rates.service import SessionFactory, get_rate
+from app.receipts.costing import CostExpense, CostLine, ReceiptCost, calculate_receipt_costs
 from app.receipts.models import Receipt, ReceiptExpense, ReceiptExpenseAllocation, ReceiptLine
 from app.receipts.schemas import (
     AllocationOut,
+    CostJumpParams,
+    CostJumpWarning,
+    CostNotBelowPriceParams,
+    CostNotBelowPriceWarning,
     ExpenseOut,
+    PreviewAllocationOut,
+    RateDeviationParams,
+    RateDeviationWarning,
     RateInput,
     ReceiptCreate,
+    ReceiptDefaultsOut,
+    ReceiptInput,
     ReceiptLineOut,
     ReceiptListItem,
     ReceiptOut,
     ReceiptPage,
+    ReceiptPreviewExpenseOut,
+    ReceiptPreviewIn,
+    ReceiptPreviewLineOut,
+    ReceiptPreviewOut,
     ReceiptStatus,
+    ReceiptWarning,
 )
 from app.settings.service import get_business_settings
 
@@ -148,12 +168,77 @@ def _currency_snapshot(db: Session, data: RateInput, local_date: date, path: tup
     }
 
 
-def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
-    """Post a receipt without committing. The caller owns the transaction."""
+@dataclass(frozen=True)
+class PreparedReceipt:
+    moment: datetime
+    products: dict[int, Product]
+    currency_snapshot: dict
+    expense_snapshots: list[dict]
+    vat_payer: bool
+    costs: ReceiptCost
+    previous: dict[int, LastPurchase]
+    warnings: list[ReceiptWarning]
+
+
+def _nbk_comparisons(
+    data: ReceiptInput, local_date: date, session_factory: SessionFactory | None
+) -> dict[str, RateOut | None]:
+    comparisons = {}
+    for rate_input in (data, *data.expenses):
+        if rate_input.rate_source != "manual" or rate_input.currency in comparisons:
+            continue
+        if session_factory is None:
+            raise RuntimeError("Manual receipt rates require a separate session factory")
+        try:
+            comparisons[rate_input.currency] = get_rate(
+                rate_input.currency, local_date, session_factory=session_factory
+            )
+        except AppError:
+            comparisons[rate_input.currency] = None
+    return comparisons
+
+
+def _rate_warnings(
+    data: ReceiptInput, comparisons: dict[str, RateOut | None], threshold: int
+) -> list[ReceiptWarning]:
+    warnings = []
+    for index, rate_input in [(None, data), *enumerate(data.expenses)]:
+        nbk = comparisons.get(rate_input.currency)
+        if rate_input.rate_source != "manual" or nbk is None:
+            continue
+        delta = abs(rate_input.rate_decimal - nbk.rate) * 100
+        if delta <= threshold * nbk.rate:
+            continue
+        target = "receipt" if index is None else "expense"
+        rate = format(rate_input.rate_decimal, ".4f")
+        nbk_rate = format(nbk.rate, ".4f")
+        warnings.append(
+            RateDeviationWarning(
+                key=f"rate_deviation:{target}:{index if index is not None else '-'}:"
+                f"{rate_input.currency}:{rate}:{nbk_rate}",
+                params=RateDeviationParams(
+                    target=target,
+                    index=index,
+                    currency=rate_input.currency,
+                    rate=rate,
+                    nbk_rate=nbk_rate,
+                    nbk_rate_date=nbk.rate_date,
+                    nbk_exact=nbk.exact,
+                    percent=int((delta / nbk.rate).quantize(Decimal(1), rounding=ROUND_HALF_UP)),
+                ),
+            )
+        )
+    return warnings
+
+
+def _prepare_receipt(
+    db: Session, data: ReceiptInput, moment: datetime, nbk_compare: dict[str, RateOut | None]
+) -> PreparedReceipt:
+    """Read and calculate only: no writes, locks, numbers or transaction completion."""
     products = load_line_products(db, [line.product_id for line in data.lines], "receipt")
-    vat_payer = get_business_settings(db).is_vat_payer
-    received_at = data.received_at or datetime.now(UTC)
-    local_date = received_at.astimezone(ZoneInfo(LOCAL_TZ)).date()
+    settings = get_business_settings(db, read_only=True)
+    vat_payer = settings.is_vat_payer
+    local_date = moment.astimezone(ZoneInfo(LOCAL_TZ)).date()
     currency_snapshot = _currency_snapshot(db, data, local_date, ())
     expense_snapshots = [
         _currency_snapshot(db, expense, local_date, ("expenses", index))
@@ -177,15 +262,61 @@ def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
         ],
         vat_payer,
     )
+    previous = load_last_purchases(db, [line.product_id for line in data.lines])
+    warnings = _rate_warnings(data, nbk_compare, settings.rate_warning_percent)
+    for line in data.lines:
+        pid = line.product_id
+        product = products[pid]
+        unit_cost = costs.lines[pid].unit_cost
+        prev = previous.get(pid)
+        if (
+            prev is not None
+            and prev.unit_cost > 0
+            and (unit_cost >= 2 * prev.unit_cost or 2 * unit_cost <= prev.unit_cost)
+        ):
+            warnings.append(
+                CostJumpWarning(
+                    key=f"cost_jump:{pid}:{unit_cost}:{prev.unit_cost}",
+                    params=CostJumpParams(
+                        product_id=pid,
+                        article=product.article,
+                        unit_cost=unit_cost,
+                        previous_cost=prev.unit_cost,
+                        previous_received_at=prev.received_at,
+                    ),
+                )
+            )
+        if unit_cost >= product.sale_price:
+            warnings.append(
+                CostNotBelowPriceWarning(
+                    key=f"cost_not_below_price:{pid}:{unit_cost}:{product.sale_price}",
+                    params=CostNotBelowPriceParams(
+                        product_id=pid,
+                        article=product.article,
+                        unit_cost=unit_cost,
+                        sale_price=product.sale_price,
+                    ),
+                )
+            )
+    return PreparedReceipt(
+        moment, products, currency_snapshot, expense_snapshots, vat_payer, costs, previous, warnings
+    )
+
+
+def _post_receipt(
+    db: Session, data: ReceiptCreate, user_id: int, prepared: PreparedReceipt
+) -> Receipt:
+    """Write a prepared receipt without committing; also used by the atomic XLSX import."""
+    products, costs = prepared.products, prepared.costs
     receipt = Receipt(
         number=next_number(db, DOC_TYPE),
         request_id=data.request_id,
         supplier=data.supplier,
         note=data.note,
         created_by=user_id,
-        received_at=received_at,
-        vat_payer_snapshot=vat_payer,
-        **currency_snapshot,
+        received_at=prepared.moment,
+        vat_payer_snapshot=prepared.vat_payer,
+        **prepared.currency_snapshot,
     )
     db.add(receipt)
     db.flush()
@@ -223,7 +354,7 @@ def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
             **snapshot,
         )
         for expense, cost, snapshot in zip(
-            data.expenses, costs.expenses, expense_snapshots, strict=True
+            data.expenses, costs.expenses, prepared.expense_snapshots, strict=True
         )
     ]
     db.add_all(expenses)
@@ -255,13 +386,33 @@ def _post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> Receipt:
     return receipt
 
 
-def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> tuple[ReceiptOut, bool]:
+def post_receipt(
+    db: Session,
+    data: ReceiptCreate,
+    user_id: int,
+    *,
+    session_factory: SessionFactory | None = None,
+) -> tuple[ReceiptOut, bool]:
+    moment = data.received_at or datetime.now(UTC)
+    existing = _existing_receipt(db, data)
+    if existing is not None:
+        return existing, False
+    nbk_compare = _nbk_comparisons(
+        data, moment.astimezone(ZoneInfo(LOCAL_TZ)).date(), session_factory
+    )
     lock_request_id(db, RECEIPT_REQUEST_LOCK, data.request_id)
     existing = _existing_receipt(db, data)
     if existing is not None:
         return existing, False
     try:
-        receipt = _post_receipt(db, data, user_id)
+        prepared = _prepare_receipt(db, data, moment, nbk_compare)
+        if data.confirmed_warnings is not None:
+            confirmed = set(data.confirmed_warnings)
+            if any(warning.key not in confirmed for warning in prepared.warnings):
+                raise ReceiptWarningsError(
+                    params={"warnings": [w.model_dump(mode="json") for w in prepared.warnings]}
+                )
+        receipt = _post_receipt(db, data, user_id, prepared)
         db.commit()
     except IntegrityError as exc:
         if not _is_request_id_conflict(exc):
@@ -272,6 +423,96 @@ def post_receipt(db: Session, data: ReceiptCreate, user_id: int) -> tuple[Receip
             raise
         return existing, False
     return get_receipt(db, receipt.id), True
+
+
+def _markup_percent(sale_price: int, unit_cost: int) -> int | None:
+    if unit_cost == 0:
+        return None
+    difference = sale_price - unit_cost
+    return (1 if difference >= 0 else -1) * round_half_up(abs(difference) * 100, unit_cost)
+
+
+def preview_receipt(
+    db: Session, data: ReceiptPreviewIn, *, session_factory: SessionFactory
+) -> ReceiptPreviewOut:
+    moment = data.received_at or datetime.now(UTC)
+    comparisons = _nbk_comparisons(
+        data, moment.astimezone(ZoneInfo(LOCAL_TZ)).date(), session_factory
+    )
+    prepared = _prepare_receipt(db, data, moment, comparisons)
+    costs = prepared.costs
+    lines = []
+    for line in data.lines:
+        pid = line.product_id
+        product = prepared.products[pid]
+        cost = costs.lines[pid]
+        previous = prepared.previous.get(pid)
+        lines.append(
+            ReceiptPreviewLineOut(
+                product_id=pid,
+                article=product.article,
+                name=product.name,
+                unit=product.unit,
+                qty=line.qty,
+                unit_price_minor=line.price_minor,
+                goods_total=cost.goods_total,
+                expenses_total=cost.expenses_total,
+                vat_credit_total=cost.vat_credit_total,
+                unit_cost=cost.unit_cost,
+                sale_price=product.sale_price,
+                previous_cost=previous.unit_cost if previous is not None else None,
+                markup_percent=_markup_percent(product.sale_price, cost.unit_cost),
+            )
+        )
+    expenses = [
+        ReceiptPreviewExpenseOut(
+            index=index,
+            kind=expense.kind,
+            amount_tiyn=cost.amount_tiyn,
+            is_vat_credit=cost.is_vat_credit,
+            revaluation_currency=cost.revaluation_currency,
+            revaluation_rate=(
+                Decimal(cost.revaluation_rate_scaled) / 10_000
+                if cost.revaluation_rate_scaled is not None
+                else None
+            ),
+            allocations=[
+                PreviewAllocationOut(product_id=pid, amount_tiyn=amount)
+                for pid, amount in sorted(cost.allocations.items())
+            ],
+        )
+        for index, (expense, cost) in enumerate(zip(data.expenses, costs.expenses, strict=True))
+    ]
+    return ReceiptPreviewOut(
+        **prepared.currency_snapshot,
+        vat_payer=prepared.vat_payer,
+        lines=lines,
+        expenses=expenses,
+        goods_total=costs.goods_total,
+        expenses_total=costs.expenses_total,
+        vat_credit_total=costs.vat_credit_total,
+        total_cost=costs.goods_total + costs.expenses_total,
+        warnings=prepared.warnings,
+    )
+
+
+def receipt_defaults(db: Session, supplier: str | None) -> ReceiptDefaultsOut:
+    query = (
+        select(Receipt.currency)
+        .where(Receipt.status == "posted")
+        .order_by(Receipt.received_at.desc(), Receipt.id.desc())
+        .limit(1)
+    )
+    if supplier and supplier.strip():
+        currency = db.scalar(
+            query.where(func.lower(func.btrim(Receipt.supplier)) == supplier.strip().lower())
+        )
+        if currency is not None:
+            return ReceiptDefaultsOut(currency=currency, source="supplier")
+    currency = db.scalar(query)
+    return ReceiptDefaultsOut(
+        currency=currency or "KZT", source="last" if currency is not None else "default"
+    )
 
 
 # The user who cancelled a document; a second alias of users next to the author.

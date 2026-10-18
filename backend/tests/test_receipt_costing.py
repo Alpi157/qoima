@@ -215,6 +215,18 @@ def test_random_1000_receipts():
                     abs(value * weight_sum - cost.amount_tiyn * weights[pid]) < weight_sum
                     for pid, value in cost.allocations.items()
                 )
+                # Inspect the result's rounding errors, without reproducing the allocator.
+                extra = [
+                    pid
+                    for pid, value in cost.allocations.items()
+                    if value * weight_sum > cost.amount_tiyn * weights[pid]
+                ]
+                others = cost.allocations.keys() - set(extra)
+                for first in extra:
+                    for second in others:
+                        a = cost.amount_tiyn * weights[first] % weight_sum
+                        b = cost.amount_tiyn * weights[second] % weight_sum
+                        assert a > b or (a == b and first < second)
         for line in lines:
             cost = result.lines[line.product_id]
             expected_s = sum(

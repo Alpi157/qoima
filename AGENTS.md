@@ -72,6 +72,10 @@
   (или `cd backend && uv run python -m app.demo seed`); API на демо-базе:
   `cd backend && uv run python -m app.demo serve --port 8011`. Пользователь `demo`, язык kk,
   пароль из переменной `DEMO_PASSWORD`, в git его нет.
+- Локальный сценарий валютного прихода 26a-2 (после подготовки demo и запуска API на 8011):
+  `cd backend && DEMO_PASSWORD=... uv run python ../scripts/check_receipt_26a2.py`.
+  Записывает курс 70.0000 только в локальную `qoima_demo`, проверяет preview и ответы
+  409/201/200; создаёт два проверочных товара и один приход, прежние настройки восстанавливает.
 - Снимки экранов: `make screenshots` (пересоздаёт `qoima_demo`, поднимает API на 8011 и фронтенд
   на 5183, снимает все экраны в 1366x800 и 390x844 в `review/screenshots/`, затем проходит продажу
   и приём по шагам, возврат годного товара и брака с отменой

@@ -178,6 +178,8 @@ def test_upgrade_legacy_and_safe_round_trip(migration_case):
 
 
 def test_legacy_request_id_replays_after_upgrade(migration_case):
+    from app.catalog.service import get_product
+
     engine, migrate, ids = migration_case
     migrate("upgrade", REVISION)
     with Session(engine) as db:
@@ -192,6 +194,12 @@ def test_legacy_request_id_replays_after_upgrade(migration_case):
         )
         assert not created and result.number == 1
         assert result.goods_total == result.total_cost == 303
+        product = get_product(db, ids["product"])
+        assert (
+            product.last_cost,
+            product.last_purchase_currency,
+            product.last_purchase_price_minor,
+        ) == (101, "KZT", 101)
         assert db.scalar(text("SELECT count(*) FROM receipts")) == 3
         assert (
             db.scalar(text("SELECT last_number FROM document_counters WHERE doc_type='receipt'"))

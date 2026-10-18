@@ -96,6 +96,8 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
     min_qty: null,
     avg_cost: null,
     last_cost: null,
+    last_purchase_currency: null,
+    last_purchase_price_minor: null,
     ...overrides,
   }
 }
@@ -177,6 +179,8 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
 
 export function makeBusinessSettings(overrides: Partial<BusinessSettings> = {}): BusinessSettings {
   return {
+    is_vat_payer: false,
+    rate_warning_percent: 10,
     seller_name: '3А Аuto Parts.KZ',
     seller_iin_bin: '900101300123',
     responsible_person: 'Кәкеш Арман',

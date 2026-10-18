@@ -144,7 +144,7 @@ class ExpenseIn(RateInput):
                 _invalid(
                     (field,), "expense_targets_required", "Укажите строки распределения расхода"
                 )
-            if field != required and field in self.model_fields_set:
+            if field != required and value is not None:
                 _invalid(
                     (field,), "expense_targets_not_allowed", "Цели не разрешены для этого способа"
                 )
@@ -167,13 +167,15 @@ class ExpenseIn(RateInput):
         return self
 
 
-class ReceiptCreate(RateInput):
-    request_id: UUID
+class ReceiptInput(RateInput):
     lines: list[ReceiptLineIn] = Field(min_length=1, max_length=MAX_LINES)
     supplier: Supplier = None
     note: Note = None
     received_at: AwareDatetime | None = None
     expenses: list[ExpenseIn] = Field(default_factory=list, max_length=50)
+    confirmed_warnings: list[Annotated[str, Field(strict=True, max_length=200)]] | None = Field(
+        default=None, max_length=100
+    )
 
     @field_validator("received_at")
     @classmethod
@@ -203,6 +205,68 @@ class ReceiptCreate(RateInput):
                         loc, "expense_target_not_in_receipt", "Товара нет в строках прихода", pid
                     )
         return self
+
+
+class ReceiptCreate(ReceiptInput):
+    request_id: UUID
+
+
+class ReceiptPreviewIn(ReceiptInput):
+    request_id: UUID | None = None
+
+
+class RateDeviationParams(BaseModel):
+    target: Literal["receipt", "expense"]
+    index: int | None = None
+    currency: Literal["CNY", "USD"]
+    rate: str
+    nbk_rate: str
+    nbk_rate_date: date
+    nbk_exact: bool
+    percent: int
+
+
+class CostJumpParams(BaseModel):
+    product_id: int
+    article: str
+    unit_cost: int
+    previous_cost: int
+    previous_received_at: datetime
+
+
+class CostNotBelowPriceParams(BaseModel):
+    product_id: int
+    article: str
+    unit_cost: int
+    sale_price: int
+
+
+class RateDeviationWarning(BaseModel):
+    key: str
+    code: Literal["rate_deviation"] = "rate_deviation"
+    params: RateDeviationParams
+
+
+class CostJumpWarning(BaseModel):
+    key: str
+    code: Literal["cost_jump"] = "cost_jump"
+    params: CostJumpParams
+
+
+class CostNotBelowPriceWarning(BaseModel):
+    key: str
+    code: Literal["cost_not_below_price"] = "cost_not_below_price"
+    params: CostNotBelowPriceParams
+
+
+ReceiptWarning = Annotated[
+    RateDeviationWarning | CostJumpWarning | CostNotBelowPriceWarning, Field(discriminator="code")
+]
+
+
+class ReceiptDefaultsOut(BaseModel):
+    currency: ReceiptCurrency
+    source: Literal["supplier", "last", "default"]
 
 
 class ReceiptCancel(BaseModel):
@@ -299,3 +363,50 @@ class ReceiptListItem(BaseModel):
 class ReceiptPage(BaseModel):
     items: list[ReceiptListItem]
     total: int
+
+
+class ReceiptPreviewLineOut(ReceiptLineOut):
+    unit_price_minor: int
+    goods_total: int
+    unit_cost: int
+    sale_price: int
+    previous_cost: int | None
+    markup_percent: int | None
+
+
+class PreviewAllocationOut(BaseModel):
+    product_id: int
+    amount_tiyn: int
+
+
+class ReceiptPreviewExpenseOut(BaseModel):
+    index: int
+    kind: ExpenseKind
+    amount_tiyn: int
+    is_vat_credit: bool
+    revaluation_currency: Literal["CNY", "USD"] | None
+    revaluation_rate: Decimal | None
+    allocations: list[PreviewAllocationOut]
+
+    @field_serializer("revaluation_rate")
+    def serialize_revaluation_rate(self, value: Decimal | None) -> str | None:
+        return format(value, ".4f") if value is not None else None
+
+
+class ReceiptPreviewOut(BaseModel):
+    currency: ReceiptCurrency
+    exchange_rate: Decimal
+    rate_date: date | None
+    rate_source: Literal["nbk", "manual"] | None
+    vat_payer: bool
+    lines: list[ReceiptPreviewLineOut]
+    expenses: list[ReceiptPreviewExpenseOut]
+    goods_total: int
+    expenses_total: int
+    vat_credit_total: int
+    total_cost: int
+    warnings: list[ReceiptWarning]
+
+    @field_serializer("exchange_rate")
+    def serialize_rate(self, value: Decimal) -> str:
+        return format(value, ".4f")

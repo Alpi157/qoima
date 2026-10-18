@@ -231,6 +231,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/receipts/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Receipt Defaults */
+        get: operations["receipt_defaults_api_receipts_defaults_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Receipt */
+        post: operations["preview_receipt_api_receipts_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/receipts/{receipt_id}": {
         parameters: {
             query?: never;
@@ -657,6 +691,10 @@ export interface components {
             released_by_name: string;
             /** Chief Accountant */
             chief_accountant: string;
+            /** Is Vat Payer */
+            is_vat_payer: boolean;
+            /** Rate Warning Percent */
+            rate_warning_percent: number;
             /**
              * Updated At
              * Format: date-time
@@ -665,7 +703,7 @@ export interface components {
         };
         /**
          * BusinessSettingsUpdate
-         * @description PUT body: every field is required, an empty string clears it.
+         * @description Invoice fields are required; omitted receipt settings keep their values.
          */
         BusinessSettingsUpdate: {
             /** Seller Name */
@@ -678,6 +716,59 @@ export interface components {
             released_by_name: string;
             /** Chief Accountant */
             chief_accountant: string;
+            /** Is Vat Payer */
+            is_vat_payer?: boolean | null;
+            /** Rate Warning Percent */
+            rate_warning_percent?: number | null;
+        };
+        /** CostJumpParams */
+        CostJumpParams: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Unit Cost */
+            unit_cost: number;
+            /** Previous Cost */
+            previous_cost: number;
+            /**
+             * Previous Received At
+             * Format: date-time
+             */
+            previous_received_at: string;
+        };
+        /** CostJumpWarning */
+        CostJumpWarning: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "cost_jump";
+            params: components["schemas"]["CostJumpParams"];
+        };
+        /** CostNotBelowPriceParams */
+        CostNotBelowPriceParams: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Unit Cost */
+            unit_cost: number;
+            /** Sale Price */
+            sale_price: number;
+        };
+        /** CostNotBelowPriceWarning */
+        CostNotBelowPriceWarning: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "cost_not_below_price";
+            params: components["schemas"]["CostNotBelowPriceParams"];
         };
         /** CustomerCreate */
         CustomerCreate: {
@@ -851,7 +942,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "receipt_warnings" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -1133,6 +1224,13 @@ export interface components {
             /** Sum Posted */
             sum_posted: number;
         };
+        /** PreviewAllocationOut */
+        PreviewAllocationOut: {
+            /** Product Id */
+            product_id: number;
+            /** Amount Tiyn */
+            amount_tiyn: number;
+        };
         /** ProductCreate */
         ProductCreate: {
             /** Article */
@@ -1191,6 +1289,10 @@ export interface components {
             avg_cost: number | null;
             /** Last Cost */
             last_cost: number | null;
+            /** Last Purchase Currency */
+            last_purchase_currency: ("KZT" | "CNY" | "USD") | null;
+            /** Last Purchase Price Minor */
+            last_purchase_price_minor: number | null;
         };
         /** ProductPage */
         ProductPage: {
@@ -1246,6 +1348,45 @@ export interface components {
             /** Is Archived */
             is_archived?: boolean | null;
         };
+        /** RateDeviationParams */
+        RateDeviationParams: {
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "receipt" | "expense";
+            /** Index */
+            index?: number | null;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "CNY" | "USD";
+            /** Rate */
+            rate: string;
+            /** Nbk Rate */
+            nbk_rate: string;
+            /**
+             * Nbk Rate Date
+             * Format: date
+             */
+            nbk_rate_date: string;
+            /** Nbk Exact */
+            nbk_exact: boolean;
+            /** Percent */
+            percent: number;
+        };
+        /** RateDeviationWarning */
+        RateDeviationWarning: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "rate_deviation";
+            params: components["schemas"]["RateDeviationParams"];
+        };
         /** RateOut */
         RateOut: {
             /**
@@ -1293,11 +1434,6 @@ export interface components {
             rate_source?: ("nbk" | "manual") | null;
             /** Rate Date */
             rate_date?: string | null;
-            /**
-             * Request Id
-             * Format: uuid
-             */
-            request_id: string;
             /** Lines */
             lines: components["schemas"]["ReceiptLineIn"][];
             /** Supplier */
@@ -1308,6 +1444,26 @@ export interface components {
             received_at?: string | null;
             /** Expenses */
             expenses?: components["schemas"]["ExpenseIn"][];
+            /** Confirmed Warnings */
+            confirmed_warnings?: string[] | null;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+        };
+        /** ReceiptDefaultsOut */
+        ReceiptDefaultsOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "supplier" | "last" | "default";
         };
         /** ReceiptLineIn */
         ReceiptLineIn: {
@@ -1445,6 +1601,114 @@ export interface components {
             items: components["schemas"]["ReceiptListItem"][];
             /** Total */
             total: number;
+        };
+        /** ReceiptPreviewExpenseOut */
+        ReceiptPreviewExpenseOut: {
+            /** Index */
+            index: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delivery" | "customs_duty" | "antidumping_duty" | "import_vat" | "broker" | "bank" | "other";
+            /** Amount Tiyn */
+            amount_tiyn: number;
+            /** Is Vat Credit */
+            is_vat_credit: boolean;
+            /** Revaluation Currency */
+            revaluation_currency: ("CNY" | "USD") | null;
+            /** Revaluation Rate */
+            revaluation_rate: string | null;
+            /** Allocations */
+            allocations: components["schemas"]["PreviewAllocationOut"][];
+        };
+        /** ReceiptPreviewIn */
+        ReceiptPreviewIn: {
+            /**
+             * Currency
+             * @default KZT
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate?: string | null;
+            /** Rate Source */
+            rate_source?: ("nbk" | "manual") | null;
+            /** Rate Date */
+            rate_date?: string | null;
+            /** Lines */
+            lines: components["schemas"]["ReceiptLineIn"][];
+            /** Supplier */
+            supplier?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Received At */
+            received_at?: string | null;
+            /** Expenses */
+            expenses?: components["schemas"]["ExpenseIn"][];
+            /** Confirmed Warnings */
+            confirmed_warnings?: string[] | null;
+            /** Request Id */
+            request_id?: string | null;
+        };
+        /** ReceiptPreviewLineOut */
+        ReceiptPreviewLineOut: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+            /** Goods Total */
+            goods_total: number;
+            /** Expenses Total */
+            expenses_total: number;
+            /** Vat Credit Total */
+            vat_credit_total: number;
+            /** Unit Cost */
+            unit_cost: number;
+            /** Sale Price */
+            sale_price: number;
+            /** Previous Cost */
+            previous_cost: number | null;
+            /** Markup Percent */
+            markup_percent: number | null;
+        };
+        /** ReceiptPreviewOut */
+        ReceiptPreviewOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate: string;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Rate Source */
+            rate_source: ("nbk" | "manual") | null;
+            /** Vat Payer */
+            vat_payer: boolean;
+            /** Lines */
+            lines: components["schemas"]["ReceiptPreviewLineOut"][];
+            /** Expenses */
+            expenses: components["schemas"]["ReceiptPreviewExpenseOut"][];
+            /** Goods Total */
+            goods_total: number;
+            /** Expenses Total */
+            expenses_total: number;
+            /** Vat Credit Total */
+            vat_credit_total: number;
+            /** Total Cost */
+            total_cost: number;
+            /** Warnings */
+            warnings: (components["schemas"]["RateDeviationWarning"] | components["schemas"]["CostJumpWarning"] | components["schemas"]["CostNotBelowPriceWarning"])[];
         };
         /** ReceivedOut */
         ReceivedOut: {
@@ -2536,6 +2800,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceiptOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    receipt_defaults_api_receipts_defaults_get: {
+        parameters: {
+            query?: {
+                supplier?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptDefaultsOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    preview_receipt_api_receipts_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptPreviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptPreviewOut"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */
