@@ -185,3 +185,87 @@ def test_demo_serve_forces_closed_local_feed(monkeypatch):
     demo._serve_command(8011)
     assert captured["NBK_RATES_URL"] == "http://127.0.0.1:9/nbk"
     assert captured["DATABASE_URL"].endswith("/qoima_demo")
+
+
+def test_seed_does_not_date_later_api_adjustments(client, db_session):
+    import uuid
+
+    from app.inventory.models import StockMovement
+    from app.reports.service import summary
+
+    seed_time = datetime(2026, 9, 27, 12, tzinfo=UTC)
+    demo.seed(db_session, "demo-password", now=seed_time)
+    day = date(2026, 9, 17)
+    report = summary(db_session, day, day)
+    assert report.sales_count == 0 and report.write_off_count == 1
+    assert report.write_off_value > 0
+    assert summary(db_session, date(2026, 9, 16), date(2026, 9, 27)).discount_total > 0
+    assert (
+        client.post(
+            "/api/auth/login", json={"username": "demo", "password": "demo-password"}
+        ).status_code
+        == 200
+    )
+    product = db_session.scalar(select(Product).where(Product.article == "12686362 41-157"))
+    expected_now = db_session.scalar(select(func.now()))
+    response = client.post(
+        "/api/stock/adjustments",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "product_id": product.id,
+            "qty": -1,
+            "reason": "Тауар шатасты",
+        },
+    )
+    assert response.status_code == 201, response.text
+    saved = response.json()["movement"]
+    actual = datetime.fromisoformat(saved["created_at"])
+    assert actual == expected_now
+    assert actual.date() != day
+    assert db_session.get(StockMovement, saved["id"]).created_at == expected_now
+
+
+def test_historical_adjustment_removes_listener_on_failure(client, db_session, monkeypatch):
+    import uuid
+
+    from app.inventory.models import StockMovement
+    from app.inventory.service import MovementIn
+    from tests.factories import create_product, create_user
+
+    user = create_user(db_session, password="test-password")
+    product = create_product(db_session)
+    reason = "Тауар шатасты"
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("Insertion failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(demo, "post_movements", fail)
+        with pytest.raises(RuntimeError, match="Insertion failed"):
+            demo._historical_adjustment(
+                db_session,
+                MovementIn(product.id, 1, "adjustment", note=reason),
+                user.id,
+                datetime(2020, 1, 1, tzinfo=UTC),
+            )
+    assert (
+        client.post(
+            "/api/auth/login", json={"username": user.username, "password": "test-password"}
+        ).status_code
+        == 200
+    )
+    expected_now = db_session.scalar(select(func.now()))
+    response = client.post(
+        "/api/stock/adjustments",
+        json={
+            "request_id": str(uuid.uuid4()),
+            "product_id": product.id,
+            "qty": 1,
+            "unit_cost": 0,
+            "reason": reason,
+        },
+    )
+    assert response.status_code == 201, response.text
+    saved = response.json()["movement"]
+    assert datetime.fromisoformat(saved["created_at"]) == expected_now
+    assert db_session.get(StockMovement, saved["id"]).created_at == expected_now

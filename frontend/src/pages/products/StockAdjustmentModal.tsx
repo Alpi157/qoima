@@ -42,6 +42,7 @@ const QUICK_REASONS = [
   'products.adjust.reasons.recount',
   'products.adjust.reasons.defect',
   'products.adjust.reasons.loss',
+  'products.adjust.reasons.mixup',
 ] as const
 
 function useCreateAdjustment() {

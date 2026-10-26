@@ -231,7 +231,8 @@
       "reasons": {
         "recount": "Қайта санау",
         "defect": "Ақау",
-        "loss": "Жоғалды"
+        "loss": "Жоғалды",
+        "mixup": "Тауар шатасты"
       },
       "saved": "{{article}} қалдығы: {{stock}}",
       "direction": "Не істейміз",
@@ -843,7 +844,16 @@
     "partial": "ішінара",
     "partialHint": "Кейбір сатылымдардың сатып алу бағасы белгісіз",
     "returns": "Қайтарулар: {{amount}} ({{count}})",
-    "defectLoss": "Ақау шығыны: {{amount}}"
+    "defectLoss": "Ақау шығыны: {{amount}}",
+    "discounts": "Жеңілдіктер: {{amount}} (сатылым сомасына кірген)",
+    "discountUnknown": "Кейбір ескі сатылымдарда бастапқы баға сақталмаған, олардың жеңілдігі есептелмеді.",
+    "writeOff": "Есептен шығарылды: {{amount}}",
+    "surplus": "Артық табылды: {{amount}}",
+    "adjustmentUnknown": "Сатып алу бағасы белгісіз түзетулер: {{count}}. Олар сомаға кірмеді.",
+    "showAdjustments": "Көрсету",
+    "hideAdjustments": "Жасыру",
+    "adjustmentAmount": "Сомасы",
+    "adjustmentProduct": "Тауар"
   },
   "returns": {
     "action": "Қайтару",

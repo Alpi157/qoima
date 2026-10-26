@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import i18n from 'i18next'
 
 import { api } from '../../api/client'
 import { ApiError, networkError } from '../../api/errors'
@@ -9,6 +10,8 @@ import { makeProduct, ok } from '../../test/fixtures'
 import { renderWithProviders } from '../../test/render'
 import { fill, setupUser } from '../../test/user'
 import { StockAdjustmentModal } from './StockAdjustmentModal'
+import { useReportSummary } from '../report/api'
+import { makeReportSummary } from '../../test/fixtures'
 
 const PRODUCT = makeProduct({ id: 1, article: 'OC-90', stock: 5, avg_cost: 100 })
 
@@ -29,6 +32,61 @@ afterEach(() => {
 })
 
 describe('StockAdjustmentModal', () => {
+  it.each(['ru', 'kk', 'zh'])(
+    'saves the fourth quick reason in both directions (%s)',
+    async (language) => {
+      await i18n.changeLanguage(language)
+      const user = setupUser()
+      const post = vi.spyOn(api, 'POST').mockReturnValue(ok({ stock: 4, movement: {} }))
+      for (const direction of ['add', 'remove'] as const) {
+        const view = renderModal()
+        await user.click(
+          screen.getByRole('radio', { name: i18n.t(`products.adjust.${direction}`) }),
+        )
+        const reason = { ru: 'Пересорт', kk: 'Тауар шатасты', zh: '货品混淆' }[language]!
+        await user.click(screen.getByRole('button', { name: reason }))
+        expect(
+          (
+            screen.getByRole('textbox', {
+              name: i18n.t('products.adjust.reason'),
+            }) as HTMLInputElement
+          ).value,
+        ).toBe(reason)
+        await user.click(
+          screen.getByRole('button', { name: i18n.t(`products.adjust.${direction}`) }),
+        )
+        await waitFor(() => expect(post).toHaveBeenCalledTimes(direction === 'add' ? 1 : 2))
+        expect(
+          postBody<components['schemas']['AdjustmentCreate']>(post, direction === 'add' ? 0 : 1),
+        ).toMatchObject({
+          reason,
+          qty: direction === 'add' ? 1 : -1,
+        })
+        view.unmount()
+      }
+    },
+  )
+
+  it('refreshes a previously loaded report after saving an adjustment', async () => {
+    function CachedReport() {
+      const query = useReportSummary('2026-09-01', '2026-09-30', true)
+      return <span>{query.data ? 'report ready' : 'loading report'}</span>
+    }
+    const user = setupUser()
+    const get = vi.spyOn(api, 'GET').mockReturnValue(ok(makeReportSummary()))
+    vi.spyOn(api, 'POST').mockReturnValue(ok({ stock: 6, movement: {} }))
+    renderWithProviders(
+      <>
+        <CachedReport />
+        <StockAdjustmentModal product={PRODUCT} opened onClose={() => {}} />
+      </>,
+    )
+    await screen.findByText('report ready')
+    expect(get).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Пересорт' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2))
+  })
   it.each([0, 12345, null])(
     'requires cost only for unknown positive stock, prefilling %s',
     async (lastCost) => {

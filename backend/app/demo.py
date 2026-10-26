@@ -19,7 +19,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import psycopg
-from sqlalchemy import create_engine, make_url
+from sqlalchemy import create_engine, event, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import models  # noqa: F401  (registers every model so cross-module FKs resolve)
@@ -29,6 +29,7 @@ from app.catalog.schemas import ProductCreate, ProductUpdate
 from app.config import get_settings
 from app.customers import service as customers_service
 from app.customers.schemas import CustomerCreate
+from app.inventory.models import StockMovement
 from app.inventory.service import MovementIn, post_movements
 from app.payments import service as payments_service
 from app.payments.schemas import PaymentCreate
@@ -192,6 +193,27 @@ def _local_time(now: datetime, days_ago: int, at: tuple[int, int]) -> datetime:
     return min(moment, now - timedelta(minutes=1))
 
 
+def _historical_adjustment(
+    db: Session, movement: MovementIn, user_id: int, created_at: datetime
+) -> StockMovement:
+    """Date a single demo insertion; never change an existing journal entry."""
+
+    def date_movement(mapper, connection, target):
+        if (
+            target in db.new
+            and target.kind == "adjustment"
+            and target.product_id == movement.product_id
+            and target.note == movement.note
+        ):
+            target.created_at = created_at
+
+    event.listen(StockMovement, "before_insert", date_movement)
+    try:
+        return post_movements(db, [movement], user_id)[0]
+    finally:
+        event.remove(StockMovement, "before_insert", date_movement)
+
+
 def seed(db: Session, password: str, now: datetime | None = None) -> None:
     """Fill an empty database with demo data through the regular services."""
     now = now or datetime.now(UTC)
@@ -307,6 +329,14 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
             user.id,
         )
 
+    _historical_adjustment(
+        db,
+        MovementIn(product_ids["12686362 41-157"], -3, "adjustment", note="Тауар шатасты"),
+        user.id,
+        _local_time(now, 10, (15, 30)),
+    )
+    db.commit()
+
     sale_ids: list[int] = []
     debt_sale_indices = {0, 1, 4, 6, 15}
     for number, (days_ago, at, customer, lines) in enumerate(SALES):
@@ -337,7 +367,7 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                         unit_price=next(
                             item.price_tenge for item in PRODUCTS if item.article == article
                         )
-                        * 100,
+                        * (90 if number == 7 else 100),
                     )
                     for article, qty in lines
                 ],

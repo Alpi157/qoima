@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -25,6 +26,12 @@ class SummaryOut(BaseModel):
     returns_total: int
     returns_count: int
     defect_loss: int
+    write_off_value: int
+    write_off_count: int
+    surplus_value: int
+    adjustment_unknown_count: int
+    discount_total: int
+    discount_unknown_count: int
     received: ReceivedOut
     days: list[DayOut]
 
@@ -57,4 +64,26 @@ class CustomerReportItem(BaseModel):
 
 class CustomerReportPage(BaseModel):
     items: list[CustomerReportItem]
+    total: int
+
+
+AdjustmentDirection = Literal["minus", "plus"]
+
+
+class AdjustmentReportItem(BaseModel):
+    movement_id: int
+    created_at: datetime
+    product_id: int
+    article: str
+    name: str
+    unit: str
+    qty: int
+    unit_cost: int | None
+    value: int | None
+    reason: str | None
+    created_by_name: str
+
+
+class AdjustmentReportPage(BaseModel):
+    items: list[AdjustmentReportItem]
     total: int

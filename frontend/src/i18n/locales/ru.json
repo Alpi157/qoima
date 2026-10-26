@@ -235,7 +235,8 @@
       "reasons": {
         "recount": "Пересчёт",
         "defect": "Брак",
-        "loss": "Потеря"
+        "loss": "Потеря",
+        "mixup": "Пересорт"
       },
       "saved": "Остаток {{article}}: {{stock}}",
       "direction": "Действие",
@@ -909,7 +910,16 @@
     "partial": "частично",
     "partialHint": "У некоторых продаж неизвестна закупочная цена.",
     "returns": "Возвраты: {{amount}} ({{count}})",
-    "defectLoss": "Потери на браке: {{amount}}"
+    "defectLoss": "Потери на браке: {{amount}}",
+    "discounts": "Скидки: {{amount}} (уже учтены в выручке)",
+    "discountUnknown": "У части старых продаж нет базовой цены, их скидка не посчитана.",
+    "writeOff": "Списано: {{amount}}",
+    "surplus": "Найдено излишков: {{amount}}",
+    "adjustmentUnknown": "Корректировки без закупочной цены: {{count}}. В сумму не вошли.",
+    "showAdjustments": "Показать",
+    "hideAdjustments": "Скрыть",
+    "adjustmentAmount": "Сумма",
+    "adjustmentProduct": "Товар"
   },
   "returns": {
     "action": "Вернуть",

@@ -980,3 +980,68 @@ test('draft safety: expired product session preserves the draft through login', 
     JSON.parse((await page.evaluate((key) => localStorage.getItem(key), key))!).requestId,
   ).toBe(JSON.parse(before!).requestId)
 })
+
+test('write-off: adjustment uses current time after demo and appears in report details', async ({
+  page,
+}) => {
+  await login(page)
+  const article = `WRITE-OFF-27-${width(page)}`
+  const created = await page.request.post('/api/products', {
+    data: { article, name: 'Есептен шығаруды тексеру', sale_price: 300000 },
+  })
+  expect(created.status()).toBe(201)
+  const product = (await created.json()) as components['schemas']['ProductOut']
+  const receipt = await page.request.post('/api/receipts', {
+    data: {
+      request_id: crypto.randomUUID(),
+      lines: [{ product_id: product.id, qty: 10, unit_price_minor: 201250 }],
+    },
+  })
+  expect(receipt.status()).toBe(201)
+  const today = todayLocal()
+  await page.goto(`/report?from=${today}&to=${today}`)
+  await settle(page)
+  await page.goto(`/products/${product.id}`)
+  await page.getByRole('button', { name: 'Санын түзету', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByText('Азайту', { exact: true }).click()
+  await modal.getByRole('textbox', { name: 'Саны', exact: true }).fill('3')
+  await modal.getByRole('button', { name: 'Тауар шатасты', exact: true }).click()
+  const before = Date.now()
+  const posted = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/stock/adjustments') && response.request().method() === 'POST',
+  )
+  await modal.getByRole('button', { name: 'Азайту', exact: true }).click()
+  const response = await posted
+  expect(response.status()).toBe(201)
+  const adjustment = (await response.json()) as components['schemas']['AdjustmentOut']
+  const after = Date.now()
+  const timestamp = new Date(adjustment.movement.created_at).getTime()
+  expect(timestamp).toBeGreaterThanOrEqual(before - 1000)
+  expect(timestamp).toBeLessThanOrEqual(after + 1000)
+  expect(adjustment.movement).toMatchObject({ qty: -3, note: 'Тауар шатасты' })
+  await expect(modal).toHaveCount(0)
+  await page.getByRole('link', { name: 'Басты бет', exact: true }).click()
+  await page.getByRole('link', { name: 'Тағы', exact: true }).click()
+  await page.getByRole('link', { name: 'Есеп', exact: true }).click()
+  await expect(page.getByText(/Есептен шығарылды:/)).toBeVisible()
+  const section = page.getByTestId('report-adjustments-minus')
+  await section.getByRole('button', { name: 'Көрсету', exact: true }).click()
+  const row =
+    width(page) === '1366'
+      ? section.getByRole('row').filter({ hasText: article })
+      : section.locator('[data-row-key]').filter({ hasText: article }).filter({ visible: true })
+  await expect(row).toContainText('Тауар шатасты')
+  await expect(row).toContainText('6\u00a0037,50\u00a0₸')
+  const pageData = await getJson<components['schemas']['AdjustmentReportPage']>(
+    page,
+    `/api/reports/adjustments?from=${today}&to=${today}&direction=minus`,
+  )
+  expect(pageData.items.find((item) => item.movement_id === adjustment.movement.id)).toMatchObject({
+    value: 603750,
+    qty: -3,
+  })
+  await row.getByRole('link', { name: article, exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/products/${product.id}$`))
+})

@@ -635,3 +635,51 @@ test('draft safety screens in Kazakh', async ({ page }, testInfo) => {
   await snap(page, 'draft-removed-products', width)
   await snap(page, 'draft-removed-products-screen', width, { fullPage: false })
 })
+
+test('write-off screens in Kazakh', async ({ page }, testInfo) => {
+  const width = testInfo.project.name
+  await login(page)
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  const today = todayLocal()
+  const start = new Date(`${today}T00:00:00Z`)
+  start.setUTCDate(start.getUTCDate() - 11)
+  const from = start.toISOString().slice(0, 10)
+  const adjustments = await getJson<components['schemas']['AdjustmentReportPage']>(
+    page,
+    `/api/reports/adjustments?from=${from}&to=${today}&direction=minus`,
+  )
+  const historical = adjustments.items.find((row) => row.reason === 'Тауар шатасты')!
+  expect(historical).toBeTruthy()
+  await page.goto(`/products/${historical.product_id}`)
+  await page.getByRole('button', { name: 'Санын түзету', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByText('Азайту', { exact: true }).click()
+  await modal.getByRole('button', { name: 'Тауар шатасты', exact: true }).click()
+  await snap(page, 'write-off-adjustment', width, { fullPage: false })
+  await modal.getByRole('button', { name: 'Бас тарту', exact: true }).click()
+  await page.goto(`/report?from=${from}&to=${today}`)
+  await expect(page.getByText(/Жеңілдіктер:/)).toBeVisible()
+  await expect(page.getByText(/Есептен шығарылды:/)).toBeVisible()
+  await snap(page, 'write-off-summary', width)
+  await page
+    .getByTestId('report-adjustments-minus')
+    .getByRole('button', { name: 'Көрсету', exact: true })
+    .click()
+  await expect(
+    page
+      .getByTestId('report-adjustments-minus')
+      .getByText(/Тауар шатасты/)
+      .filter({ visible: true }),
+  ).toBeVisible()
+  await snap(page, 'write-off-details', width)
+  const day = todayLocal(new Date(historical.created_at))
+  await page.goto(`/report?from=${day}&to=${day}`)
+  const summary = await getJson<components['schemas']['SummaryOut']>(
+    page,
+    `/api/reports/summary?from=${day}&to=${day}`,
+  )
+  expect(summary.sales_count).toBe(0)
+  expect(summary.write_off_count).toBe(1)
+  await expect(page.getByText(/Есептен шығарылды:/)).toBeVisible()
+  await snap(page, 'write-off-no-sales', width)
+})

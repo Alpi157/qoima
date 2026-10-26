@@ -42,6 +42,8 @@ export const queryKeys = {
   reportProducts: (from: string, to: string, limit: number, page: number) =>
     ['reports', 'products', from, to, limit, page] as const,
   reportCustomers: (from: string, to: string) => ['reports', 'customers', from, to] as const,
+  reportAdjustments: (from: string, to: string, direction: 'minus' | 'plus', page: number) =>
+    ['reports', 'adjustments', from, to, direction, page] as const,
   products: (params: ProductListParams) => ['products', params] as const,
   productSearch: (q: string) => ['products', 'search', q] as const,
   frequentProducts: ['products', 'frequent'] as const,

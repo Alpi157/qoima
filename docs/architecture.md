@@ -505,14 +505,16 @@ PATCH `min_qty: null` отключает порог.
 и их известную закупочную стоимость. Неизвестная стоимость не подменяется ценой продажи;
 такие виды также входят в общий `unknown_cost_count`. Архивация с остатком разрешена.
 
-### Отчёты (17.2a)
+### Отчёты (17.2a, 27)
 
-Все три маршрута защищены и требуют `from`/`to` в формате YYYY-MM-DD.
+Все четыре маршрута защищены и требуют `from`/`to` в формате YYYY-MM-DD.
 Оба дня включены по Asia/Almaty. Конец не раньше начала, максимум 366 календарных дней;
 нарушения дают 422 `validation_error`. Только проведённые документы входят в расчёт.
 
 Summary возвращает `revenue`, `sales_count`, `cost`, `profit`, `revenue_unknown_cost`,
 `debt_given`, `returns_total`, `returns_count`, `defect_loss`,
+`write_off_value`, `write_off_count`, `surplus_value`, `adjustment_unknown_count`,
+`discount_total`, `discount_unknown_count`,
 `received {cash, card, total}`, `days [{date, revenue, profit}]`.
 `cost = sum(qty*unit_cost)` по известным снимкам, `profit` равна выручке этих же строк
 минус cost. Выручка неизвестных строк учитывается отдельно. Неизвестная цена не равна нулю.
@@ -548,6 +550,43 @@ Summary агрегирует финансовые строки по их соб�
 и customers считает только продажи периода, возвраты его не увеличивают.
 День с одним возвратом имеет sales_count 0. `debt_given` сохраняет исходное
 значение суммы `total-paid_at_sale` проведённых продаж периода.
+
+В шаге 27 движения `kind='adjustment'` учитываются по `created_at` в периоде
+Asia/Almaty. `write_off_value = sum(-qty*unit_cost)` для минусовых движений
+с известной ценой, `write_off_count` — число таких движений, включая нулевую цену.
+`surplus_value = sum(qty*unit_cost)` для плюсовых движений с известной ценой.
+`adjustment_unknown_count` считает все корректировки с NULL unit_cost;
+они не входят в суммы. Цена берётся только из движения, последующие приёмы её
+не заменяют. Брак из возвратов не создаёт движений и остаётся в defect_loss.
+Эти показатели не меняют прежние revenue, cost, profit и defect_loss.
+
+`discount_total` складывает `qty*max(list_price-unit_price, 0)` строк проведённых
+продаж по sold_at и вычитает скидку возвращённого количества по returned_at,
+используя исходную строку продажи. Годный и бракованный возврат равнозначны;
+продажа может быть из прошлого периода, поэтому итог скидок бывает отрицательным.
+NULL list_price не даёт скидку; `discount_unknown_count` считает только такие
+строки продаж самого периода. Отменённые документы исключаются. Расчёты денег
+в SQL Numeric, результаты — целые тиыны. Сводка выполняет один SQL-запрос данных.
+
+Adjustments возвращает `{items, total}`. Элемент: `movement_id, created_at,
+product_id, article, name, unit, qty, unit_cost, value, reason, created_by_name`.
+`value=abs(qty)*unit_cost` или NULL. Причина — сохранённый note; сведения товара
+текущие из каталога, включая архив. Обязательный direction=minus|plus выбирает
+знак количества; неизвестные цены включены. Сортировка created_at DESC, id DESC;
+limit 50 по умолчанию (1–200), offset 0 по умолчанию. Два SQL-запроса данных с JOIN
+товара и автора, без N+1. Период проверяется так же, как в остальных отчётах.
+
+Интерфейс раскрывает списания и излишки отдельно, страницами по 50, с переходом
+в товар. Сводка сохраняется без продаж. Деньги форматируются через
+formatRoundedMoney в сводке и formatMoney в списке. После корректировки остатка
+инвалидируется префикс reports. Быстрая причина «пересорт» сохраняется текстом.
+
+Историческое списание демо датируется только при INSERT: временный before_insert
+определён и подключается в app/demo.py, удаляется в finally сразу после вставки.
+Рабочие модули приложения обработчик не подключают. UPDATE журнала и обход
+триггера не используются. Обычная API-корректировка после seed получает текущее
+время PostgreSQL, что проверяют pytest и e2e; pytest также проверяет снятие
+обработчика при ошибке вставки.
 
 ### Отмена документа
 Продажа: статус 'cancelled', обратные движения 'sale_cancel'. Повторная отмена запрещена.
@@ -1051,6 +1090,7 @@ GET    /api/stock/summary               количество, закупочна
 GET    /api/reports/summary?from=&to=   итоги и каждый день периода
 GET    /api/reports/products?from=&to=&limit=&offset=
 GET    /api/reports/customers?from=&to=&limit=&offset=
+GET    /api/reports/adjustments?from=&to=&direction=minus|plus&limit=&offset=
 
 POST   /api/stock/adjustments           корректировка остатка с обязательной причиной
 

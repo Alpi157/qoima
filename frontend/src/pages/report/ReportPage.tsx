@@ -30,6 +30,7 @@ import {
   type ReportSummary,
 } from './api'
 import { ReportChart } from './ReportChart'
+import { AdjustmentReport } from './AdjustmentReport'
 
 const PERIODS = [
   { value: 'today', label: 'report.today' },
@@ -335,6 +336,40 @@ function ReportResults({ data, from, to }: { data: ReportSummary; from: string; 
           <Text mt="xs">
             {t('report.defectLoss', { amount: formatRoundedMoney(data.defect_loss) })}
           </Text>
+        )}
+        {(data.discount_total > 0 ||
+          data.discount_unknown_count > 0 ||
+          data.write_off_count > 0 ||
+          data.surplus_value > 0 ||
+          data.adjustment_unknown_count > 0) && (
+          <Stack gap="xs" mt="md">
+            {data.discount_total > 0 && (
+              <Text>
+                {t('report.discounts', { amount: formatRoundedMoney(data.discount_total) })}
+              </Text>
+            )}
+            {data.discount_unknown_count > 0 && (
+              <Text size="sm" c="dimmed">
+                {t('report.discountUnknown')}
+              </Text>
+            )}
+            {data.write_off_count > 0 && (
+              <AdjustmentReport
+                from={from}
+                to={to}
+                direction="minus"
+                amount={data.write_off_value}
+              />
+            )}
+            {data.surplus_value > 0 && (
+              <AdjustmentReport from={from} to={to} direction="plus" amount={data.surplus_value} />
+            )}
+            {data.adjustment_unknown_count > 0 && (
+              <Text size="sm" c="dimmed">
+                {t('report.adjustmentUnknown', { count: data.adjustment_unknown_count })}
+              </Text>
+            )}
+          </Stack>
         )}
       </Card>
       <Card>

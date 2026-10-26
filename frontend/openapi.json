@@ -2787,6 +2787,100 @@
         }
       }
     },
+    "/api/reports/adjustments": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Adjustments",
+        "operationId": "adjustments_api_reports_adjustments_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "minus",
+                "plus"
+              ],
+              "type": "string",
+              "title": "Direction"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdjustmentReportPage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/returns": {
       "get": {
         "tags": [
@@ -3168,6 +3262,112 @@
           "stock"
         ],
         "title": "AdjustmentOut"
+      },
+      "AdjustmentReportItem": {
+        "properties": {
+          "movement_id": {
+            "type": "integer",
+            "title": "Movement Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_by_name": {
+            "type": "string",
+            "title": "Created By Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "movement_id",
+          "created_at",
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "unit_cost",
+          "value",
+          "reason",
+          "created_by_name"
+        ],
+        "title": "AdjustmentReportItem"
+      },
+      "AdjustmentReportPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdjustmentReportItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "AdjustmentReportPage"
       },
       "AllocationOut": {
         "properties": {
@@ -7939,6 +8139,30 @@
             "type": "integer",
             "title": "Defect Loss"
           },
+          "write_off_value": {
+            "type": "integer",
+            "title": "Write Off Value"
+          },
+          "write_off_count": {
+            "type": "integer",
+            "title": "Write Off Count"
+          },
+          "surplus_value": {
+            "type": "integer",
+            "title": "Surplus Value"
+          },
+          "adjustment_unknown_count": {
+            "type": "integer",
+            "title": "Adjustment Unknown Count"
+          },
+          "discount_total": {
+            "type": "integer",
+            "title": "Discount Total"
+          },
+          "discount_unknown_count": {
+            "type": "integer",
+            "title": "Discount Unknown Count"
+          },
           "received": {
             "$ref": "#/components/schemas/ReceivedOut"
           },
@@ -7961,6 +8185,12 @@
           "returns_total",
           "returns_count",
           "defect_loss",
+          "write_off_value",
+          "write_off_count",
+          "surplus_value",
+          "adjustment_unknown_count",
+          "discount_total",
+          "discount_unknown_count",
           "received",
           "days"
         ],

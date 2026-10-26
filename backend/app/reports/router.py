@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.reports import service
-from app.reports.schemas import CustomerReportPage, ProductReportPage, SummaryOut
+from app.reports.schemas import (
+    AdjustmentDirection,
+    AdjustmentReportPage,
+    CustomerReportPage,
+    ProductReportPage,
+    SummaryOut,
+)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 FromDate = Annotated[date, Query(alias="from")]
@@ -38,3 +44,15 @@ def customers(
     db: Session = Depends(get_db),
 ) -> CustomerReportPage:
     return service.customers(db, date_from, date_to, limit, offset)
+
+
+@router.get("/adjustments", response_model=AdjustmentReportPage)
+def adjustments(
+    date_from: FromDate,
+    date_to: ToDate,
+    direction: AdjustmentDirection,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> AdjustmentReportPage:
+    return service.adjustments(db, date_from, date_to, direction, limit, offset)

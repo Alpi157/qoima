@@ -229,7 +229,8 @@
       "reasons": {
         "recount": "重新盘点",
         "defect": "次品",
-        "loss": "丢失"
+        "loss": "丢失",
+        "mixup": "货品混淆"
       },
       "saved": "{{article}} 库存：{{stock}}",
       "direction": "操作",
@@ -835,7 +836,16 @@
     "partial": "部分",
     "partialHint": "部分销售的进价未知。",
     "returns": "退货：{{amount}}（{{count}}）",
-    "defectLoss": "次品损失：{{amount}}"
+    "defectLoss": "次品损失：{{amount}}",
+    "discounts": "折扣：{{amount}}（已计入销售额）",
+    "discountUnknown": "部分旧销售没有原价，未计算其折扣。",
+    "writeOff": "报损：{{amount}}",
+    "surplus": "盘盈：{{amount}}",
+    "adjustmentUnknown": "进价未知的调整：{{count}}。未计入金额。",
+    "showAdjustments": "显示",
+    "hideAdjustments": "收起",
+    "adjustmentAmount": "金额",
+    "adjustmentProduct": "商品"
   },
   "returns": {
     "action": "退货",

@@ -609,6 +609,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Adjustments */
+        get: operations["adjustments_api_reports_adjustments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/returns": {
         parameters: {
             query?: never;
@@ -686,6 +703,41 @@ export interface components {
             movement: components["schemas"]["MovementOut"];
             /** Stock */
             stock: number;
+        };
+        /** AdjustmentReportItem */
+        AdjustmentReportItem: {
+            /** Movement Id */
+            movement_id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Unit Cost */
+            unit_cost: number | null;
+            /** Value */
+            value: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Created By Name */
+            created_by_name: string;
+        };
+        /** AdjustmentReportPage */
+        AdjustmentReportPage: {
+            /** Items */
+            items: components["schemas"]["AdjustmentReportItem"][];
+            /** Total */
+            total: number;
         };
         /** AllocationOut */
         AllocationOut: {
@@ -2202,6 +2254,18 @@ export interface components {
             returns_count: number;
             /** Defect Loss */
             defect_loss: number;
+            /** Write Off Value */
+            write_off_value: number;
+            /** Write Off Count */
+            write_off_count: number;
+            /** Surplus Value */
+            surplus_value: number;
+            /** Adjustment Unknown Count */
+            adjustment_unknown_count: number;
+            /** Discount Total */
+            discount_total: number;
+            /** Discount Unknown Count */
+            discount_unknown_count: number;
             received: components["schemas"]["ReceivedOut"];
             /** Days */
             days: components["schemas"]["DayOut"][];
@@ -3747,6 +3811,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerReportPage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    adjustments_api_reports_adjustments_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                direction: "minus" | "plus";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentReportPage"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

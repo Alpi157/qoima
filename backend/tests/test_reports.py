@@ -83,6 +83,12 @@ def test_summary_numbers(auth_client, report_case):
         "returns_total": 0,
         "returns_count": 0,
         "defect_loss": 0,
+        "write_off_value": 0,
+        "write_off_count": 0,
+        "surplus_value": 0,
+        "adjustment_unknown_count": 0,
+        "discount_total": 0,
+        "discount_unknown_count": 0,
         "received": {"cash": 200, "card": 550, "total": 750},
         "days": [
             {"date": "2026-01-10", "revenue": 1300, "profit": 600},

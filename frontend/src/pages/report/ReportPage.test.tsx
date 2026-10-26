@@ -7,19 +7,40 @@ import { makeReportSummary, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { setupUser } from '../../test/user'
 import { ReportPage } from './ReportPage'
-import type { ReportProduct, ReportSummary } from './api'
+import type { ReportAdjustment, ReportProduct, ReportSummary } from './api'
 
 function mockReport(
   overrides: Partial<ReportSummary> = {},
   total = 1,
   rowOverrides: Partial<ReportProduct> = {},
+  adjustmentOverrides: Partial<ReportAdjustment> = {},
 ) {
   const row = { revenue: 120000, profit: 40000, revenue_unknown_cost: 0, ...rowOverrides }
   return vi.spyOn(api, 'GET').mockImplementation(((
     path: string,
-    init?: { params: { query: { limit?: number; offset?: number } } },
+    init?: { params: { query: { limit?: number; offset?: number; direction?: string } } },
   ) => {
     if (path === '/api/reports/summary') return ok(makeReportSummary(overrides))
+    if (path === '/api/reports/adjustments')
+      return ok({
+        items: [
+          {
+            movement_id: (init?.params.query.offset ?? 0) + 1,
+            created_at: '2026-09-27T09:00:00Z',
+            product_id: 9,
+            article: 'WRITE-OFF',
+            name: 'Фильтр списания',
+            unit: 'шт',
+            qty: init?.params.query.direction === 'plus' ? 3 : -3,
+            unit_cost: 201250,
+            value: 603750,
+            reason: 'Пересорт',
+            created_by_name: 'Тест',
+            ...adjustmentOverrides,
+          },
+        ],
+        total,
+      })
     if (path === '/api/reports/products')
       return ok({
         items: [
@@ -60,6 +81,109 @@ afterEach(() => {
 })
 
 describe('ReportPage', () => {
+  it('retries a failed details request without hiding the summary', async () => {
+    const user = setupUser()
+    const get = mockReport({ write_off_count: 1, write_off_value: 603750 })
+    const original = get.getMockImplementation() as unknown as (
+      path: string,
+      init: unknown,
+    ) => unknown
+    let attempts = 0
+    get.mockImplementation(((path: string, init: unknown) => {
+      if (path === '/api/reports/adjustments' && ++attempts === 1)
+        return Promise.reject(new Error('Unavailable'))
+      return original(path, init)
+    }) as never)
+    renderReport()
+    await user.click(await screen.findByRole('button', { name: 'Показать' }))
+    await user.click(await screen.findByRole('button', { name: 'Повторить' }))
+    expect((await screen.findAllByText('Пересорт')).length).toBeGreaterThan(0)
+    expect(screen.getByText('Списано: 6 038 ₸')).toBeTruthy()
+    expect(attempts).toBe(2)
+  })
+  it('hides zero adjustment and discount rows and negative net discounts', async () => {
+    mockReport({ discount_total: -1000 })
+    renderReport()
+    await screen.findByTestId('report-profit')
+    expect(
+      screen.queryByText(/Скидки:|Списано:|Найдено излишков:|Корректировки без закупочной цены:/),
+    ).toBeNull()
+    expect(screen.queryByText(/У части старых продаж/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Показать' })).toBeNull()
+  })
+
+  it('shows rounded summary, warnings and a zero-cost write-off without sales', async () => {
+    mockReport({
+      sales_count: 0,
+      discount_total: 10050,
+      discount_unknown_count: 1,
+      write_off_count: 1,
+      write_off_value: 0,
+      surplus_value: 20050,
+      adjustment_unknown_count: 2,
+    })
+    renderReport()
+    expect(await screen.findByText('За этот период продаж не было.')).toBeTruthy()
+    expect(screen.getByText('Скидки: 101 ₸ (уже учтены в выручке)')).toBeTruthy()
+    expect(
+      screen.getByText('У части старых продаж нет базовой цены, их скидка не посчитана.'),
+    ).toBeTruthy()
+    expect(screen.getByText('Списано: 0 ₸')).toBeTruthy()
+    expect(screen.getByText('Найдено излишков: 201 ₸')).toBeTruthy()
+    expect(screen.getByText('Корректировки без закупочной цены: 2. В сумму не вошли.')).toBeTruthy()
+  })
+
+  it.each(['minus', 'plus'] as const)(
+    'loads and hides %s details with product links and pagination',
+    async (direction) => {
+      const user = setupUser()
+      const get = mockReport(
+        { write_off_count: 1, write_off_value: 603750, surplus_value: 603750 },
+        80,
+      )
+      const { router } = renderReport()
+      await screen.findByTestId('report-profit')
+      expect(get).not.toHaveBeenCalledWith('/api/reports/adjustments', expect.anything())
+      const section = within(screen.getByTestId(`report-adjustments-${direction}`))
+      await user.click(section.getByRole('button', { name: 'Показать' }))
+      expect((await section.findAllByText('Пересорт')).length).toBeGreaterThan(0)
+      expect(
+        section.getAllByText(formatMoney(603750).replaceAll('\u00a0', ' ')).length,
+      ).toBeGreaterThan(0)
+      expect(section.getAllByText('27.09.2026 14:00').length).toBeGreaterThan(0)
+      await user.click(section.getByRole('button', { name: 'Следующая страница' }))
+      await waitFor(() =>
+        expect(get).toHaveBeenCalledWith('/api/reports/adjustments', {
+          params: {
+            query: { from: '2026-09-01', to: '2026-09-30', direction, limit: 50, offset: 50 },
+          },
+        }),
+      )
+      await user.click(section.getByRole('button', { name: 'Скрыть' }))
+      expect(section.queryByText('Пересорт')).toBeNull()
+      await user.click(section.getByRole('button', { name: 'Показать' }))
+      await waitFor(() =>
+        expect(get).toHaveBeenLastCalledWith('/api/reports/adjustments', {
+          params: {
+            query: { from: '2026-09-01', to: '2026-09-30', direction, limit: 50, offset: 0 },
+          },
+        }),
+      )
+      await user.click((await section.findAllByRole('link', { name: 'WRITE-OFF' }))[0])
+      expect(router.state.location.pathname).toBe('/products/9')
+    },
+  )
+
+  it('shows unknown detail values and resets disclosure on period change', async () => {
+    const user = setupUser()
+    mockReport({ write_off_count: 1 }, 1, {}, { unit_cost: null, value: null, reason: null })
+    renderReport()
+    await user.click(await screen.findByRole('button', { name: 'Показать' }))
+    expect((await screen.findAllByText('—')).length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Сегодня' }))
+    expect(await screen.findByRole('button', { name: 'Показать' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Скрыть' })).toBeNull()
+  })
   it('shows zero profit when both revenue and unknown revenue are zero', async () => {
     await i18n.changeLanguage('kk')
     mockReport({}, 1, { revenue: 0, profit: 0, revenue_unknown_cost: 0 })

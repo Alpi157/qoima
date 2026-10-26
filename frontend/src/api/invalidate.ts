@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 // Everything that shows stock or stock documents; a posted or cancelled document changes all of it.
 const STOCK_QUERY_PREFIXES = [
+  'reports',
   'receipts',
   'receipt',
   'products',
