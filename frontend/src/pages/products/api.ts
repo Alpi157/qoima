@@ -12,12 +12,24 @@ import { isApiError } from '../../api/errors'
 import { queryKeys, type ProductListParams } from '../../api/queryKeys'
 import type { components } from '../../api/schema'
 import { PAGE_SIZE, pageOffset } from '../../lib/pagination'
+import { todayLocal } from '../../lib/dates'
 
 export type Product = components['schemas']['ProductOut']
 export type ProductCreate = components['schemas']['ProductCreate']
 export type ProductUpdate = components['schemas']['ProductUpdate']
 export type Movement = components['schemas']['MovementOut']
 export type ProductPurchase = components['schemas']['ProductPurchaseOut']
+export type BuyToday = components['schemas']['BuyTodayOut']
+
+export function useProductBuyToday(id: number) {
+  return useQuery({
+    queryKey: queryKeys.productBuyToday(id, todayLocal()),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/products/{product_id}/buy-today', { params: { path: { product_id: id } } }),
+      ),
+  })
+}
 
 export function useProductPurchases(id: number, page: number) {
   return useQuery({
@@ -158,6 +170,8 @@ function useInvalidateProduct() {
   return (product: Product) => {
     void queryClient.invalidateQueries({ queryKey: ['products'] })
     void queryClient.invalidateQueries({ queryKey: queryKeys.product(product.id) })
+    void queryClient.invalidateQueries({ queryKey: ['product-buy-today', product.id] })
+    void queryClient.invalidateQueries({ queryKey: ['stock-buy-today'] })
     void queryClient.invalidateQueries({ queryKey: queryKeys.stockSummary })
     void queryClient.invalidateQueries({ queryKey: ['reports'] })
   }

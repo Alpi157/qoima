@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '../../api/client'
-import { makeProduct, makeStockSummary, ok } from '../../test/fixtures'
+import { makeProduct, makeStockSummary, makeStockBuyToday, ok } from '../../test/fixtures'
 import { renderWithDataRouter } from '../../test/render'
 import { fill, setupUser } from '../../test/user'
 import { StockPage } from './StockPage'
@@ -32,9 +32,11 @@ describe('StockPage', () => {
   it.each([0, 2])('shows archived stock only when present: %s', async (count) => {
     vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
       ok(
-        path === '/api/stock/summary'
-          ? makeStockSummary({ archived_products_count: count, archived_cost_value: 123450 })
-          : { items: [], total: 0 },
+        path === '/api/stock/buy-today'
+          ? makeStockBuyToday()
+          : path === '/api/stock/summary'
+            ? makeStockSummary({ archived_products_count: count, archived_cost_value: 123450 })
+            : { items: [], total: 0 },
       )) as never)
     renderStock()
     await screen.findByText('По закупочной цене')
@@ -47,7 +49,11 @@ describe('StockPage', () => {
   it('shows quantities and a warning badge when nothing is left', async () => {
     vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
       ok(
-        path === '/api/stock/summary' ? makeStockSummary() : { items: [IN_STOCK, EMPTY], total: 2 },
+        path === '/api/stock/buy-today'
+          ? makeStockBuyToday()
+          : path === '/api/stock/summary'
+            ? makeStockSummary()
+            : { items: [IN_STOCK, EMPTY], total: 2 },
       )) as never)
     renderStock()
 
@@ -66,7 +72,11 @@ describe('StockPage', () => {
       .spyOn(api, 'GET')
       .mockImplementation(((path: string) =>
         ok(
-          path === '/api/stock/summary' ? makeStockSummary() : { items: [IN_STOCK], total: 1 },
+          path === '/api/stock/buy-today'
+            ? makeStockBuyToday()
+            : path === '/api/stock/summary'
+              ? makeStockSummary()
+              : { items: [IN_STOCK], total: 1 },
         )) as never)
     const { router } = renderStock()
 
@@ -87,7 +97,11 @@ describe('StockPage', () => {
     const user = setupUser()
     vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
       ok(
-        path === '/api/stock/summary' ? makeStockSummary() : { items: [IN_STOCK], total: 1 },
+        path === '/api/stock/buy-today'
+          ? makeStockBuyToday()
+          : path === '/api/stock/summary'
+            ? makeStockSummary()
+            : { items: [IN_STOCK], total: 1 },
       )) as never)
     const { router } = renderStock()
 
@@ -100,14 +114,18 @@ it.each(['out', 'low'])(
   'reads %s from URL and clears the filter while preserving search',
   async (state) => {
     const user = setupUser()
-    const get = vi
-      .spyOn(api, 'GET')
-      .mockImplementation(((path: string) =>
-        ok(
-          path === '/api/stock/summary'
-            ? makeStockSummary({ out_of_stock_count: 4, low_stock_count: 2, unknown_cost_count: 1 })
+    const get = vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+      ok(
+        path === '/api/stock/buy-today'
+          ? makeStockBuyToday()
+          : path === '/api/stock/summary'
+            ? makeStockSummary({
+                out_of_stock_count: 4,
+                low_stock_count: 2,
+                unknown_cost_count: 1,
+              })
             : { items: [IN_STOCK], total: 1 },
-        )) as never)
+      )) as never)
     const { router } = renderStock(`/stock?state=${state}&q=IKH&page=2`)
     const button = await screen.findByRole('button', {
       name: state === 'out' ? 'Закончились (4)' : 'Заканчиваются (2)',
@@ -133,7 +151,13 @@ it('uses low-stock warning badges only for positive stock at or below the thresh
     makeProduct({ id: 3, article: 'C', stock: 3, min_qty: 2 }),
   ]
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
-    ok(path === '/api/stock/summary' ? makeStockSummary() : { items, total: 3 })) as never)
+    ok(
+      path === '/api/stock/buy-today'
+        ? makeStockBuyToday()
+        : path === '/api/stock/summary'
+          ? makeStockSummary()
+          : { items, total: 3 },
+    )) as never)
   renderStock()
   await screen.findByRole('table')
   const badges = document.querySelectorAll('[data-tone="warning"]')
@@ -148,9 +172,11 @@ it('uses low-stock warning badges only for positive stock at or below the thresh
 it('rounds stock values and average cost, leaving the sale price exact', async () => {
   vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
     ok(
-      path === '/api/stock/summary'
-        ? makeStockSummary({ cost_value: 648750, retail_value: 6940881 })
-        : { items: [makeProduct({ avg_cost: 68750, sale_price: 150005 })], total: 1 },
+      path === '/api/stock/buy-today'
+        ? makeStockBuyToday()
+        : path === '/api/stock/summary'
+          ? makeStockSummary({ cost_value: 648750, retail_value: 6940881 })
+          : { items: [makeProduct({ avg_cost: 68750, sale_price: 150005 })], total: 1 },
     )) as never)
   renderStock()
   const table = await screen.findByRole('table')

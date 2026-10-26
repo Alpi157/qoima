@@ -37,6 +37,8 @@ export interface ReturnListParams {
 
 // Invalidating a prefix (for example ['products']) refreshes every list with any params.
 export const queryKeys = {
+  productBuyToday: (id: number, date: string) => ['product-buy-today', id, date] as const,
+  stockBuyToday: (date: string) => ['stock-buy-today', date] as const,
   stockSummary: ['stock-summary'] as const,
   reportSummary: (from: string, to: string) => ['reports', 'summary', from, to] as const,
   reportProducts: (from: string, to: string, limit: number, page: number) =>

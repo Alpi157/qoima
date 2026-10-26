@@ -7,6 +7,32 @@ import { PAGE_RELOAD_KEY } from '../src/lib/pageReload.js'
 import type { components } from '../src/api/schema.js'
 import { todayLocal } from '../src/lib/dates.js'
 import { fillCurrencyReceipt, verifyCurrencyReview } from './currencyReceipt.js'
+import { buyTodayProduct, enterSupplierQuote } from './buyToday.js'
+
+test('buy today screens in Kazakh', async ({ page }, testInfo) => {
+  await login(page)
+  const width = testInfo.project.name
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  const product = await buyTodayProduct(page, `BUY28-SCREEN-${width}`)
+  await page.goto(`/products/${product.id}`)
+  await snap(page, 'buy-today-purchase', width)
+  const dialog = await enterSupplierQuote(page)
+  await snap(page, 'buy-today-quote-window', width, { fullPage: false })
+  await dialog.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(page.getByTestId('buy-today-block')).toContainText('жеткізушінің')
+  await snap(page, 'buy-today-quote', width)
+  const unknown = await buyTodayProduct(page, `BUY28-UNKNOWN-${width}`, false)
+  await page.goto(`/products/${unknown.id}`)
+  await snap(page, 'buy-today-no-basis', width)
+  await page.goto('/stock')
+  await settle(page)
+  await page
+    .getByTestId('stock-buy-today')
+    .getByRole('button', { name: 'Тағы', exact: true })
+    .click()
+  await snap(page, 'buy-today-stock', width)
+})
 
 test('currency receipt screens in Kazakh', async ({ page }, testInfo) => {
   const width = testInfo.project.name

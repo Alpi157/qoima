@@ -98,7 +98,7 @@
   Только при `QOIMA_E2E_BUILD=1` Playwright собирает frontend и запускает preview;
   обычные e2e, `make test` и `make screenshots` используют прежний запуск без дополнительной сборки.
 - Проверки черновиков и бюджета действий (после подготовки `qoima_demo` с тем же
-  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget|currency receipt|write-off"`.
+  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget|currency receipt|write-off|buy today"`.
   Бюджет одного клика, заполнения поля и Enter хранится в `frontend/e2e/action-budget.json`;
   штатные сценарии не должны превышать зафиксированные числа.
 - Снимки шага 23 (`draft-*`) дополнительно снимаются на kk в 1366x768 и 390x844,
@@ -114,6 +114,9 @@
 - Снимки шага 27 (`write-off-*`): четыре причины корректировки, скидки и списания,
   раскрытый список, день без продаж со списанием; на kk в 1366x768 и 390x844.
   E2e `write-off` проверяет текущее created_at после демосида и переход из отчёта в товар.
+- Снимки шага 28 (`buy-today-*`): карточка валютного товара по закупке и цене поставщика,
+  отсутствие основы, окно цены и склад с валютной разбивкой; на kk в 1366x768 и 390x844.
+  E2e `buy today` проверяет демо-курс, новую цену поставщика и возврат к закупке после её отмены.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

@@ -43,6 +43,7 @@ import {
 import { ProductFormModal } from './ProductFormModal'
 import { StockAdjustmentModal } from './StockAdjustmentModal'
 import { PurchaseHistory } from './PurchaseHistory'
+import { BuyTodayBlock } from './BuyTodayBlock'
 
 const DOCUMENT_PATHS: Record<string, string> = {
   receipt: '/receipts',
@@ -298,6 +299,8 @@ function ProductDetails({ product }: { product: Product }) {
           />
         </SimpleGrid>
       </Card>
+
+      <BuyTodayBlock product={product} />
 
       {product.note && <Text style={{ whiteSpace: 'pre-wrap' }}>{product.note}</Text>}
 

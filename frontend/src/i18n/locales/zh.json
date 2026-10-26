@@ -126,7 +126,10 @@
     "nbk_rate_mismatch": "国家银行汇率似乎已变化。汇率已更新，请检查。",
     "expense_zero_weight": "商品金额为零，无法按金额分摊。请选择“按数量”。",
     "expense_manual_sum_mismatch": "手动分摊合计应为 {{expected}}，现在为 {{actual}}。",
-    "receipt_warnings": "保存前请查看提醒。"
+    "receipt_warnings": "保存前请查看提醒。",
+    "price_quote_request_conflict": "此请求已保存其他供应商报价（№{{id}}）。",
+    "price_quote_already_cancelled": "供应商报价已删除。",
+    "price_quote_not_found": "未找到供应商报价。"
   },
   "validation": {
     "missing": "必填",
@@ -916,6 +919,38 @@
       "description": "调整将从结算中移除，欠款将重新计算。",
       "confirm": "撤销调整",
       "done": "调整单 {{number}}号已撤销"
+    }
+  },
+  "buyToday": {
+    "title": "今日采购",
+    "amount": "今日采购：每1{{unit}} {{amount}}",
+    "purchaseBasis": "依据 {{date}} 的采购：{{price}}",
+    "quoteBasis": "依据供应商 {{date}} 的报价：{{price}}",
+    "expensesUnknown": "采购费用未知，未计入",
+    "markup": "当前加价 {{now}}%，采购时为 {{then}}%。",
+    "keepMarkup": "要保持 {{then}}% 的加价，售价应为：{{price}}",
+    "cheaper": "今天采购每件便宜 {{diff}}（库存平均 {{avg}}）。",
+    "dearer": "今天采购每件贵 {{diff}}（库存平均 {{avg}}）。",
+    "noPurchase": "没有采购记录，无法计算今日价格。",
+    "noRate": "没有国家银行汇率，无法计算今日价格。",
+    "newQuote": "供应商报了新价格",
+    "priceField": "价格，{{symbol}}",
+    "dateField": "日期",
+    "removeQuote": "删除此价格",
+    "confirmPurchase": "删除供应商报价？计算将恢复为最近一次采购。",
+    "confirmPrevious": "删除供应商报价？计算将恢复为上一个供应商报价。",
+    "confirmNone": "删除供应商报价？将没有计算今日价格的依据。",
+    "stock": "按今日采购价",
+    "difference": "差额：{{diff}}（{{percent}}%）",
+    "differenceNoPercent": "差额：{{diff}}",
+    "group": "以{{currency}}采购：按进价 {{cost}}，今日 {{today}}",
+    "withoutBasis": "未计算今日价格的商品：{{count}}",
+    "coverage": "已计算商品的进价：{{cost}}。其余商品的已知进价总额：{{excluded}}。",
+    "priceRequired": "请输入大于零且不超过1 000 000 000的价格。",
+    "currency": {
+      "KZT": "坚戈",
+      "CNY": "人民币",
+      "USD": "美元"
     }
   }
 }

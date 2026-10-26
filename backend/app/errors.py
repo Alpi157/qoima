@@ -66,6 +66,9 @@ class ErrorCode(StrEnum):
     METHOD_NOT_ALLOWED = "method_not_allowed"
     RATE_NOT_FOUND = "rate_not_found"
     RATE_DATE_IN_FUTURE = "rate_date_in_future"
+    PRICE_QUOTE_REQUEST_CONFLICT = "price_quote_request_conflict"
+    PRICE_QUOTE_ALREADY_CANCELLED = "price_quote_already_cancelled"
+    PRICE_QUOTE_NOT_FOUND = "price_quote_not_found"
     HTTP_ERROR = "http_error"
 
 
@@ -103,6 +106,24 @@ class ReceiptWarningsError(AppError):
     code = ErrorCode.RECEIPT_WARNINGS
     status_code = 409
     default_message = "Проверьте и подтвердите предупреждения прихода"
+
+
+class PriceQuoteRequestConflictError(AppError):
+    code = ErrorCode.PRICE_QUOTE_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "С этим request_id уже сохранена другая цена поставщика"
+
+
+class PriceQuoteAlreadyCancelledError(AppError):
+    code = ErrorCode.PRICE_QUOTE_ALREADY_CANCELLED
+    status_code = 409
+    default_message = "Цена поставщика уже удалена"
+
+
+class PriceQuoteNotFoundError(AppError):
+    code = ErrorCode.PRICE_QUOTE_NOT_FOUND
+    status_code = 404
+    default_message = "Цена поставщика не найдена"
 
 
 class InvalidArticleError(AppError):

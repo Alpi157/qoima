@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 
 // Everything that shows stock or stock documents; a posted or cancelled document changes all of it.
 const STOCK_QUERY_PREFIXES = [
+  'product-buy-today',
+  'stock-buy-today',
   'reports',
   'receipts',
   'receipt',
@@ -14,6 +16,7 @@ const STOCK_QUERY_PREFIXES = [
 
 // A sale also changes the purchase history on its customer's page.
 const SALE_QUERY_PREFIXES = [
+  'stock-buy-today',
   'reports',
   'stock-summary',
   'sales',
@@ -39,6 +42,10 @@ function useInvalidatePrefixes(prefixes: string[]) {
 /** Refreshes stock-related queries after a receipt, a cancellation or an adjustment. */
 export function useInvalidateStock() {
   return useInvalidatePrefixes(STOCK_QUERY_PREFIXES)
+}
+
+export function useInvalidateBuyToday() {
+  return useInvalidatePrefixes(['product-buy-today', 'stock-buy-today', 'reports'])
 }
 
 /** Refreshes sales, stock and customer queries after a sale or its cancellation. */

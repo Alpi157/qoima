@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.rates.router import get_rate_session_factory
+from app.rates.service import SessionFactory
 from app.reports import service
 from app.reports.schemas import (
     AdjustmentDirection,
@@ -20,8 +22,13 @@ ToDate = Annotated[date, Query(alias="to")]
 
 
 @router.get("/summary", response_model=SummaryOut)
-def summary(date_from: FromDate, date_to: ToDate, db: Session = Depends(get_db)) -> SummaryOut:
-    return service.summary(db, date_from, date_to)
+def summary(
+    date_from: FromDate,
+    date_to: ToDate,
+    db: Session = Depends(get_db),
+    session_factory: SessionFactory = Depends(get_rate_session_factory),
+) -> SummaryOut:
+    return service.summary(db, date_from, date_to, session_factory=session_factory)
 
 
 @router.get("/products", response_model=ProductReportPage)

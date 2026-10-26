@@ -5,6 +5,7 @@ import { REPORT_MODULE } from './pageModules.js'
 import { todayLocal } from '../src/lib/dates.js'
 import { formatMoney } from '../src/lib/money.js'
 import type { components } from '../src/api/schema.js'
+import { buyTodayProduct, enterSupplierQuote, type BuyToday } from './buyToday.js'
 import {
   currencyProducts,
   currencyLanguage,
@@ -20,6 +21,36 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/receipts/defaults*', (route) =>
     route.fulfill({ json: { currency: 'KZT', source: 'default' } }),
   )
+})
+
+test('buy today: demo rate, supplier quote and cancellation restore the purchase basis', async ({
+  page,
+}) => {
+  await login(page)
+  const product = await buyTodayProduct(page, `BUY28-${page.viewportSize()!.width}`)
+  await page.goto(`/products/${product.id}`)
+  const block = page.getByTestId('buy-today-block')
+  await expect(block.getByRole('heading', { name: 'Бүгін сатып алу', exact: true })).toBeVisible()
+  await expect(block).toContainText('67.62 ₸')
+  await expect(block).toContainText('Ұлттық банк курсы')
+  const before = await getJson<BuyToday>(page, `/api/products/${product.id}/buy-today`)
+  expect(before.basis).toBe('purchase')
+  const dialog = await enterSupplierQuote(page)
+  await dialog.getByRole('button', { name: 'Сақтау', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(block).toContainText('жеткізушінің')
+  const withQuote = await getJson<BuyToday>(page, `/api/products/${product.id}/buy-today`)
+  expect(withQuote.basis).toBe('quote')
+  expect(withQuote.buy_today).toBeGreaterThan(before.buy_today!)
+  await block.getByRole('button', { name: 'Бұл бағаны өшіру', exact: true }).click()
+  const confirmation = page.getByRole('dialog')
+  await expect(confirmation).toContainText('Есептеу соңғы сатып алуға қайтады.')
+  await confirmation.getByRole('button', { name: 'Бұл бағаны өшіру', exact: true }).click()
+  await expect(confirmation).toHaveCount(0)
+  await expect(block.getByRole('button', { name: 'Бұл бағаны өшіру', exact: true })).toHaveCount(0)
+  const restored = await getJson<BuyToday>(page, `/api/products/${product.id}/buy-today`)
+  expect(restored.basis).toBe('purchase')
+  expect(restored.buy_today).toBe(before.buy_today)
 })
 
 for (const language of ['kk', 'ru'] as const) {

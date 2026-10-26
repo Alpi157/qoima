@@ -420,6 +420,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/{product_id}/price-quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Quote */
+        post: operations["create_quote_api_products__product_id__price_quotes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/price-quotes/{quote_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Quote */
+        post: operations["cancel_quote_api_price_quotes__quote_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/{product_id}/buy-today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product Buy Today */
+        get: operations["product_buy_today_api_products__product_id__buy_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stock/buy-today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stock Buy Today */
+        get: operations["stock_buy_today_api_stock_buy_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/debt-adjustments": {
         parameters: {
             query?: never;
@@ -682,6 +750,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActiveQuoteOut */
+        ActiveQuoteOut: {
+            /** Id */
+            id: number;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Price Minor */
+            price_minor: number;
+            /**
+             * Quoted On
+             * Format: date
+             */
+            quoted_on: string;
+            /** Cancel Fallback Basis */
+            cancel_fallback_basis: ("purchase" | "quote") | null;
+        };
         /** AdjustmentCreate */
         AdjustmentCreate: {
             /**
@@ -789,6 +876,54 @@ export interface components {
             is_vat_payer?: boolean | null;
             /** Rate Warning Percent */
             rate_warning_percent?: number | null;
+        };
+        /** BuyTodayOut */
+        BuyTodayOut: {
+            /** Basis */
+            basis: ("purchase" | "quote") | null;
+            /** Basis Date */
+            basis_date: string | null;
+            /** Basis Receipt Id */
+            basis_receipt_id: number | null;
+            /** Currency */
+            currency: ("KZT" | "CNY" | "USD") | null;
+            /** Price Minor */
+            price_minor: number | null;
+            /** Cost Then */
+            cost_then: number | null;
+            /** Avg Cost */
+            avg_cost: number | null;
+            /** Today Rate */
+            today_rate: string | null;
+            /** Today Rate Date */
+            today_rate_date: string | null;
+            /** Today Rate Exact */
+            today_rate_exact: boolean | null;
+            /** Goods Today */
+            goods_today: number | null;
+            /** Expenses Revalued */
+            expenses_revalued: number | null;
+            /** Expenses Fixed */
+            expenses_fixed: number | null;
+            /** Buy Today */
+            buy_today: number | null;
+            /** Sale Price */
+            sale_price: number;
+            /** Markup Then */
+            markup_then: number | null;
+            /** Markup Now */
+            markup_now: number | null;
+            /** Price To Keep Markup */
+            price_to_keep_markup: number | null;
+            /** Difference Vs Avg */
+            difference_vs_avg: number | null;
+            /** Reason Unavailable */
+            reason_unavailable: ("no_purchase" | "no_rate") | null;
+            active_quote: components["schemas"]["ActiveQuoteOut"] | null;
+            /** Expenses Known */
+            expenses_known: boolean;
+            /** Rates */
+            rates: components["schemas"]["TodayRateOut"][];
         };
         /** CostJumpParams */
         CostJumpParams: {
@@ -1011,7 +1146,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "receipt_warnings" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "receipt_warnings" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "price_quote_request_conflict" | "price_quote_already_cancelled" | "price_quote_not_found" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -1299,6 +1434,66 @@ export interface components {
             product_id: number;
             /** Amount Tiyn */
             amount_tiyn: number;
+        };
+        /** PriceQuoteCreate */
+        PriceQuoteCreate: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Price Minor */
+            price_minor: number;
+            /**
+             * Quoted On
+             * Format: date
+             */
+            quoted_on: string;
+        };
+        /** PriceQuoteOut */
+        PriceQuoteOut: {
+            /** Id */
+            id: number;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Product Id */
+            product_id: number;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Price Minor */
+            price_minor: number;
+            /**
+             * Quoted On
+             * Format: date
+             */
+            quoted_on: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "posted" | "cancelled";
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancelled By */
+            cancelled_by: number | null;
+            /** Created By */
+            created_by: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** ProductCreate */
         ProductCreate: {
@@ -2213,6 +2408,73 @@ export interface components {
              */
             status: "posted" | "cancelled";
         };
+        /** StockBuyTodayGroup */
+        StockBuyTodayGroup: {
+            /**
+             * Cost Value
+             * @default 0
+             */
+            cost_value: number;
+            /**
+             * Buy Today Value
+             * @default 0
+             */
+            buy_today_value: number;
+            /**
+             * Difference
+             * @default 0
+             */
+            difference: number;
+            /** Difference Percent */
+            difference_percent?: string | null;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /**
+             * Products Count
+             * @default 0
+             */
+            products_count: number;
+            /**
+             * Qty
+             * @default 0
+             */
+            qty: number;
+        };
+        /** StockBuyTodayOut */
+        StockBuyTodayOut: {
+            /** Groups */
+            groups: components["schemas"]["StockBuyTodayGroup"][];
+            total: components["schemas"]["StockBuyTodayValues"];
+            /** Rates */
+            rates: components["schemas"]["TodayRateOut"][];
+            /** Without Basis Count */
+            without_basis_count: number;
+            /** Without Basis Cost Value */
+            without_basis_cost_value: number;
+        };
+        /** StockBuyTodayValues */
+        StockBuyTodayValues: {
+            /**
+             * Cost Value
+             * @default 0
+             */
+            cost_value: number;
+            /**
+             * Buy Today Value
+             * @default 0
+             */
+            buy_today_value: number;
+            /**
+             * Difference
+             * @default 0
+             */
+            difference: number;
+            /** Difference Percent */
+            difference_percent?: string | null;
+        };
         /** StockSummary */
         StockSummary: {
             /** Products Count */
@@ -2236,6 +2498,10 @@ export interface components {
         };
         /** SummaryOut */
         SummaryOut: {
+            /** Buy Today Cost */
+            buy_today_cost: number;
+            /** Buy Today Unknown Count */
+            buy_today_unknown_count: number;
             /** Revenue */
             revenue: number;
             /** Sales Count */
@@ -2269,6 +2535,20 @@ export interface components {
             received: components["schemas"]["ReceivedOut"];
             /** Days */
             days: components["schemas"]["DayOut"][];
+        };
+        /** TodayRateOut */
+        TodayRateOut: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Rate */
+            rate: string | null;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Exact */
+            exact: boolean | null;
         };
         /** UserOut */
         UserOut: {
@@ -3368,6 +3648,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    create_quote_api_products__product_id__price_quotes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceQuoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Цена с этим request_id уже сохранена */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceQuoteOut"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceQuoteOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    cancel_quote_api_price_quotes__quote_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceQuoteOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    product_buy_today_api_products__product_id__buy_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuyTodayOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    stock_buy_today_api_stock_buy_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockBuyTodayOut"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

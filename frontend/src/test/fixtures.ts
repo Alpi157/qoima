@@ -222,6 +222,8 @@ export function makeReportSummary(
   overrides: Partial<import('../pages/report/api').ReportSummary> = {},
 ) {
   return {
+    buy_today_cost: 0,
+    buy_today_unknown_count: 0,
     revenue: 120000,
     sales_count: 1,
     cost: 80000,
@@ -239,6 +241,65 @@ export function makeReportSummary(
     discount_unknown_count: 0,
     received: { cash: 100000, card: 10000, total: 110000 },
     days: [{ date: '2026-09-27', revenue: 120000, profit: 40000 }],
+    ...overrides,
+  }
+}
+
+export function makeBuyToday(
+  overrides: Partial<import('../api/schema').components['schemas']['BuyTodayOut']> = {},
+): import('../api/schema').components['schemas']['BuyTodayOut'] {
+  return {
+    basis: 'purchase',
+    basis_date: '2026-10-10',
+    basis_receipt_id: 5,
+    currency: 'CNY',
+    price_minor: 10000,
+    cost_then: 805000,
+    avg_cost: 805000,
+    today_rate: '85.0000',
+    today_rate_date: '2026-10-20',
+    today_rate_exact: true,
+    goods_today: 850000,
+    expenses_revalued: 42500,
+    expenses_fixed: 70000,
+    buy_today: 962500,
+    sale_price: 1450000,
+    markup_then: 80,
+    markup_now: 51,
+    price_to_keep_markup: 1732500,
+    difference_vs_avg: 157500,
+    reason_unavailable: null,
+    active_quote: null,
+    expenses_known: true,
+    rates: [{ currency: 'CNY', rate: '85.0000', rate_date: '2026-10-20', exact: true }],
+    ...overrides,
+  }
+}
+
+export function makeStockBuyToday(
+  overrides: Partial<import('../api/schema').components['schemas']['StockBuyTodayOut']> = {},
+): import('../api/schema').components['schemas']['StockBuyTodayOut'] {
+  return {
+    groups: [
+      {
+        currency: 'CNY',
+        products_count: 1,
+        qty: 100,
+        cost_value: 80500000,
+        buy_today_value: 96250000,
+        difference: 15750000,
+        difference_percent: '19.6',
+      },
+    ],
+    total: {
+      cost_value: 80500000,
+      buy_today_value: 96250000,
+      difference: 15750000,
+      difference_percent: '19.6',
+    },
+    rates: [{ currency: 'CNY', rate: '85.0000', rate_date: '2026-10-20', exact: true }],
+    without_basis_count: 0,
+    without_basis_cost_value: 0,
     ...overrides,
   }
 }

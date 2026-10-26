@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { type ApiError, isApiError, isServerOrNetworkError } from '../../api/errors'
 
 const CONFLICT_CODES = new Set([
+  'price_quote_request_conflict',
   'sale_request_conflict',
   'receipt_request_conflict',
   'payment_request_conflict',

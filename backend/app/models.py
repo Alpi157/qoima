@@ -7,6 +7,7 @@ from app.debt_adjustments.models import CustomerDebtAdjustment
 from app.inventory.models import StockBalance, StockMovement, Warehouse
 from app.numbering import DocumentCounter
 from app.payments.models import CustomerPayment
+from app.price_quotes.models import ProductPriceQuote
 from app.rates.models import ExchangeRate
 from app.receipts.models import Receipt, ReceiptExpense, ReceiptExpenseAllocation, ReceiptLine
 from app.returns.models import SaleReturn, SaleReturnLine
@@ -21,6 +22,7 @@ __all__ = [
     "DocumentCounter",
     "ExchangeRate",
     "Product",
+    "ProductPriceQuote",
     "Receipt",
     "ReceiptExpense",
     "ReceiptExpenseAllocation",

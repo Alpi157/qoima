@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app import models  # noqa: F401  (registers every model so cross-module FKs resolve)
 from app.auth import router as auth_router
 from app.auth.dependencies import current_user
+from app.buy_today import router as buy_today_router
 from app.catalog import router as catalog_router
 from app.config import Settings, get_settings
 from app.customers import router as customers_router
@@ -17,6 +18,7 @@ from app.debt_adjustments import router as debt_adjustments_router
 from app.errors import ErrorOut, register_exception_handlers
 from app.inventory import router as inventory_router
 from app.payments import router as payments_router
+from app.price_quotes import router as price_quotes_router
 from app.rates import router as rates_router
 from app.receipts import router as receipts_router
 from app.reports import router as reports_router
@@ -56,6 +58,8 @@ protected_api.include_router(customers_router.router)
 protected_api.include_router(receipts_router.router)
 protected_api.include_router(sales_router.router)
 protected_api.include_router(payments_router.router)
+protected_api.include_router(price_quotes_router.router)
+protected_api.include_router(buy_today_router.router)
 protected_api.include_router(debt_adjustments_router.router)
 protected_api.include_router(inventory_router.router)
 protected_api.include_router(settings_router.router)

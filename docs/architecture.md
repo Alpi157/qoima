@@ -505,7 +505,7 @@ PATCH `min_qty: null` отключает порог.
 и их известную закупочную стоимость. Неизвестная стоимость не подменяется ценой продажи;
 такие виды также входят в общий `unknown_cost_count`. Архивация с остатком разрешена.
 
-### Отчёты (17.2a, 27)
+### Отчёты (17.2a, 27, 28)
 
 Все четыре маршрута защищены и требуют `from`/`to` в формате YYYY-MM-DD.
 Оба дня включены по Asia/Almaty. Конец не раньше начала, максимум 366 календарных дней;
@@ -566,7 +566,9 @@ Asia/Almaty. `write_off_value = sum(-qty*unit_cost)` для минусовых �
 продажа может быть из прошлого периода, поэтому итог скидок бывает отрицательным.
 NULL list_price не даёт скидку; `discount_unknown_count` считает только такие
 строки продаж самого периода. Отменённые документы исключаются. Расчёты денег
-в SQL Numeric, результаты — целые тиыны. Сводка выполняет один SQL-запрос данных.
+в SQL Numeric, результаты — целые тиыны. Исторические показатели сводки выполняют
+один SQL-запрос данных; оценка buy_today шага 28 добавляет отдельную пакетную загрузку
+(описана в разделе «Купить сегодня»).
 
 Adjustments возвращает `{items, total}`. Элемент: `movement_id, created_at,
 product_id, article, name, unit, qty, unit_cost, value, reason, created_by_name`.
@@ -778,7 +780,8 @@ SaleOut.returns содержит id, number, returned_at, total, status всех
 26a-2 добавляет preview, три предупреждения и повторное подтверждение, вызов get_rate
 при проведении и новый порядок блокировок, API настройки «Мы плательщик НДС» и порога,
 подсказки интерфейсу и проверку published_date в ленте. Интерфейс реализован в 26b.
-Расчёт «купить сегодня» остаётся планом шага 28.
+Расчёт «купить сегодня» реализован в шаге 28 отдельной оценкой; сохранённая
+себестоимость прихода и средняя на складе от этой оценки не меняются.
 
 ### Единицы и округление
 
@@ -888,11 +891,19 @@ is_vat_credit=true: сумма и доли сохраняются отдельн
 Статус vat_payer_snapshot фиксируется при проведении. Смена настройки старые приходы не
 пересчитывает. Доли всегда читаются из receipt_expense_allocations, а не рассчитываются снова.
 
-### «Купить сегодня» (шаг 28, план)
+### «Купить сегодня» (шаг 28)
 
-Основа — строка последней проведённой закупки; отменённые приходы исключаются.
-q, p_minor и доли s_k относятся к этой строке. Цена поставщика, явно введённая позже,
-заменяет валютную цену и её валюту по правилам шага 28.
+Основа — последняя строка проведённой закупки с unit_cost IS NOT NULL по
+received_at DESC, receipt_lines.id DESC; ноль является известной ценой.
+q, p_minor и сохранённые доли s_k относятся к этой строке. Отменённые приходы
+и более поздние строки с неизвестной ценой исключаются.
+
+Действующая цена поставщика — последняя posted по quoted_on DESC, created_at DESC,
+id DESC. Она заменяет валютную цену и валюту товара, если quoted_on позже местной
+даты received_at, либо дата совпадает и quote.created_at > receipt.created_at.
+Расходы, их валютные основы, q и cost_then остаются от последней закупки.
+Без закупки цена поставщика даёт q=1, расходы отсутствуют, expenses_known=false,
+cost_then/markup_then/price_to_keep_markup=NULL. Без обеих основ — no_purchase.
 
 ```text
 V = расходы с валютной основой пересчёта, кроме НДС к зачёту
@@ -916,6 +927,86 @@ r_today_scaled — курс валюты товара сегодня, умнож
 курса — сервис шага 25 возвращает последний известный с датой; она подписывается в UI.
 Наценка (%) = 100 * (цена продажи - R) / R, маржа (%) = 100 * (цена продажи - R) / цена продажи;
 нулевой знаменатель означает, что процент не определён.
+
+Чистая calculate_replacement (receipts/replacement.py) складывает Fraction и
+округляет итог R один раз. goods_today, expenses_revalued, expenses_fixed —
+информационные суммы за единицу, округлённые для API уже после расчёта R.
+Их сумма может отличаться от R на тиын: они не служат входом расчёта.
+Старый KZT-приход без расходов возвращает прежнюю unit_cost.
+Наценки — sign(price−cost) × round_half_up(abs(100×(price−cost)), cost),
+NULL при cost=0. markup_then использует текущую sale_price и unit_cost закупки,
+markup_now — текущую sale_price и R. Цена сохранения прежней наценки равна
+round_half_up(R×(100+markup_then),100), именно с целым markup_then;
+неизвестная наценка или отрицательная цена дают NULL.
+
+Общий buy_today/service.py собирает товары и остатки, последние закупки,
+две последние posted-цены и доли расходов максимум четырьмя запросами данных.
+Архивность не исключает товар. Курсы CNY/USD берутся по today_local() один раз
+на необходимую валюту, включая валюты ненулевых капитализируемых расходов;
+KZT=1.0000 без запроса. Фабрика отдельных сессий передаётся маршрутом через
+Depends(get_rate_session_factory), сессия чтения не делает commit.
+При exact=false возвращённый прежний курс используется с его датой.
+AppError при получении необходимого курса даёт no_rate только затронутым товарам;
+сведения об основе сохраняются, вычисляемые суммы NULL.
+
+GET /api/products/{product_id}/buy-today возвращает basis (purchase|quote|NULL),
+basis_date (местная дата), basis_receipt_id (закупка расходов, также при quote),
+currency, price_minor, cost_then, avg_cost, today_rate, today_rate_date,
+today_rate_exact, goods_today, expenses_revalued, expenses_fixed, buy_today,
+sale_price, markup_then, markup_now, price_to_keep_markup, difference_vs_avg,
+reason_unavailable (no_purchase|no_rate|NULL), expenses_known, rates и active_quote.
+difference_vs_avg=R−avg_cost, NULL при отсутствии одного из значений.
+Курсы — строки с четырьмя знаками; деньги — целые тиыны, price_minor — сотые
+единицы валюты. rates содержит {currency,rate,rate_date,exact} необходимых валют,
+NULL-поля обозначают отсутствующий курс. Для KZT верхние поля курса синтетические:
+1.0000, сегодняшняя местная дата, exact=true; подпись Нацбанка не показывается.
+active_quote={id,currency,price_minor,quoted_on,cancel_fallback_basis} либо NULL.
+Она показывается и тогда, когда закупка новее цены. cancel_fallback_basis выбирает
+подтверждение возврата к purchase, quote или отсутствию основы после её отмены.
+
+product_price_quotes: id BIGINT identity PK; request_id UUID NOT NULL UNIQUE;
+product_id FK products; currency KZT/CNY/USD; price_minor BIGINT > 0; quoted_on DATE;
+status posted/cancelled; cancelled_at TIMESTAMPTZ и cancelled_by FK users nullable;
+created_by FK users и created_at TIMESTAMPTZ обязательны. CHECK связывает cancelled
+с заполненным cancelled_at. Индекс выбора: product_id,status,quoted_on,created_at,id.
+Миграция b7f4e1921026 после ac6d7e921026 отказывает в downgrade при любых записях,
+включая отменённые, под ACCESS EXCLUSIVE LOCK до изменения схемы.
+
+POST /api/products/{product_id}/price-quotes принимает обязательные request_id,
+currency, price_minor (strict int 1..MAX_SALE_PRICE), quoted_on (не позже сегодня
+по Asia/Almaty). Первое сохранение — 201, одинаковый повтор — 200, повтор другого
+product_id/валюты/цены/даты — 409 price_quote_request_conflict с {id}.
+Повтор отменённой записи возвращает её текущий статус, не восстанавливает её.
+Отдельный advisory-lock namespace 2203 сериализует UUID; IntegrityError обрабатывается
+только по uq_product_price_quotes_request_id. Один commit делает сервис цены.
+POST /api/price-quotes/{quote_id}/cancel без тела блокирует запись и возвращает её
+со status=cancelled (200); повтор — 409 price_quote_already_cancelled,
+неизвестный id — 404 price_quote_not_found. Отменяется одна запись, после чего
+оставшиеся posted-цены снова сравниваются с закупкой. Остатки и средняя не меняются.
+Оба POST возвращают id,request_id,product_id,currency,price_minor,quoted_on,status,
+cancelled_at,cancelled_by,created_by,created_at. Все новые маршруты защищены.
+
+GET /api/stock/buy-today оценивает только qty>0 основного склада, включая архивные.
+groups идут KZT,CNY,USD по валюте выбранной основы и содержат currency,
+products_count,qty,cost_value,buy_today_value,difference,difference_percent.
+Суммы qty×avg_cost и qty×R включают только товары с известными R и avg_cost.
+total содержит суммы той же выборки и разницу; без рассчитанных товаров суммы 0.
+Процент — строка с одним знаком, округление difference×1000/cost_value половиной
+от нуля; при нулевом cost_value NULL. without_basis_count считает виды остальных
+товаров, without_basis_cost_value — их известную стоимость qty×avg_cost.
+rates содержит использованные валюты и даты, включая NULL при отсутствии курса.
+В интерфейсе частичное покрытие подписано; закупочная стоимость сравниваемой выборки
+и исключённая известная стоимость раскрываются за «Тағы».
+
+SummaryOut дополнительно содержит buy_today_cost и buy_today_unknown_count.
+Отдельный поток строк суммирует qty×R текущей основы по продажам периода и
+вычитает годные возвраты по их собственной дате; брак не уменьшает сумму.
+Основа и курс берутся на момент запроса, независимо от исторической известности
+sale_lines.unit_cost. Каждая пропущенная строка продажи или годного возврата
+увеличивает unknown_count на один, без взаимного погашения количеств.
+Сводка выполняет прежнюю агрегацию и отдельный запрос количеств, затем до четырёх
+пакетных запросов оценки; запросы курсов идут в отдельных сессиях.
+В интерфейсе отчёта эти поля пока не показываются (шаг 29).
 
 ### Ввод, проведение и чтение (26a-1)
 
@@ -1068,6 +1159,9 @@ GET    /api/products/{id}
 PATCH  /api/products/{id}               артикул, название, бренд, цена, заметка, архив (не остаток)
 GET    /api/products/{id}/movements     история движений, новые сверху, с balance_after
 GET    /api/products/{id}/purchases     проведённые закупки, limit=20 (1–100), offset=0
+GET    /api/products/{id}/buy-today     сегодняшняя оценка, основа, наценки, курсы
+POST   /api/products/{id}/price-quotes цена поставщика; 201 новая, 200 повтор request_id
+POST   /api/price-quotes/{id}/cancel   удалить одну цену поставщика, без тела
 
 GET    /api/customers?q=                имя или телефон; цифры телефона сравниваются без 7/8 в начале
 GET    /api/customers/recent?limit=6    по дате последней проведённой продажи, затем новые без
@@ -1086,6 +1180,7 @@ GET    /api/receipts/{id}
 POST   /api/receipts/{id}/cancel
 
 GET    /api/stock/summary               количество, закупочная и продажная стоимость склада
+GET    /api/stock/buy-today             сравнение стоимости по валютам основы, курсы, покрытие
 
 GET    /api/reports/summary?from=&to=   итоги и каждый день периода
 GET    /api/reports/products?from=&to=&limit=&offset=
@@ -1241,6 +1336,9 @@ NULL. У прежних видов ledger reason NULL. Только posted-до�
 | `expense_manual_sum_mismatch` | 422 | `index`, `expected`, `actual` | ручные доли не равны сумме расхода в тиынах |
 | `receipt_warnings` | 409 | `warnings` (все текущие) | передан список confirmed_warnings, но не все ключи подтверждены |
 | `receipt_request_conflict` | 409 | `id`, `number` | request_id использован приёмом с другим составом |
+| `price_quote_request_conflict` | 409 | `id` | request_id использован ценой поставщика с другим товаром, валютой, ценой или датой |
+| `price_quote_already_cancelled` | 409 | - | цена поставщика уже отменена |
+| `price_quote_not_found` | 404 | - | цена поставщика не найдена |
 | `stock_adjustment_request_conflict` | 409 | `movement_id`, `product_id` | request_id использован корректировкой остатка с другим составом |
 | `insufficient_stock` | 409 | `items` | не хватает товара на остатке |
 | `receipt_not_found` | 404 | - | приход не найден |

@@ -22,6 +22,7 @@ import { formatInteger, formatMoney, formatRoundedMoney } from '../../lib/money'
 import { useListParams } from '../../lib/useListParams'
 import { type Product, useProducts } from '../products/api'
 import { useStockSummary } from './api'
+import { StockBuyToday } from './StockBuyToday'
 
 const productPath = (product: Product) => `/products/${product.id}`
 
@@ -70,6 +71,7 @@ function StockSummary() {
           unit="₸"
         />
       </SimpleGrid>
+      <StockBuyToday />
       {data.archived_products_count > 0 && (
         <Text mt="md" size="sm" c="dimmed">
           {t('stock.archivedStock', {

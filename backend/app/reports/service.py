@@ -5,11 +5,13 @@ from sqlalchemy import Date, Numeric, case, cast, func, literal, select, union_a
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
+from app.buy_today.service import evaluate_products
 from app.catalog.models import Product
 from app.customers.models import Customer
 from app.db_utils import LOCAL_TZ, local_date_range
 from app.inventory.models import StockMovement
 from app.payments.models import CustomerPayment
+from app.rates.service import SessionFactory
 from app.reports.schemas import (
     AdjustmentDirection,
     AdjustmentReportItem,
@@ -110,7 +112,47 @@ def _sales_source(date_from: date, date_to: date):
     return union_all(sales, returns).subquery()
 
 
-def summary(db: Session, date_from: date, date_to: date) -> SummaryOut:
+def _buy_today_totals(
+    db: Session, date_from: date, date_to: date, session_factory: SessionFactory | None
+) -> tuple[int, int]:
+    sales = (
+        select(SaleLine.product_id, SaleLine.qty)
+        .join(Sale, Sale.id == SaleLine.sale_id)
+        .where(Sale.status == "posted", *local_date_range(Sale.sold_at, date_from, date_to))
+    )
+    returns = (
+        select(SaleReturnLine.product_id, -SaleReturnLine.qty)
+        .join(SaleReturn, SaleReturn.id == SaleReturnLine.return_id)
+        .where(
+            SaleReturn.status == "posted",
+            SaleReturnLine.condition == "good",
+            *local_date_range(SaleReturn.returned_at, date_from, date_to),
+        )
+    )
+    source = union_all(sales, returns).subquery()
+    rows = db.execute(
+        select(source.c.product_id, func.sum(source.c.qty), func.count()).group_by(
+            source.c.product_id
+        )
+    ).all()
+    if not rows:
+        return 0, 0
+    products, _, _ = evaluate_products(
+        db, [row[0] for row in rows], session_factory=session_factory
+    )
+    value = unknown = 0
+    for pid, qty, count in rows:
+        replacement = products[pid].buy_today
+        if replacement is None:
+            unknown += count
+        else:
+            value += int(qty) * replacement
+    return value, unknown
+
+
+def summary(
+    db: Session, date_from: date, date_to: date, *, session_factory: SessionFactory | None = None
+) -> SummaryOut:
     validate_period(date_from, date_to)
     source = _sales_source(date_from, date_to)
     fields = (
@@ -217,7 +259,12 @@ def summary(db: Session, date_from: date, date_to: date) -> SummaryOut:
                 profit=int(row["profit"]) if row else 0,
             )
         )
+    buy_today_cost, buy_today_unknown_count = _buy_today_totals(
+        db, date_from, date_to, session_factory
+    )
     return SummaryOut(
+        buy_today_cost=buy_today_cost,
+        buy_today_unknown_count=buy_today_unknown_count,
         **{field: totals[field] for field in fields if field not in ("cash", "card")},
         received=ReceivedOut(
             cash=totals["cash"], card=totals["card"], total=totals["cash"] + totals["card"]

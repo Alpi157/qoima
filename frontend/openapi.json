@@ -1967,6 +1967,209 @@
         }
       }
     },
+    "/api/products/{product_id}/price-quotes": {
+      "post": {
+        "tags": [
+          "price-quotes"
+        ],
+        "summary": "Create Quote",
+        "operationId": "create_quote_api_products__product_id__price_quotes_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Product Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceQuoteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceQuoteOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Цена с этим request_id уже сохранена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceQuoteOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/price-quotes/{quote_id}/cancel": {
+      "post": {
+        "tags": [
+          "price-quotes"
+        ],
+        "summary": "Cancel Quote",
+        "operationId": "cancel_quote_api_price_quotes__quote_id__cancel_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "quote_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Quote Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceQuoteOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{product_id}/buy-today": {
+      "get": {
+        "tags": [
+          "buy-today"
+        ],
+        "summary": "Product Buy Today",
+        "operationId": "product_buy_today_api_products__product_id__buy_today_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuyTodayOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stock/buy-today": {
+      "get": {
+        "tags": [
+          "buy-today"
+        ],
+        "summary": "Stock Buy Today",
+        "operationId": "stock_buy_today_api_stock_buy_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockBuyTodayOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
     "/api/debt-adjustments": {
       "get": {
         "tags": [
@@ -3197,6 +3400,56 @@
   },
   "components": {
     "schemas": {
+      "ActiveQuoteOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "price_minor": {
+            "type": "integer",
+            "title": "Price Minor"
+          },
+          "quoted_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Quoted On"
+          },
+          "cancel_fallback_basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "purchase",
+                  "quote"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fallback Basis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "currency",
+          "price_minor",
+          "quoted_on",
+          "cancel_fallback_basis"
+        ],
+        "title": "ActiveQuoteOut"
+      },
       "AdjustmentCreate": {
         "properties": {
           "request_id": {
@@ -3503,6 +3756,286 @@
         ],
         "title": "BusinessSettingsUpdate",
         "description": "Invoice fields are required; omitted receipt settings keep their values."
+      },
+      "BuyTodayOut": {
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "purchase",
+                  "quote"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "basis_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Date"
+          },
+          "basis_receipt_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Receipt Id"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "KZT",
+                  "CNY",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Minor"
+          },
+          "cost_then": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Then"
+          },
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cost"
+          },
+          "today_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Today Rate"
+          },
+          "today_rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Today Rate Date"
+          },
+          "today_rate_exact": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Today Rate Exact"
+          },
+          "goods_today": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goods Today"
+          },
+          "expenses_revalued": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expenses Revalued"
+          },
+          "expenses_fixed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expenses Fixed"
+          },
+          "buy_today": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Today"
+          },
+          "sale_price": {
+            "type": "integer",
+            "title": "Sale Price"
+          },
+          "markup_then": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markup Then"
+          },
+          "markup_now": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markup Now"
+          },
+          "price_to_keep_markup": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price To Keep Markup"
+          },
+          "difference_vs_avg": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Vs Avg"
+          },
+          "reason_unavailable": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "no_purchase",
+                  "no_rate"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Unavailable"
+          },
+          "active_quote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActiveQuoteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expenses_known": {
+            "type": "boolean",
+            "title": "Expenses Known"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TodayRateOut"
+            },
+            "type": "array",
+            "title": "Rates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "basis",
+          "basis_date",
+          "basis_receipt_id",
+          "currency",
+          "price_minor",
+          "cost_then",
+          "avg_cost",
+          "today_rate",
+          "today_rate_date",
+          "today_rate_exact",
+          "goods_today",
+          "expenses_revalued",
+          "expenses_fixed",
+          "buy_today",
+          "sale_price",
+          "markup_then",
+          "markup_now",
+          "price_to_keep_markup",
+          "difference_vs_avg",
+          "reason_unavailable",
+          "active_quote",
+          "expenses_known",
+          "rates"
+        ],
+        "title": "BuyTodayOut"
       },
       "CostJumpParams": {
         "properties": {
@@ -4176,6 +4709,9 @@
           "method_not_allowed",
           "rate_not_found",
           "rate_date_in_future",
+          "price_quote_request_conflict",
+          "price_quote_already_cancelled",
+          "price_quote_not_found",
           "http_error"
         ],
         "title": "ErrorCode",
@@ -5059,6 +5595,134 @@
           "amount_tiyn"
         ],
         "title": "PreviewAllocationOut"
+      },
+      "PriceQuoteCreate": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "price_minor": {
+            "type": "integer",
+            "maximum": 100000000000.0,
+            "minimum": 1.0,
+            "title": "Price Minor"
+          },
+          "quoted_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Quoted On"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "currency",
+          "price_minor",
+          "quoted_on"
+        ],
+        "title": "PriceQuoteCreate"
+      },
+      "PriceQuoteOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "price_minor": {
+            "type": "integer",
+            "title": "Price Minor"
+          },
+          "quoted_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Quoted On"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "posted",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "cancelled_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By"
+          },
+          "created_by": {
+            "type": "integer",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "request_id",
+          "product_id",
+          "currency",
+          "price_minor",
+          "quoted_on",
+          "status",
+          "cancelled_at",
+          "cancelled_by",
+          "created_by",
+          "created_at"
+        ],
+        "title": "PriceQuoteOut"
       },
       "ProductCreate": {
         "properties": {
@@ -8048,6 +8712,130 @@
         ],
         "title": "SaleReturnSummary"
       },
+      "StockBuyTodayGroup": {
+        "properties": {
+          "cost_value": {
+            "type": "integer",
+            "title": "Cost Value",
+            "default": 0
+          },
+          "buy_today_value": {
+            "type": "integer",
+            "title": "Buy Today Value",
+            "default": 0
+          },
+          "difference": {
+            "type": "integer",
+            "title": "Difference",
+            "default": 0
+          },
+          "difference_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Percent"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "products_count": {
+            "type": "integer",
+            "title": "Products Count",
+            "default": 0
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency"
+        ],
+        "title": "StockBuyTodayGroup"
+      },
+      "StockBuyTodayOut": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/StockBuyTodayGroup"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "total": {
+            "$ref": "#/components/schemas/StockBuyTodayValues"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TodayRateOut"
+            },
+            "type": "array",
+            "title": "Rates"
+          },
+          "without_basis_count": {
+            "type": "integer",
+            "title": "Without Basis Count"
+          },
+          "without_basis_cost_value": {
+            "type": "integer",
+            "title": "Without Basis Cost Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups",
+          "total",
+          "rates",
+          "without_basis_count",
+          "without_basis_cost_value"
+        ],
+        "title": "StockBuyTodayOut"
+      },
+      "StockBuyTodayValues": {
+        "properties": {
+          "cost_value": {
+            "type": "integer",
+            "title": "Cost Value",
+            "default": 0
+          },
+          "buy_today_value": {
+            "type": "integer",
+            "title": "Buy Today Value",
+            "default": 0
+          },
+          "difference": {
+            "type": "integer",
+            "title": "Difference",
+            "default": 0
+          },
+          "difference_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Percent"
+          }
+        },
+        "type": "object",
+        "title": "StockBuyTodayValues"
+      },
       "StockSummary": {
         "properties": {
           "products_count": {
@@ -8103,6 +8891,14 @@
       },
       "SummaryOut": {
         "properties": {
+          "buy_today_cost": {
+            "type": "integer",
+            "title": "Buy Today Cost"
+          },
+          "buy_today_unknown_count": {
+            "type": "integer",
+            "title": "Buy Today Unknown Count"
+          },
           "revenue": {
             "type": "integer",
             "title": "Revenue"
@@ -8176,6 +8972,8 @@
         },
         "type": "object",
         "required": [
+          "buy_today_cost",
+          "buy_today_unknown_count",
           "revenue",
           "sales_count",
           "cost",
@@ -8195,6 +8993,61 @@
           "days"
         ],
         "title": "SummaryOut"
+      },
+      "TodayRateOut": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "exact": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "rate",
+          "rate_date",
+          "exact"
+        ],
+        "title": "TodayRateOut"
       },
       "UserOut": {
         "properties": {

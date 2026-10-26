@@ -17,6 +17,8 @@ class DayOut(BaseModel):
 
 
 class SummaryOut(BaseModel):
+    buy_today_cost: int
+    buy_today_unknown_count: int
     revenue: int
     sales_count: int
     cost: int
