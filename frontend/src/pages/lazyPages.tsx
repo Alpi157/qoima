@@ -118,3 +118,7 @@ export const StockPage = lazyPage(() =>
 export const ReportPage = lazyPage(() =>
   import('./report/ReportPage').then((m) => ({ default: m.ReportPage })),
 )
+
+export const ExpensesPage = lazyPage(() =>
+  import('./expenses/ExpensesPage').then((m) => ({ default: m.ExpensesPage })),
+)

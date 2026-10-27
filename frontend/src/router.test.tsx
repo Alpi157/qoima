@@ -113,6 +113,7 @@ describe('routes', () => {
     const links = [...nav.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')])
     expect(links).toEqual([
       ['Отчёт', '/report'],
+      ['Расходы', '/expenses'],
       ['Товары', '/products'],
       ['Покупатели', '/customers'],
       ['Долги', '/debts'],

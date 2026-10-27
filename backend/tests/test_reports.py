@@ -74,6 +74,17 @@ def test_summary_numbers(auth_client, report_case):
     response = auth_client.get("/api/reports/summary", params=PERIOD)
     assert response.status_code == 200, response.text
     assert response.json() == {
+        "expenses_total": 0,
+        "expenses_count": 0,
+        "expenses_by_category": [],
+        "card_commission": 0,
+        "tax_estimate": 0,
+        "card_commission_percent": "0",
+        "tax_percent": "0",
+        "operating_total": 0,
+        "profit_after_expenses": 600,
+        "buy_today_base_cost": 0,
+        "rate_effect": 0,
         "buy_today_cost": 0,
         "buy_today_unknown_count": 4,
         "revenue": 1500,
@@ -221,7 +232,7 @@ def test_query_budget(db_session, report_case):
     event.listen(conn, "before_cursor_execute", record)
     try:
         for method, expected in [
-            (service.summary, 5),
+            (service.summary, 7),
             (service.products, 2),
             (service.customers, 2),
         ]:

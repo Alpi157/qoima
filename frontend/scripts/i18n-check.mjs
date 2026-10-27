@@ -37,6 +37,8 @@ const SECTIONS = [
   'buyToday',
   'paymentMethod',
   'report',
+  'expenses',
+  'profit',
   'flow',
   'settings',
   'errors',

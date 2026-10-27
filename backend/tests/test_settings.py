@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 EMPTY = {
+    "card_commission_percent": "0",
+    "tax_percent": "0",
     "is_vat_payer": False,
     "rate_warning_percent": 10,
     "seller_name": "",
@@ -11,6 +13,8 @@ EMPTY = {
     "chief_accountant": "",
 }
 FILLED = {
+    "card_commission_percent": "0",
+    "tax_percent": "0",
     "is_vat_payer": False,
     "rate_warning_percent": 10,
     "seller_name": "3А Аuto Parts.KZ",
@@ -162,3 +166,27 @@ def test_vat_null_rejected(auth_client):
     assert (
         auth_client.put("/api/settings", json={**FILLED, "is_vat_payer": None}).status_code == 422
     )
+
+
+@pytest.mark.parametrize("field", ["card_commission_percent", "tax_percent"])
+@pytest.mark.parametrize(
+    "value,expected", [("0.95", "0.95"), ("1", "1"), ("100", "100"), ("1.50", "1.5"), ("0", "0")]
+)
+def test_profit_percent_round_trip(auth_client, field, value, expected):
+    response = auth_client.put("/api/settings", json={**FILLED, field: value})
+    assert response.status_code == 200
+    assert response.json()[field] == expected
+    omitted = {
+        key: val
+        for key, val in FILLED.items()
+        if key not in ("tax_percent", "card_commission_percent")
+    }
+    assert auth_client.put("/api/settings", json=omitted).json()[field] == expected
+
+
+@pytest.mark.parametrize("field", ["card_commission_percent", "tax_percent"])
+@pytest.mark.parametrize("value", ["100.01", "1.234", "-1", "abc", None, 1, "1e1", "", "1,5"])
+def test_profit_percent_invalid(auth_client, field, value):
+    response = auth_client.put("/api/settings", json={**FILLED, field: value})
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["type"] == "percent_invalid"

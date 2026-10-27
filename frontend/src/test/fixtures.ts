@@ -180,6 +180,8 @@ export function makeSale(overrides: Partial<Sale> = {}): Sale {
 
 export function makeBusinessSettings(overrides: Partial<BusinessSettings> = {}): BusinessSettings {
   return {
+    card_commission_percent: '0',
+    tax_percent: '0',
     is_vat_payer: false,
     rate_warning_percent: 10,
     seller_name: '3А Аuto Parts.KZ',
@@ -222,6 +224,17 @@ export function makeReportSummary(
   overrides: Partial<import('../pages/report/api').ReportSummary> = {},
 ) {
   return {
+    expenses_total: 0,
+    expenses_count: 0,
+    expenses_by_category: [],
+    card_commission: 0,
+    tax_estimate: 0,
+    card_commission_percent: '0',
+    tax_percent: '0',
+    operating_total: 0,
+    profit_after_expenses: 40000,
+    buy_today_base_cost: 0,
+    rate_effect: 0,
     buy_today_cost: 0,
     buy_today_unknown_count: 0,
     revenue: 120000,

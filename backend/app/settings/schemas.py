@@ -30,6 +30,26 @@ class BusinessSettingsUpdate(BaseModel):
     is_vat_payer: bool | None = None
     rate_warning_percent: Annotated[int, Field(strict=True, ge=1, le=100)] | None = None
 
+    card_commission_percent: str | None = None
+    tax_percent: str | None = None
+
+    @field_validator("card_commission_percent", "tax_percent", mode="before")
+    @classmethod
+    def _percent(cls, value: object) -> str:
+        if not isinstance(value, str) or not re.fullmatch(
+            r"[0-9]+(?:\.[0-9]{1,2})?", value.strip()
+        ):
+            raise PydanticCustomError(
+                "percent_invalid", "Введите число от 0 до 100, не больше двух знаков после запятой."
+            )
+        value = value.strip()
+        whole, _, fraction = value.partition(".")
+        if len(whole) > 3 or int(whole) * 100 + int(fraction.ljust(2, "0")) > 10000:
+            raise PydanticCustomError(
+                "percent_invalid", "Введите число от 0 до 100, не больше двух знаков после запятой."
+            )
+        return value
+
     @model_validator(mode="before")
     @classmethod
     def _no_nulls(cls, data: object) -> object:
@@ -53,4 +73,6 @@ class BusinessSettingsOut(BaseModel):
     chief_accountant: str
     is_vat_payer: bool
     rate_warning_percent: int
+    card_commission_percent: str
+    tax_percent: str
     updated_at: datetime

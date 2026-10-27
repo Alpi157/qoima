@@ -40,6 +40,17 @@
 | срок оплаты | төлеу мерзімі | 付款期限 | долги 31; kk: на вычитке | — |
 | просрочка | мерзімі өткен | 逾期 | долги 31; kk: на вычитке | — |
 
+| аренда | Жалдау ақысы | 租金 | expenses.categories.rent; kk: на вычитке | — |
+| зарплата | Жалақы | 工资 | expenses.categories.salary; kk: на вычитке | — |
+| доставка покупателям | Сатып алушыға жеткізу | 给客户送货 | expenses.categories.customer_delivery; kk: на вычитке | — |
+| связь и интернет | Байланыс және интернет | 通讯和网络 | expenses.categories.communication; kk: на вычитке | — |
+| реклама | Жарнама | 广告 | expenses.categories.advertising; kk: на вычитке | — |
+| налоги и взносы | Салықтар мен жарналар | 税费和社保 | expenses.categories.taxes; kk: на вычитке | — |
+| банк | Банк қызметтері | 银行费用 | expenses.categories.bank; kk: на вычитке | — |
+| прочее | Басқа | 其他 | expenses.categories.other; kk: на вычитке | — |
+| прибыль после расходов | Шығыстардан кейінгі пайда | 扣除支出后的利润 | profit.after; kk: на вычитке | — |
+| комиссия за карту | Карта комиссиясы | 刷卡手续费 | profit.commission; kk: на вычитке | — |
+
 Машинный список запрещённых вариантов хранится в одном месте:
 [frontend/scripts/kk-forbidden-stems.json](../frontend/scripts/kk-forbidden-stems.json).
 Он содержит **основы слов**, сейчас «болдырма». i18n-check.mjs ищет их как подстроки

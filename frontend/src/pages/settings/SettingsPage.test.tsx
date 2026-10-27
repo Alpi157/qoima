@@ -100,6 +100,8 @@ describe('SettingsPage', () => {
     const [path, init] = put.mock.calls[0] as unknown as [string, { body: BusinessSettingsUpdate }]
     expect(path).toBe('/api/settings')
     expect(init.body).toStrictEqual({
+      card_commission_percent: '0',
+      tax_percent: '0',
       is_vat_payer: false,
       rate_warning_percent: 10,
       seller_name: '3А Аuto Parts.KZ',
@@ -159,5 +161,40 @@ describe('SettingsPage', () => {
       expect(fieldErrorOf(field('ИИН/БИН'))).toBe('ИИН/БИН должен состоять из 12 цифр'),
     )
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+it('accepts a decimal comma for percentages and preserves invalid text', async () => {
+  vi.spyOn(api, 'GET').mockReturnValue(ok(makeBusinessSettings()))
+  const put = vi
+    .spyOn(api, 'PUT')
+    .mockReturnValue(
+      ok(makeBusinessSettings({ card_commission_percent: '0.95', tax_percent: '3.5' })),
+    )
+  renderWithProviders(<SettingsPage />)
+  const user = setupUser()
+  const commission = await screen.findByRole('textbox', {
+    name: 'Комиссия за оплату картой и QR, %',
+  })
+  const tax = screen.getByRole('textbox', { name: 'Налог, % от выручки' })
+  await user.clear(commission)
+  await fill(user, commission, '0,95')
+  await user.clear(tax)
+  await fill(user, tax, '1.234')
+  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+  expect(put).not.toHaveBeenCalled()
+  expect(
+    (screen.getByRole('textbox', { name: 'Налог, % от выручки' }) as HTMLInputElement).value,
+  ).toBe('1.234')
+  expect(
+    screen.getByText('Введите число от 0 до 100, не больше двух знаков после запятой.'),
+  ).toBeTruthy()
+  await user.clear(screen.getByRole('textbox', { name: 'Налог, % от выручки' }))
+  await fill(user, screen.getByRole('textbox', { name: 'Налог, % от выручки' }), '3,5')
+  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+  await waitFor(() => expect(put).toHaveBeenCalledTimes(1))
+  expect((put.mock.calls[0][1] as { body: BusinessSettingsUpdate }).body).toMatchObject({
+    card_commission_percent: '0.95',
+    tax_percent: '3.5',
   })
 })

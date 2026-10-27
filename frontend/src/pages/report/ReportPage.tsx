@@ -1,4 +1,4 @@
-import { Alert, Anchor, Button, Group, SimpleGrid, Stack, Text, Tooltip } from '@mantine/core'
+import { Alert, Anchor, Group, SimpleGrid, Stack, Text, Tooltip } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
@@ -6,7 +6,8 @@ import { useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
 import { ListPagination } from '../../components/ListPagination'
 import { PageLoader } from '../../components/PageLoader'
-import { PeriodInput } from '../../components/PeriodInput'
+import { ReportPeriod } from '../../components/ReportPeriod'
+import { ProfitSteps } from './ProfitSteps'
 import { QueryError } from '../../components/QueryError'
 import {
   Card,
@@ -18,7 +19,7 @@ import {
   Stat,
   useBackToMore,
 } from '../../components/ui'
-import { formatDate, isCalendarDate, periodDays, quickRange } from '../../lib/dates'
+import { isCalendarDate, periodDays, quickRange } from '../../lib/dates'
 import { unitLabel } from '../../lib/labels'
 import { formatAmount, formatInteger, formatMoney, formatRoundedMoney } from '../../lib/money'
 import { PAGE_SIZE } from '../../lib/pagination'
@@ -31,71 +32,6 @@ import {
 } from './api'
 import { ReportChart } from './ReportChart'
 import { AdjustmentReport } from './AdjustmentReport'
-
-const PERIODS = [
-  { value: 'today', label: 'report.today' },
-  { value: 'week', label: 'report.week' },
-  { value: 'month', label: 'report.month' },
-  { value: 'previousMonth', label: 'report.previousMonth' },
-] as const
-
-function ReportPeriod({
-  from,
-  to,
-  onChange,
-}: {
-  from: string
-  to: string
-  onChange: (from: string, to: string) => void
-}) {
-  const { t } = useTranslation()
-  const [custom, setCustom] = useState(false)
-  const preset = PERIODS.find(({ value }) => {
-    const range = quickRange(value)
-    return range[0] === from && range[1] === to
-  })?.value
-  return (
-    <Card>
-      <Stack gap="md">
-        <Group gap="xs" role="group" aria-label={t('common.period.label')}>
-          {PERIODS.map(({ value, label }) => (
-            <Button
-              key={value}
-              variant={!custom && preset === value ? 'light' : 'default'}
-              aria-pressed={!custom && preset === value}
-              onClick={() => {
-                setCustom(false)
-                onChange(...quickRange(value))
-              }}
-            >
-              {t(label)}
-            </Button>
-          ))}
-          <Button
-            variant={custom || !preset ? 'light' : 'default'}
-            aria-pressed={custom || !preset}
-            onClick={() => setCustom(true)}
-          >
-            {t('report.custom')}
-          </Button>
-        </Group>
-        {custom || !preset ? (
-          <PeriodInput
-            from={from}
-            to={to}
-            onChange={(start, end) =>
-              onChange(...(start && end ? ([start, end] as [string, string]) : quickRange('month')))
-            }
-          />
-        ) : (
-          <Text c="dimmed">
-            {formatDate(from)} · {formatDate(to)}
-          </Text>
-        )}
-      </Stack>
-    </Card>
-  )
-}
 
 function Profit({
   amount,
@@ -372,6 +308,7 @@ function ReportResults({ data, from, to }: { data: ReportSummary; from: string; 
           </Stack>
         )}
       </Card>
+      <ProfitSteps data={data} from={from} to={to} />
       <Card>
         <Stack gap="md">
           <SectionTitle>{t('report.received')}</SectionTitle>

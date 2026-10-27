@@ -69,6 +69,9 @@ class ErrorCode(StrEnum):
     PRICE_QUOTE_REQUEST_CONFLICT = "price_quote_request_conflict"
     PRICE_QUOTE_ALREADY_CANCELLED = "price_quote_already_cancelled"
     PRICE_QUOTE_NOT_FOUND = "price_quote_not_found"
+    EXPENSE_REQUEST_CONFLICT = "expense_request_conflict"
+    EXPENSE_NOT_FOUND = "expense_not_found"
+    EXPENSE_ALREADY_CANCELLED = "expense_already_cancelled"
     HTTP_ERROR = "http_error"
 
 
@@ -419,6 +422,24 @@ class RateDateInFutureError(AppError):
     default_message = "Дата курса не может быть в будущем"
 
 
+class ExpenseRequestConflictError(AppError):
+    code = ErrorCode.EXPENSE_REQUEST_CONFLICT
+    status_code = 409
+    default_message = "Этот запрос уже использован для других расходов"
+
+
+class ExpenseNotFoundError(AppError):
+    code = ErrorCode.EXPENSE_NOT_FOUND
+    status_code = 404
+    default_message = "Расход не найден"
+
+
+class ExpenseAlreadyCancelledError(AppError):
+    code = ErrorCode.EXPENSE_ALREADY_CANCELLED
+    status_code = 409
+    default_message = "Расход уже отменён"
+
+
 class FieldErrorOut(BaseModel):
     field: str
     # Russian text, for logs and as a fallback when the frontend has no translation.
@@ -465,6 +486,8 @@ VALIDATION_MESSAGES = {
 # Our own error types, raised as PydanticCustomError in the schemas; the message is our text.
 CUSTOM_VALIDATION_TYPES = frozenset(
     {
+        "expense_date_in_future",
+        "percent_invalid",
         "qty_zero",
         "amount_zero",
         "iin_bin_format",

@@ -13,7 +13,6 @@ import { Card, SectionTitle } from '../../components/ui'
 import { apiErrorText } from '../../i18n/errorText'
 import { formatCurrency } from '../../lib/currency'
 import { formatDate } from '../../lib/dates'
-import { unitLabel } from '../../lib/labels'
 import { formatRoundedMoney } from '../../lib/money'
 import { type Product, useProductBuyToday } from './api'
 import { PriceQuoteModal } from './PriceQuoteModal'
@@ -62,10 +61,7 @@ export function BuyTodayBlock({ product }: { product: Product }) {
               ) : (
                 <>
                   <Text size="xl" fw={600}>
-                    {t('buyToday.amount', {
-                      unit: unitLabel(product.unit),
-                      amount: formatRoundedMoney(data.buy_today),
-                    })}
+                    {formatRoundedMoney(data.buy_today)}
                   </Text>
                   {data.basis_date && data.currency && data.price_minor !== null && (
                     <Text>

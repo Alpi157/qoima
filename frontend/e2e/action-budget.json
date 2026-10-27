@@ -4,5 +4,6 @@
   "receipt": 4,
   "currencyReceipt": 16,
   "payment": 3,
-  "goodReturn": 3
+  "goodReturn": 3,
+  "expense": 4
 }

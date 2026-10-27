@@ -16,6 +16,7 @@ from app.customers import router as customers_router
 from app.db import get_db
 from app.debt_adjustments import router as debt_adjustments_router
 from app.errors import ErrorOut, register_exception_handlers
+from app.expenses import router as expenses_router
 from app.inventory import router as inventory_router
 from app.payments import router as payments_router
 from app.price_quotes import router as price_quotes_router
@@ -58,6 +59,7 @@ protected_api.include_router(customers_router.router)
 protected_api.include_router(receipts_router.router)
 protected_api.include_router(sales_router.router)
 protected_api.include_router(payments_router.router)
+protected_api.include_router(expenses_router.router)
 protected_api.include_router(price_quotes_router.router)
 protected_api.include_router(buy_today_router.router)
 protected_api.include_router(debt_adjustments_router.router)

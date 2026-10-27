@@ -129,7 +129,10 @@
     "receipt_warnings": "保存前请查看提醒。",
     "price_quote_request_conflict": "此请求已保存其他供应商报价（№{{id}}）。",
     "price_quote_already_cancelled": "供应商报价已删除。",
-    "price_quote_not_found": "未找到供应商报价。"
+    "price_quote_not_found": "未找到供应商报价。",
+    "expense_request_conflict": "此请求已用于其他支出。",
+    "expense_not_found": "未找到支出。",
+    "expense_already_cancelled": "支出已作废。"
   },
   "validation": {
     "missing": "必填",
@@ -175,7 +178,9 @@
     "expense_targets_not_allowed": "请检查费用分摊方式。",
     "expense_target_not_in_receipt": "请检查分摊费用的商品。",
     "expense_target_duplicate": "每种商品只能选择一次。",
-    "rate_percent_range": "请输入1到100的整数。"
+    "rate_percent_range": "请输入1到100的整数。",
+    "expense_date_in_future": "不能选择将来的日期。",
+    "percent_invalid": "请输入0到100之间的数字，小数点后最多两位。"
   },
   "products": {
     "movementKind": {
@@ -243,7 +248,8 @@
       "title": "修改库存数量：{{article}}",
       "cost": "采购价，₸",
       "costRequired": "请输入采购价",
-      "costRange": "价格不得超过 1 000 000 000 ₸"
+      "costRange": "价格不得超过 1 000 000 000 ₸",
+      "purchaseHint": "购入的商品请通过“{{receive}}”录入。这里只记录盘点时多出的数量。"
     },
     "list": {
       "article": "零件号",
@@ -529,7 +535,12 @@
     "noAccountant": "没有会计",
     "vatPayer": "我们是增值税纳税人",
     "vatPayerHint": "进口增值税不计入成本，单独记录",
-    "rateWarningPercent": "汇率差异提醒，%"
+    "rateWarningPercent": "汇率差异提醒，%",
+    "profit": "利润计算",
+    "cardCommission": "刷卡和扫码付款手续费，%",
+    "cardCommissionHint": "按刷卡收到的款项计算。",
+    "tax": "税率，占销售额的%",
+    "taxHint": "报表中仅为估算。准确税额请咨询会计。"
   },
   "flow": {
     "search": "输入零件号或名称",
@@ -923,7 +934,6 @@
   },
   "buyToday": {
     "title": "今日采购",
-    "amount": "今日采购：每1{{unit}} {{amount}}",
     "purchaseBasis": "依据 {{date}} 的采购：{{price}}",
     "quoteBasis": "依据供应商 {{date}} 的报价：{{price}}",
     "expensesUnknown": "采购费用未知，未计入",
@@ -952,5 +962,56 @@
       "CNY": "人民币",
       "USD": "美元"
     }
+  },
+  "expenses": {
+    "title": "支出",
+    "add": "添加支出",
+    "repeat": "重复上月的租金和工资",
+    "review": "请检查",
+    "repeatHint": "将记录以下支出。请检查日期。",
+    "repeatLimit": "一次最多保存20笔支出。请取消多余的勾选。",
+    "date": "日期",
+    "category": "类别",
+    "categoryRequired": "请选择支出类别。",
+    "amount": "金额，₸",
+    "note": "备注",
+    "categories": {
+      "rent": "租金",
+      "salary": "工资",
+      "customer_delivery": "给客户送货",
+      "communication": "通讯和网络",
+      "advertising": "广告",
+      "taxes": "税费和社保",
+      "bank": "银行费用",
+      "other": "其他"
+    },
+    "purchaseHint": "进货运费、关税和报关费请在收货时填写，不要记在这里。",
+    "taxHint": "税费已按设置中的{{percent}}%计算。如果在这里再记录，会重复计算。",
+    "bankHint": "刷卡手续费已按设置中的{{percent}}%计算。这里只记录其他银行费用。",
+    "saved": "支出 №{{number}} 已保存",
+    "cancel": {
+      "title": "要作废支出 №{{number}} 吗？",
+      "confirm": "作废支出",
+      "done": "支出 №{{number}} 已作废",
+      "description": "此支出将不再计入报表。"
+    },
+    "cancelled": "已作废",
+    "empty": "此期间没有支出。",
+    "total": "合计：{{amount}}"
+  },
+  "profit": {
+    "title": "利润是怎么算出来的",
+    "cost": "已售商品的进货成本",
+    "purchase": "按进价计算的利润",
+    "defect": "其中次品损失 {{amount}}",
+    "writeOff": "报损",
+    "surplus": "盘盈",
+    "commission": "刷卡手续费（{{percent}}%）",
+    "tax": "税费估算（{{percent}}%）",
+    "after": "扣除支出后的利润",
+    "rateMore": "按今天的汇率重新购入已售商品，要多花 {{amount}}。",
+    "rateLess": "按今天的汇率重新购入已售商品，可少花 {{amount}}。",
+    "unknown": "无法按今日汇率计算的销售行：{{count}}。未计入此比较。",
+    "noRates": "刷卡手续费和税率尚未在<settings>设置</settings>中填写。"
   }
 }

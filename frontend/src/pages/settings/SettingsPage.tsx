@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { PageLoader } from '../../components/PageLoader'
 import { QueryError } from '../../components/QueryError'
 import { Card, PageContainer, PageHeader, useBackToMore } from '../../components/ui'
+import { parseMoney } from '../../lib/money'
 import { serverFormErrors } from '../../lib/formErrors'
 import {
   type BusinessSettings,
@@ -16,16 +17,25 @@ import {
 } from './api'
 
 // Same rule as the backend (app/settings/schemas.py); the text is its error type's.
+function validPercent(value: string): boolean {
+  const normalized = value.trim().replace(',', '.')
+  return /^\d{1,3}(?:\.\d{1,2})?$/.test(normalized) && (parseMoney(normalized) ?? 10001) <= 10000
+}
+
 const IIN_BIN_PATTERN = /^\d{12}$/
 
 // Written on the invoice when there is no chief accountant; always in Kazakh, like the form.
 const NO_ACCOUNTANT = 'Қамтамасыз етілмейді'
 
 type SettingsFormValues = Omit<BusinessSettingsUpdate, 'rate_warning_percent'> & {
+  card_commission_percent: string
+  tax_percent: string
   rate_warning_percent: number | string
 }
 
 const FIELD_MAP = {
+  card_commission_percent: 'card_commission_percent',
+  tax_percent: 'tax_percent',
   seller_name: 'seller_name',
   seller_iin_bin: 'seller_iin_bin',
   responsible_person: 'responsible_person',
@@ -37,6 +47,8 @@ const FIELD_MAP = {
 
 function formValues(settings: BusinessSettings): SettingsFormValues {
   return {
+    card_commission_percent: settings.card_commission_percent,
+    tax_percent: settings.tax_percent,
     seller_name: settings.seller_name,
     seller_iin_bin: settings.seller_iin_bin,
     responsible_person: settings.responsible_person,
@@ -49,6 +61,8 @@ function formValues(settings: BusinessSettings): SettingsFormValues {
 
 function toBody(values: SettingsFormValues): BusinessSettingsUpdate {
   return {
+    card_commission_percent: values.card_commission_percent.trim().replace(',', '.'),
+    tax_percent: values.tax_percent.trim().replace(',', '.'),
     seller_name: values.seller_name.trim(),
     seller_iin_bin: values.seller_iin_bin.trim(),
     responsible_person: values.responsible_person.trim(),
@@ -67,6 +81,9 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
   const form = useForm<SettingsFormValues>({
     initialValues: formValues(settings),
     validate: {
+      card_commission_percent: (value) =>
+        validPercent(value) ? null : t('validation.percent_invalid'),
+      tax_percent: (value) => (validPercent(value) ? null : t('validation.percent_invalid')),
       rate_warning_percent: (value) =>
         typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 100
           ? null
@@ -164,6 +181,22 @@ function SettingsForm({ settings }: { settings: BusinessSettings }) {
           </Stack>
         </Card>
 
+        <Card title={t('settings.profit')}>
+          <Stack gap="lg">
+            <TextInput
+              label={t('settings.cardCommission')}
+              description={t('settings.cardCommissionHint')}
+              inputMode="decimal"
+              {...form.getInputProps('card_commission_percent')}
+            />
+            <TextInput
+              label={t('settings.tax')}
+              description={t('settings.taxHint')}
+              inputMode="decimal"
+              {...form.getInputProps('tax_percent')}
+            />
+          </Stack>
+        </Card>
         {formError && (
           <Alert color="red" role="alert">
             {formError}

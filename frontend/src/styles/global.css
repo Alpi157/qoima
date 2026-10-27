@@ -237,3 +237,13 @@ body {
   outline: 2px solid #1d5aa6;
   outline-offset: -2px;
 }
+
+/* Keep document actions reachable when a long modal form scrolls. */
+.q-modal-actions-sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: white;
+  padding-block: var(--q-space-8);
+  border-top: 1px solid var(--mantine-color-gray-3);
+}

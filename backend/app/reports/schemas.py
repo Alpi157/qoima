@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.expenses.schemas import ExpenseCategory
+
 
 class ReceivedOut(BaseModel):
     cash: int
@@ -16,7 +18,24 @@ class DayOut(BaseModel):
     profit: int
 
 
+class ExpenseCategoryTotal(BaseModel):
+    category: ExpenseCategory
+    amount: int
+    count: int
+
+
 class SummaryOut(BaseModel):
+    expenses_total: int
+    expenses_count: int
+    expenses_by_category: list[ExpenseCategoryTotal]
+    card_commission: int
+    tax_estimate: int
+    card_commission_percent: str
+    tax_percent: str
+    operating_total: int
+    profit_after_expenses: int
+    buy_today_base_cost: int
+    rate_effect: int
     buy_today_cost: int
     buy_today_unknown_count: int
     revenue: int

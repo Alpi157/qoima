@@ -18,6 +18,8 @@ class BusinessSettings(Base):
     __tablename__ = "business_settings"
     __table_args__ = (
         CheckConstraint(f"id = {SETTINGS_ID}", name="single_row"),
+        CheckConstraint("card_commission_bp BETWEEN 0 AND 10000", name="card_commission_bp_range"),
+        CheckConstraint("tax_bp BETWEEN 0 AND 10000", name="tax_bp_range"),
         CheckConstraint(
             "rate_warning_percent BETWEEN 1 AND 100", name="rate_warning_percent_range"
         ),
@@ -31,4 +33,6 @@ class BusinessSettings(Base):
     chief_accountant: Mapped[str] = _text_column()
     is_vat_payer: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     rate_warning_percent: Mapped[int] = mapped_column(Integer, server_default=text("10"))
+    card_commission_bp: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    tax_bp: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

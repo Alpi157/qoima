@@ -248,7 +248,7 @@ sale_return_lines: `id`, `return_id` (FK sale_returns, индекс), `sale_line
 прежние данные сохраняются при downgrade и повторном upgrade.
 
 ### document_counters (номера документов)
-`doc_type` (text PK, check `IN ('receipt', 'sale', 'payment', 'return', 'debt_adjustment')`), `last_number` (bigint, check >= 0).
+`doc_type` (text PK, check `IN ('receipt', 'sale', 'payment', 'return', 'debt_adjustment', 'expense')`), `last_number` (bigint, check >= 0).
 Одна строка на тип документа, `last_number` - последний выданный номер.
 
 Номер берёт `app/numbering.py::next_number(db, doc_type)`:
@@ -998,15 +998,16 @@ rates содержит использованные валюты и даты, в
 В интерфейсе частичное покрытие подписано; закупочная стоимость сравниваемой выборки
 и исключённая известная стоимость раскрываются за «Тағы».
 
-SummaryOut дополнительно содержит buy_today_cost и buy_today_unknown_count.
-Отдельный поток строк суммирует qty×R текущей основы по продажам периода и
-вычитает годные возвраты по их собственной дате; брак не уменьшает сумму.
-Основа и курс берутся на момент запроса, независимо от исторической известности
-sale_lines.unit_cost. Каждая пропущенная строка продажи или годного возврата
-увеличивает unknown_count на один, без взаимного погашения количеств.
-Сводка выполняет прежнюю агрегацию и отдельный запрос количеств, затем до четырёх
-пакетных запросов оценки; запросы курсов идут в отдельных сессиях.
-В интерфейсе отчёта эти поля пока не показываются (шаг 29).
+SummaryOut содержит `buy_today_cost`, `buy_today_base_cost`, `rate_effect` и
+`buy_today_unknown_count`. Обе стоимости относятся к одной выборке: строки проведённых
+продаж и годных возвратов периода, где известны исторический снимок unit_cost и текущая
+оценка buy_today. Возврат уменьшает обе суммы, брак не входит. Историческая стоимость
+берётся из своей строки продажи или возврата, текущая — из пакетной оценки товара.
+`rate_effect = buy_today_cost - buy_today_base_cost`: положительное значение означает,
+что купить заново дороже. Каждая исключённая строка продажи или годного возврата
+увеличивает unknown_count на один, без взаимного погашения количеств. Нулевая цена
+известна и участвует. Количество SQL-запросов не зависит от числа строк; фабрика
+коротких сессий курсов остаётся прежней.
 
 ### Ввод, проведение и чтение (26a-1)
 
@@ -1504,3 +1505,83 @@ VPS у казахстанского провайдера: в базе имена
 `alembic upgrade head`, затем один процесс uvicorn), `web` (`deploy/web.Dockerfile`: сборка
 фронтенда в node, затем caddy:2-alpine со статикой и `deploy/Caddyfile`; порты 80, 443, 443/udp).
 Установка на сервер по шагам: `deploy/README.md`.
+
+
+## Журнал расходов и прибыль после расходов (29)
+
+### Модель и операции
+
+`expenses`: id BIGINT identity PK, number BIGINT UNIQUE; request_id UUID и request_index
+INTEGER NOT NULL с уникальным `(request_id, request_index)`; expense_date DATE NOT NULL;
+category TEXT CHECK rent/salary/customer_delivery/communication/advertising/taxes/bank/other;
+amount BIGINT CHECK >0; note nullable; status posted/cancelled; cancelled_at TIMESTAMPTZ,
+cancelled_by FK users и cancel_reason; created_by FK users, created_at TIMESTAMPTZ.
+Статус согласован с cancelled_at как у оплат. Индекс `(status, expense_date)`.
+Номера из счётчика expense без пропусков при откате; отменённый номер не переиспользуется.
+Миграция c8a5e3921029 после b7f4e1921026 также добавляет ставки и счётчик. Downgrade
+под ACCESS EXCLUSIVE LOCK отказывает при любых расходах до изменения схемы.
+
+Все четыре маршрута требуют входа:
+
+- POST /api/expenses: `{request_id, items:[{expense_date,category,amount,note}]}`,
+  1–20 элементов; amount — strict int 1..MAX_MONEY; заметка trim, пустая → NULL,
+  максимум 500 символов. Будущая дата по Asia/Almaty — 422 validation_error,
+  полевой тип expense_date_in_future. Ответ `{items:[ExpenseOut]}`: 201 или 200 при повторе.
+- POST /api/expenses/{expense_id}/cancel: `{reason}`, непустая причина 3–500 символов,
+  блокировка строки и один commit; 404 `expense_not_found`, 409 `expense_already_cancelled`.
+- GET /api/expenses: обязательные from/to, период включительно до 366 дней,
+  повторяемый category, status по умолчанию все, limit 50 (1–200), offset 0.
+  Порядок expense_date DESC, number DESC. `{items,total,posted_amount}`:
+  сумма проведённых по всему фильтру, а не странице. Два запроса, авторы через JOIN.
+- GET /api/expenses/{expense_id}: ExpenseOut или 404 `expense_not_found`.
+
+ExpenseOut: id, number, expense_date, category, amount, note, status, created_at,
+created_by_name, cancelled_at, cancelled_by_name, cancel_reason.
+
+Повтор берёт advisory-lock namespace 2204 **до** чтения существующих расходов.
+Сравнивается упорядоченный состав `(expense_date,category,amount,normalized_note)`;
+request_index — позиция с нуля. Тот же состав возвращает те же документы с текущими
+статусами; другой — 409 `expense_request_conflict` с id и number первого расхода.
+IntegrityError перехватывается только по uq_expenses_request_id_request_index.
+Весь пакет и номера фиксируются одной транзакцией. Редактирования и удаления нет.
+Расходы не создают движений остатков, не меняют долги и блок received.
+
+### Ставки и формулы
+
+В business_settings: card_commission_bp и tax_bp INTEGER NOT NULL DEFAULT 0,
+CHECK 0–10000. GET/PUT /api/settings передают card_commission_percent и tax_percent
+строками с точкой и максимум двумя десятичными знаками; допустим диапазон 0–100.
+В PUT пропуск сохраняет значение, явный null отклоняется. Ошибка — 422 validation_error
+с полевым типом percent_invalid. Вывод минимальный: 150 bp → "1.5", 100 → "1".
+Деньги и проценты разбираются без float.
+
+SummaryOut дополнен expenses_total, expenses_count, expenses_by_category
+`[{category,amount,count}]` (проведённые по expense_date, ненулевые категории в порядке
+списка выше), card_commission, tax_estimate, строками ставок, operating_total,
+profit_after_expenses и показателями сравнения курса.
+
+```
+card_commission = round_half_up(max(received.card, 0) * card_commission_bp, 10000)
+tax_estimate = round_half_up(max(revenue, 0) * tax_bp, 10000)
+operating_total = expenses_total + card_commission + tax_estimate
+profit_after_expenses = profit - write_off_value + surplus_value - operating_total
+```
+
+Ставки текущие, налог подписан как оценка. Брак уже внутри profit и второй раз не
+вычитается. Излишки компенсируют списания при пересорте. Старые revenue, cost, profit,
+defect_loss и дни не меняют смысл. Расход без продаж даёт отрицательный новый итог.
+
+### Интерфейс
+
+/expenses использует период отчёта, по умолчанию текущий месяц; ссылка из лесенки
+сохраняет from/to. Новый расход не имеет начального вида: обязательный выбор проверяется
+перед POST, ошибка подсвечивает кнопки и не стирает ввод. Отмена — CancelDocumentModal
+с причиной. Неизвестный результат блокирует поля и повторяет неизменное тело с тем же UUID.
+Конфликт открывает документ через expenseFocus, даже вне выбранного периода.
+
+Повтор копирует rent/salary предыдущего календарного месяца, заметку и сумму, ставит
+сегодняшнюю дату; дата и галочка доступны у строки. Порядок фиксирован на время окна.
+Все строки отмечены; при выборе больше 20 показана подсказка и сохранение недоступно,
+данные остаются. При снятии галочек в POST попадают только выбранные строки.
+Успех и отмена обновляют expenses/reports; настройки ставок обновляют reports.
+Лесенка и деньги показаны раздельно. Бюджет expense — четыре действия.

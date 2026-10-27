@@ -98,7 +98,7 @@
   Только при `QOIMA_E2E_BUILD=1` Playwright собирает frontend и запускает preview;
   обычные e2e, `make test` и `make screenshots` используют прежний запуск без дополнительной сборки.
 - Проверки черновиков и бюджета действий (после подготовки `qoima_demo` с тем же
-  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget|currency receipt|write-off|buy today"`.
+  `DEMO_PASSWORD`): `cd frontend && DEMO_PASSWORD=... npx playwright test --project=flows-1366 --project=flows-390 --no-deps -g "draft safety|action budget|currency receipt|write-off|buy today|expense"`.
   Бюджет одного клика, заполнения поля и Enter хранится в `frontend/e2e/action-budget.json`;
   штатные сценарии не должны превышать зафиксированные числа.
 - Снимки шага 23 (`draft-*`) дополнительно снимаются на kk в 1366x768 и 390x844,
@@ -117,6 +117,11 @@
 - Снимки шага 28 (`buy-today-*`): карточка валютного товара по закупке и цене поставщика,
   отсутствие основы, окно цены и склад с валютной разбивкой; на kk в 1366x768 и 390x844.
   E2e `buy today` проверяет демо-курс, новую цену поставщика и возврат к закупке после её отмены.
+- Снимки шага 29 (`expense-*`): журнал, пустой период, добавление с подсказкой налога,
+  повтор прошлого месяца, лесенка с расходами и без продаж, ставки и подсказка добавления
+  остатка; на kk в 1366x768 и 390x844. `buy-today-*` пересняты без повтора заголовка.
+  E2e `expense` проверяет аренду, отчёт, отмену и бюджет 4 действия.
+- Эталоны шага 29: `cd backend && uv run pytest -q tests/test_expense_reports.py -k "reference_11 or reference_13 or reference_14"`.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

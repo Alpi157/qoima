@@ -29,6 +29,8 @@ from app.catalog.schemas import ProductCreate, ProductUpdate
 from app.config import get_settings
 from app.customers import service as customers_service
 from app.customers.schemas import CustomerCreate
+from app.expenses import service as expenses_service
+from app.expenses.schemas import ExpenseCreate
 from app.inventory.models import StockMovement
 from app.inventory.service import MovementIn, post_movements
 from app.payments import service as payments_service
@@ -151,6 +153,8 @@ CANCELLED_SALE_INDEX = 0
 CANCEL_REASON = "Сатып алушы бас тартты"
 
 BUSINESS_SETTINGS = BusinessSettingsUpdate(
+    card_commission_percent="1",
+    tax_percent="3",
     seller_name="3А Аuto Parts.KZ",
     seller_iin_bin="",
     responsible_person="Кәкеш Арман",
@@ -417,6 +421,64 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
         )
         if index == 5:
             returns_service.cancel_return(db, document.id, "Қате қайтару", user.id)
+
+    today = now.astimezone(LOCAL_TZ).date()
+    previous_month = today.replace(day=1) - timedelta(days=1)
+    expenses_service.post_expenses(
+        db,
+        ExpenseCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "expenses"),
+            items=[
+                {
+                    "expense_date": today,
+                    "category": "rent",
+                    "amount": 10000000,
+                    "note": "Қойманы жалдау",
+                },
+                {
+                    "expense_date": today,
+                    "category": "communication",
+                    "amount": 1250000,
+                    "note": "Интернет",
+                },
+                {
+                    "expense_date": today - timedelta(days=10),
+                    "category": "rent",
+                    "amount": 10000000,
+                    "note": "Сатылымсыз күн",
+                },
+                {
+                    "expense_date": previous_month,
+                    "category": "rent",
+                    "amount": 10000000,
+                    "note": "Қойманы жалдау",
+                },
+                {
+                    "expense_date": previous_month,
+                    "category": "salary",
+                    "amount": 15000000,
+                    "note": "Жалақы",
+                },
+            ],
+        ),
+        user.id,
+    )
+    cancelled, _ = expenses_service.post_expenses(
+        db,
+        ExpenseCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "expense-cancelled"),
+            items=[
+                {
+                    "expense_date": today,
+                    "category": "other",
+                    "amount": 500000,
+                    "note": "Қате жазба",
+                },
+            ],
+        ),
+        user.id,
+    )
+    expenses_service.cancel_expense(db, cancelled.items[0].id, "Қате сома", user.id)
 
     for item in PRODUCTS:
         if item.archived:

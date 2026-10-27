@@ -26,6 +26,7 @@ import {
   SettingsPage,
   StockPage,
   ReportPage,
+  ExpensesPage,
   ReturnCreatePage,
   ReturnPage,
   ReturnsPage,
@@ -53,6 +54,7 @@ const pageRoutes: RouteObject[] = [
               { path: 'receive/done/:id', element: <ReceiveDonePage /> },
               { path: 'stock', element: <StockPage /> },
               { path: 'report', element: <ReportPage /> },
+              { path: 'expenses', element: <ExpensesPage /> },
               { path: 'sale', element: <Navigate to="/sell" replace /> },
               // Detailed sections opened from «Тағы»: their lists lead back with «Тағы».
               { path: 'products', element: <ProductsPage /> },

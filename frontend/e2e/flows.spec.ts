@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 
 import { getJson, login, settle, snap } from './snap.js'
+import { addExpense, isolatedExpenseReport } from './expenses.js'
 import { REPORT_MODULE } from './pageModules.js'
 import { todayLocal } from '../src/lib/dates.js'
 import { formatMoney } from '../src/lib/money.js'
@@ -1075,4 +1076,10 @@ test('write-off: adjustment uses current time after demo and appears in report d
   })
   await row.getByRole('link', { name: article, exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/products/${product.id}$`))
+})
+
+test('expense: add rent, report, cancellation and action budget', async ({ page }) => {
+  await login(page)
+  const expense = await addExpense(page)
+  await isolatedExpenseReport(page, expense)
 })

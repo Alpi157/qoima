@@ -149,6 +149,11 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           color={direction === 'add' ? 'green' : 'red'}
           fullWidth
         />
+        {direction === 'add' && (
+          <Text c="dimmed" size="sm">
+            {t('products.adjust.purchaseHint', { receive: t('stock.receive') })}
+          </Text>
+        )}
         <NumberInput
           label={t('products.adjust.qty')}
           required
@@ -240,7 +245,7 @@ function AdjustmentForm({ product, onDone }: AdjustmentFormProps) {
           </Alert>
         )}
 
-        <Group justify="flex-end" gap="sm" className="q-modal-actions">
+        <Group justify="flex-end" gap="sm" className="q-modal-actions q-modal-actions-sticky">
           <Button variant="default" onClick={() => modal?.close()} disabled={create.isPending}>
             {t('common.cancel')}
           </Button>

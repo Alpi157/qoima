@@ -61,7 +61,10 @@ export function RequestConflictAlert({
   const open = () => {
     let pathname: string
     const search = new URLSearchParams(location.search)
-    if (error.code === 'stock_adjustment_request_conflict') {
+    if (error.code === 'expense_request_conflict') {
+      pathname = '/expenses'
+      search.set('expenseFocus', String(error.params.id))
+    } else if (error.code === 'stock_adjustment_request_conflict') {
       pathname = `/products/${String(error.params.product_id)}`
       search.set('movementFocus', String(error.params.movement_id))
     } else if (
@@ -89,7 +92,8 @@ export function RequestConflictAlert({
       search:
         pathname === location.pathname ||
         customerId !== undefined ||
-        error.code === 'stock_adjustment_request_conflict'
+        error.code === 'stock_adjustment_request_conflict' ||
+        error.code === 'expense_request_conflict'
           ? search.toString()
           : '',
     })

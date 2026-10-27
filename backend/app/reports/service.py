@@ -9,7 +9,10 @@ from app.buy_today.service import evaluate_products
 from app.catalog.models import Product
 from app.customers.models import Customer
 from app.db_utils import LOCAL_TZ, local_date_range
+from app.expenses.models import Expense
+from app.expenses.schemas import EXPENSE_CATEGORIES
 from app.inventory.models import StockMovement
+from app.inventory.service import round_half_up
 from app.payments.models import CustomerPayment
 from app.rates.service import SessionFactory
 from app.reports.schemas import (
@@ -19,6 +22,7 @@ from app.reports.schemas import (
     CustomerReportItem,
     CustomerReportPage,
     DayOut,
+    ExpenseCategoryTotal,
     ProductReportItem,
     ProductReportPage,
     ReceivedOut,
@@ -26,6 +30,7 @@ from app.reports.schemas import (
 )
 from app.returns.models import SaleReturn, SaleReturnLine
 from app.sales.models import Sale, SaleLine
+from app.settings.service import get_business_settings, percent_from_bp
 
 
 def validate_period(date_from: date, date_to: date) -> None:
@@ -114,14 +119,14 @@ def _sales_source(date_from: date, date_to: date):
 
 def _buy_today_totals(
     db: Session, date_from: date, date_to: date, session_factory: SessionFactory | None
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     sales = (
-        select(SaleLine.product_id, SaleLine.qty)
+        select(SaleLine.product_id, SaleLine.qty, SaleLine.unit_cost)
         .join(Sale, Sale.id == SaleLine.sale_id)
         .where(Sale.status == "posted", *local_date_range(Sale.sold_at, date_from, date_to))
     )
     returns = (
-        select(SaleReturnLine.product_id, -SaleReturnLine.qty)
+        select(SaleReturnLine.product_id, -SaleReturnLine.qty, SaleReturnLine.unit_cost)
         .join(SaleReturn, SaleReturn.id == SaleReturnLine.return_id)
         .where(
             SaleReturn.status == "posted",
@@ -130,24 +135,51 @@ def _buy_today_totals(
         )
     )
     source = union_all(sales, returns).subquery()
+    known = source.c.unit_cost.is_not(None)
     rows = db.execute(
-        select(source.c.product_id, func.sum(source.c.qty), func.count()).group_by(
-            source.c.product_id
-        )
+        select(
+            source.c.product_id,
+            func.coalesce(func.sum(source.c.qty).filter(known), 0),
+            func.coalesce(func.sum(cast(source.c.qty, Numeric) * source.c.unit_cost), 0),
+            func.count(),
+            func.count().filter(known),
+        ).group_by(source.c.product_id)
     ).all()
     if not rows:
-        return 0, 0
+        return 0, 0, 0
     products, _, _ = evaluate_products(
         db, [row[0] for row in rows], session_factory=session_factory
     )
-    value = unknown = 0
-    for pid, qty, count in rows:
+    value = base = unknown = 0
+    for pid, qty, snapshot_cost, count, known_count in rows:
         replacement = products[pid].buy_today
         if replacement is None:
             unknown += count
         else:
             value += int(qty) * replacement
-    return value, unknown
+            base += int(snapshot_cost)
+            unknown += count - known_count
+    return value, base, unknown
+
+
+def _expense_totals(db: Session, date_from: date, date_to: date) -> list[ExpenseCategoryTotal]:
+    rows = db.execute(
+        select(Expense.category, func.sum(Expense.amount), func.count())
+        .where(
+            Expense.status == "posted",
+            Expense.expense_date >= date_from,
+            Expense.expense_date <= date_to,
+        )
+        .group_by(Expense.category)
+    ).all()
+    values = {category: (amount, count) for category, amount, count in rows}
+    return [
+        ExpenseCategoryTotal(
+            category=category, amount=int(values[category][0]), count=values[category][1]
+        )
+        for category in EXPENSE_CATEGORIES
+        if category in values and values[category][0]
+    ]
 
 
 def summary(
@@ -259,10 +291,30 @@ def summary(
                 profit=int(row["profit"]) if row else 0,
             )
         )
-    buy_today_cost, buy_today_unknown_count = _buy_today_totals(
+    buy_today_cost, buy_today_base_cost, buy_today_unknown_count = _buy_today_totals(
         db, date_from, date_to, session_factory
     )
+    categories = _expense_totals(db, date_from, date_to)
+    expenses_total = sum(item.amount for item in categories)
+    settings = get_business_settings(db, read_only=True)
+    card_commission = round_half_up(max(totals["card"], 0) * settings.card_commission_bp, 10000)
+    tax_estimate = round_half_up(max(totals["revenue"], 0) * settings.tax_bp, 10000)
+    operating_total = expenses_total + card_commission + tax_estimate
     return SummaryOut(
+        expenses_total=expenses_total,
+        expenses_count=sum(item.count for item in categories),
+        expenses_by_category=categories,
+        card_commission=card_commission,
+        tax_estimate=tax_estimate,
+        card_commission_percent=percent_from_bp(settings.card_commission_bp),
+        tax_percent=percent_from_bp(settings.tax_bp),
+        operating_total=operating_total,
+        profit_after_expenses=totals["profit"]
+        - totals["write_off_value"]
+        + totals["surplus_value"]
+        - operating_total,
+        buy_today_base_cost=buy_today_base_cost,
+        rate_effect=buy_today_cost - buy_today_base_cost,
         buy_today_cost=buy_today_cost,
         buy_today_unknown_count=buy_today_unknown_count,
         **{field: totals[field] for field in fields if field not in ("cash", "card")},

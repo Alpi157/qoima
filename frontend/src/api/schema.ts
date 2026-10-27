@@ -420,6 +420,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Expenses */
+        get: operations["list_expenses_api_expenses_get"];
+        put?: never;
+        /** Post Expenses */
+        post: operations["post_expenses_api_expenses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/expenses/{expense_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Expense */
+        get: operations["get_expense_api_expenses__expense_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/expenses/{expense_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Expense */
+        post: operations["cancel_expense_api_expenses__expense_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/products/{product_id}/price-quotes": {
         parameters: {
             query?: never;
@@ -851,6 +903,10 @@ export interface components {
             is_vat_payer: boolean;
             /** Rate Warning Percent */
             rate_warning_percent: number;
+            /** Card Commission Percent */
+            card_commission_percent: string;
+            /** Tax Percent */
+            tax_percent: string;
             /**
              * Updated At
              * Format: date-time
@@ -876,6 +932,10 @@ export interface components {
             is_vat_payer?: boolean | null;
             /** Rate Warning Percent */
             rate_warning_percent?: number | null;
+            /** Card Commission Percent */
+            card_commission_percent?: string | null;
+            /** Tax Percent */
+            tax_percent?: string | null;
         };
         /** BuyTodayOut */
         BuyTodayOut: {
@@ -1146,7 +1206,7 @@ export interface components {
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
          * @enum {string}
          */
-        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "receipt_warnings" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "price_quote_request_conflict" | "price_quote_already_cancelled" | "price_quote_not_found" | "http_error";
+        ErrorCode: "app_error" | "validation_error" | "invalid_article" | "insufficient_stock" | "invalid_credentials" | "not_authenticated" | "too_many_login_attempts" | "username_taken" | "user_not_found" | "invalid_user_data" | "product_not_found" | "duplicate_article" | "customer_not_found" | "product_archived" | "line_product_not_found" | "duplicate_line" | "amount_too_large" | "nbk_rate_mismatch" | "expense_zero_weight" | "expense_manual_sum_mismatch" | "receipt_request_conflict" | "receipt_warnings" | "stock_adjustment_request_conflict" | "adjustment_cost_required" | "adjustment_cost_not_allowed" | "receipt_not_found" | "receipt_already_cancelled" | "receipt_cancel_blocked" | "document_customer_not_found" | "sale_not_found" | "sale_already_cancelled" | "sale_request_conflict" | "debt_requires_customer" | "paid_exceeds_total" | "debt_adjustment_exceeds_debt" | "debt_adjustment_request_conflict" | "debt_adjustment_not_found" | "debt_adjustment_already_cancelled" | "payment_exceeds_debt" | "payment_request_conflict" | "payment_not_found" | "payment_already_cancelled" | "sale_not_posted" | "return_qty_exceeds_sold" | "return_request_conflict" | "return_not_found" | "return_already_cancelled" | "return_cancel_blocked" | "return_split_changed" | "sale_has_returns" | "not_found" | "method_not_allowed" | "rate_not_found" | "rate_date_in_future" | "price_quote_request_conflict" | "price_quote_already_cancelled" | "price_quote_not_found" | "expense_request_conflict" | "expense_not_found" | "expense_already_cancelled" | "http_error";
         /**
          * ErrorOut
          * @description Body of every 4xx response (see "Формат ошибок API" in docs/architecture.md).
@@ -1164,6 +1224,38 @@ export interface components {
             };
             /** Errors */
             errors?: components["schemas"]["FieldErrorOut"][] | null;
+        };
+        /** ExpenseBatch */
+        ExpenseBatch: {
+            /** Items */
+            items: components["schemas"]["app__expenses__schemas__ExpenseOut"][];
+        };
+        /** ExpenseCancel */
+        ExpenseCancel: {
+            /** Reason */
+            reason: string;
+        };
+        /** ExpenseCategoryTotal */
+        ExpenseCategoryTotal: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "rent" | "salary" | "customer_delivery" | "communication" | "advertising" | "taxes" | "bank" | "other";
+            /** Amount */
+            amount: number;
+            /** Count */
+            count: number;
+        };
+        /** ExpenseCreate */
+        ExpenseCreate: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Items */
+            items: components["schemas"]["ExpenseItem"][];
         };
         /** ExpenseIn */
         ExpenseIn: {
@@ -1197,43 +1289,31 @@ export interface components {
             /** Manual */
             manual?: components["schemas"]["ManualAllocationIn"][] | null;
         };
-        /** ExpenseOut */
-        ExpenseOut: {
-            /** Id */
-            id: number;
+        /** ExpenseItem */
+        ExpenseItem: {
             /**
-             * Kind
+             * Expense Date
+             * Format: date
+             */
+            expense_date: string;
+            /**
+             * Category
              * @enum {string}
              */
-            kind: "delivery" | "customs_duty" | "antidumping_duty" | "import_vat" | "broker" | "bank" | "other";
-            /** Amount Minor */
-            amount_minor: number;
-            /**
-             * Currency
-             * @enum {string}
-             */
-            currency: "KZT" | "CNY" | "USD";
-            /** Exchange Rate */
-            exchange_rate: string;
-            /** Rate Date */
-            rate_date: string | null;
-            /** Rate Source */
-            rate_source: ("nbk" | "manual") | null;
-            /** Amount Tiyn */
-            amount_tiyn: number;
-            /**
-             * Allocation Method
-             * @enum {string}
-             */
-            allocation_method: "amount" | "quantity" | "selected" | "manual";
-            /** Is Vat Credit */
-            is_vat_credit: boolean;
-            /** Revaluation Currency */
-            revaluation_currency: ("CNY" | "USD") | null;
-            /** Revaluation Rate */
-            revaluation_rate: string | null;
-            /** Allocations */
-            allocations: components["schemas"]["AllocationOut"][];
+            category: "rent" | "salary" | "customer_delivery" | "communication" | "advertising" | "taxes" | "bank" | "other";
+            /** Amount */
+            amount: number;
+            /** Note */
+            note?: string | null;
+        };
+        /** ExpensePage */
+        ExpensePage: {
+            /** Items */
+            items: components["schemas"]["app__expenses__schemas__ExpenseOut"][];
+            /** Total */
+            total: number;
+            /** Posted Amount */
+            posted_amount: number;
         };
         /** FieldErrorOut */
         FieldErrorOut: {
@@ -1881,7 +1961,7 @@ export interface components {
             /** Lines */
             lines: components["schemas"]["ReceiptLineOut"][];
             /** Expenses */
-            expenses: components["schemas"]["ExpenseOut"][];
+            expenses: components["schemas"]["app__receipts__schemas__ExpenseOut"][];
             /** Goods Total */
             goods_total: number | null;
             /** Expenses Total */
@@ -2498,6 +2578,28 @@ export interface components {
         };
         /** SummaryOut */
         SummaryOut: {
+            /** Expenses Total */
+            expenses_total: number;
+            /** Expenses Count */
+            expenses_count: number;
+            /** Expenses By Category */
+            expenses_by_category: components["schemas"]["ExpenseCategoryTotal"][];
+            /** Card Commission */
+            card_commission: number;
+            /** Tax Estimate */
+            tax_estimate: number;
+            /** Card Commission Percent */
+            card_commission_percent: string;
+            /** Tax Percent */
+            tax_percent: string;
+            /** Operating Total */
+            operating_total: number;
+            /** Profit After Expenses */
+            profit_after_expenses: number;
+            /** Buy Today Base Cost */
+            buy_today_base_cost: number;
+            /** Rate Effect */
+            rate_effect: number;
             /** Buy Today Cost */
             buy_today_cost: number;
             /** Buy Today Unknown Count */
@@ -2576,6 +2678,83 @@ export interface components {
              * @enum {string}
              */
             locale: "kk" | "ru" | "zh";
+        };
+        /** ExpenseOut */
+        app__expenses__schemas__ExpenseOut: {
+            /** Id */
+            id: number;
+            /** Number */
+            number: number;
+            /**
+             * Expense Date
+             * Format: date
+             */
+            expense_date: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "rent" | "salary" | "customer_delivery" | "communication" | "advertising" | "taxes" | "bank" | "other";
+            /** Amount */
+            amount: number;
+            /** Note */
+            note: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "posted" | "cancelled";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name: string;
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancelled By Name */
+            cancelled_by_name: string | null;
+            /** Cancel Reason */
+            cancel_reason: string | null;
+        };
+        /** ExpenseOut */
+        app__receipts__schemas__ExpenseOut: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "delivery" | "customs_duty" | "antidumping_duty" | "import_vat" | "broker" | "bank" | "other";
+            /** Amount Minor */
+            amount_minor: number;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Exchange Rate */
+            exchange_rate: string;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Rate Source */
+            rate_source: ("nbk" | "manual") | null;
+            /** Amount Tiyn */
+            amount_tiyn: number;
+            /**
+             * Allocation Method
+             * @enum {string}
+             */
+            allocation_method: "amount" | "quantity" | "selected" | "manual";
+            /** Is Vat Credit */
+            is_vat_credit: boolean;
+            /** Revaluation Currency */
+            revaluation_currency: ("CNY" | "USD") | null;
+            /** Revaluation Rate */
+            revaluation_rate: string | null;
+            /** Allocations */
+            allocations: components["schemas"]["AllocationOut"][];
         };
     };
     responses: never;
@@ -3648,6 +3827,150 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    list_expenses_api_expenses_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                category?: ("rent" | "salary" | "customer_delivery" | "communication" | "advertising" | "taxes" | "bank" | "other")[] | null;
+                status?: ("posted" | "cancelled") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpensePage"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    post_expenses_api_expenses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseCreate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseBatch"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseBatch"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    get_expense_api_expenses__expense_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__expenses__schemas__ExpenseOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    cancel_expense_api_expenses__expense_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseCancel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__expenses__schemas__ExpenseOut"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

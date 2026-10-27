@@ -18,6 +18,9 @@ export function useSaveBusinessSettings() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (body: BusinessSettingsUpdate) => unwrap(api.PUT('/api/settings', { body })),
-    onSuccess: (saved) => queryClient.setQueryData(queryKeys.settings, saved),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(queryKeys.settings, saved)
+      void queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
   })
 }

@@ -208,3 +208,15 @@ it('shows its own adjustment conflict inside the window', async () => {
   expect((await screen.findByRole('alert')).textContent).toContain('историю товара')
   expect(onClose).not.toHaveBeenCalled()
 })
+
+it.each(['kk', 'ru', 'zh'])(
+  'shows the stock receive label only for adding stock in %s',
+  async (language) => {
+    await i18n.changeLanguage(language)
+    renderModal()
+    const expected = i18n.t('products.adjust.purchaseHint', { receive: i18n.t('stock.receive') })
+    expect(screen.getByText(expected)).toBeTruthy()
+    await setupUser().click(screen.getByRole('radio', { name: i18n.t('products.adjust.remove') }))
+    expect(screen.queryByText(expected)).toBeNull()
+  },
+)

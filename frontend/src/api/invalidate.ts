@@ -81,3 +81,7 @@ export function useInvalidateDebtAdjustments() {
     'customer-ledger',
   ])
 }
+
+export function useInvalidateExpenses() {
+  return useInvalidatePrefixes(['expenses', 'reports'])
+}

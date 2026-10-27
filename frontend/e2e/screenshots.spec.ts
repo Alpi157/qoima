@@ -709,3 +709,74 @@ test('write-off screens in Kazakh', async ({ page }, testInfo) => {
   await expect(page.getByText(/Есептен шығарылды:/)).toBeVisible()
   await snap(page, 'write-off-no-sales', width)
 })
+
+test('expense screens and profit calculation in Kazakh', async ({ page }, testInfo) => {
+  await login(page)
+  const width = testInfo.project.name
+  if (width === '1366') await page.setViewportSize({ width: 1366, height: 768 })
+  await page.goto('/expenses')
+  await expect(
+    page.getByText('Күші жойылды', { exact: true }).filter({ visible: true }),
+  ).toBeVisible()
+  await snap(page, 'expense-list', width)
+  await page.getByRole('button', { name: 'Шығыс қосу', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Салықтар мен жарналар', exact: true }).click()
+  await dialog.getByRole('textbox', { name: 'Сомасы, ₸', exact: true }).fill('30000')
+  await expect(dialog).toContainText('екі рет есептеледі')
+  await snap(page, 'expense-add-tax', width, { fullPage: false })
+  await dialog.getByRole('button', { name: 'Бас тарту', exact: true }).click()
+  await page
+    .getByRole('button', { name: 'Өткен айдағы жалдау мен жалақыны қайталау', exact: true })
+    .click()
+  await expect(page.getByRole('dialog')).toContainText('Мына шығыстар жазылады')
+  await snap(page, 'expense-repeat', width, { fullPage: false })
+  await page.getByRole('dialog').getByRole('button', { name: 'Бас тарту', exact: true }).click()
+  await page.goto('/expenses?from=2026-02-01&to=2026-02-28')
+  await expect(page.getByText('Бұл кезеңде шығыс жазылмаған.')).toBeVisible()
+  await snap(page, 'expense-empty', width)
+
+  const product = await buyTodayProduct(page, `EXPENSE29-${width}`)
+  const postedSale = await page.request.post('/api/sales', {
+    data: {
+      request_id: crypto.randomUUID(),
+      lines: [{ product_id: product.id, qty: 2, unit_price: 1450000 }],
+    },
+  })
+  expect(postedSale.status()).toBe(201)
+  const quote = await page.request.post(`/api/products/${product.id}/price-quotes`, {
+    data: {
+      request_id: crypto.randomUUID(),
+      currency: 'CNY',
+      price_minor: 12000,
+      quoted_on: todayLocal(),
+    },
+  })
+  expect(quote.status()).toBe(201)
+  const adjustment = await page.request.post('/api/stock/adjustments', {
+    data: {
+      request_id: crypto.randomUUID(),
+      product_id: product.id,
+      qty: 1,
+      reason: 'Тауар шатасты',
+    },
+  })
+  expect(adjustment.status()).toBe(201)
+  await page.goto(`/report?from=${todayLocal()}&to=${todayLocal()}`)
+  await expect(page.getByTestId('profit-steps')).toContainText('Шығыстардан кейінгі пайда')
+  await expect(page.getByTestId('profit-steps')).toContainText('қымбатқа түседі')
+  await snap(page, 'expense-profit', width)
+  const day = new Date(`${todayLocal()}T12:00:00Z`)
+  day.setUTCDate(day.getUTCDate() - 10)
+  const noSales = day.toISOString().slice(0, 10)
+  await page.goto(`/report?from=${noSales}&to=${noSales}`)
+  await expect(page.getByTestId('profit-after-expenses')).toContainText('-')
+  await snap(page, 'expense-no-sales', width)
+  await page.goto('/settings')
+  await page.getByRole('heading', { name: 'Пайданы есептеу', exact: true }).scrollIntoViewIfNeeded()
+  await snap(page, 'expense-settings', width)
+  await page.goto(`/products/${product.id}`)
+  await page.getByRole('button', { name: 'Санын түзету', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText('Сатып алған тауарды')
+  await snap(page, 'expense-adjust-plus', width, { fullPage: false })
+})

@@ -1967,6 +1967,298 @@
         }
       }
     },
+    "/api/expenses": {
+      "post": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "Post Expenses",
+        "operationId": "post_expenses_api_expenses_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseBatch"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseBatch"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "List Expenses",
+        "operationId": "list_expenses_api_expenses_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "To"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "rent",
+                      "salary",
+                      "customer_delivery",
+                      "communication",
+                      "advertising",
+                      "taxes",
+                      "bank",
+                      "other"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "posted",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpensePage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/expenses/{expense_id}": {
+      "get": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "Get Expense",
+        "operationId": "get_expense_api_expenses__expense_id__get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "expense_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Expense Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__expenses__schemas__ExpenseOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/expenses/{expense_id}/cancel": {
+      "post": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "Cancel Expense",
+        "operationId": "cancel_expense_api_expenses__expense_id__cancel_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "expense_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Expense Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseCancel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__expenses__schemas__ExpenseOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/products/{product_id}/price-quotes": {
       "post": {
         "tags": [
@@ -3675,6 +3967,14 @@
             "type": "integer",
             "title": "Rate Warning Percent"
           },
+          "card_commission_percent": {
+            "type": "string",
+            "title": "Card Commission Percent"
+          },
+          "tax_percent": {
+            "type": "string",
+            "title": "Tax Percent"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -3690,6 +3990,8 @@
           "chief_accountant",
           "is_vat_payer",
           "rate_warning_percent",
+          "card_commission_percent",
+          "tax_percent",
           "updated_at"
         ],
         "title": "BusinessSettingsOut"
@@ -3743,6 +4045,28 @@
               }
             ],
             "title": "Rate Warning Percent"
+          },
+          "card_commission_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Commission Percent"
+          },
+          "tax_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Percent"
           }
         },
         "additionalProperties": false,
@@ -4712,6 +5036,9 @@
           "price_quote_request_conflict",
           "price_quote_already_cancelled",
           "price_quote_not_found",
+          "expense_request_conflict",
+          "expense_not_found",
+          "expense_already_cancelled",
           "http_error"
         ],
         "title": "ErrorCode",
@@ -4754,6 +5081,96 @@
         ],
         "title": "ErrorOut",
         "description": "Body of every 4xx response (see \"Формат ошибок API\" in docs/architecture.md)."
+      },
+      "ExpenseBatch": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/app__expenses__schemas__ExpenseOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ExpenseBatch"
+      },
+      "ExpenseCancel": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ExpenseCancel"
+      },
+      "ExpenseCategoryTotal": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "salary",
+              "customer_delivery",
+              "communication",
+              "advertising",
+              "taxes",
+              "bank",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "amount",
+          "count"
+        ],
+        "title": "ExpenseCategoryTotal"
+      },
+      "ExpenseCreate": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExpenseItem"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "items"
+        ],
+        "title": "ExpenseCreate"
       },
       "ExpenseIn": {
         "properties": {
@@ -4877,138 +5294,80 @@
         ],
         "title": "ExpenseIn"
       },
-      "ExpenseOut": {
+      "ExpenseItem": {
         "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
+          "expense_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expense Date"
           },
-          "kind": {
+          "category": {
             "type": "string",
             "enum": [
-              "delivery",
-              "customs_duty",
-              "antidumping_duty",
-              "import_vat",
-              "broker",
+              "rent",
+              "salary",
+              "customer_delivery",
+              "communication",
+              "advertising",
+              "taxes",
               "bank",
               "other"
             ],
-            "title": "Kind"
+            "title": "Category"
           },
-          "amount_minor": {
+          "amount": {
             "type": "integer",
-            "title": "Amount Minor"
+            "maximum": 1000000000000000.0,
+            "minimum": 1.0,
+            "title": "Amount"
           },
-          "currency": {
-            "type": "string",
-            "enum": [
-              "KZT",
-              "CNY",
-              "USD"
-            ],
-            "title": "Currency"
-          },
-          "exchange_rate": {
-            "type": "string",
-            "title": "Exchange Rate"
-          },
-          "rate_date": {
+          "note": {
             "anyOf": [
               {
                 "type": "string",
-                "format": "date"
+                "maxLength": 500
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Rate Date"
-          },
-          "rate_source": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "nbk",
-                  "manual"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rate Source"
-          },
-          "amount_tiyn": {
-            "type": "integer",
-            "title": "Amount Tiyn"
-          },
-          "allocation_method": {
-            "type": "string",
-            "enum": [
-              "amount",
-              "quantity",
-              "selected",
-              "manual"
-            ],
-            "title": "Allocation Method"
-          },
-          "is_vat_credit": {
-            "type": "boolean",
-            "title": "Is Vat Credit"
-          },
-          "revaluation_currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "CNY",
-                  "USD"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Revaluation Currency"
-          },
-          "revaluation_rate": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Revaluation Rate"
-          },
-          "allocations": {
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expense_date",
+          "category",
+          "amount"
+        ],
+        "title": "ExpenseItem"
+      },
+      "ExpensePage": {
+        "properties": {
+          "items": {
             "items": {
-              "$ref": "#/components/schemas/AllocationOut"
+              "$ref": "#/components/schemas/app__expenses__schemas__ExpenseOut"
             },
             "type": "array",
-            "title": "Allocations"
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "posted_amount": {
+            "type": "integer",
+            "title": "Posted Amount"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "kind",
-          "amount_minor",
-          "currency",
-          "exchange_rate",
-          "rate_date",
-          "rate_source",
-          "amount_tiyn",
-          "allocation_method",
-          "is_vat_credit",
-          "revaluation_currency",
-          "revaluation_rate",
-          "allocations"
+          "items",
+          "total",
+          "posted_amount"
         ],
-        "title": "ExpenseOut"
+        "title": "ExpensePage"
       },
       "FieldErrorOut": {
         "properties": {
@@ -6918,7 +7277,7 @@
           },
           "expenses": {
             "items": {
-              "$ref": "#/components/schemas/ExpenseOut"
+              "$ref": "#/components/schemas/app__receipts__schemas__ExpenseOut"
             },
             "type": "array",
             "title": "Expenses"
@@ -8891,6 +9250,53 @@
       },
       "SummaryOut": {
         "properties": {
+          "expenses_total": {
+            "type": "integer",
+            "title": "Expenses Total"
+          },
+          "expenses_count": {
+            "type": "integer",
+            "title": "Expenses Count"
+          },
+          "expenses_by_category": {
+            "items": {
+              "$ref": "#/components/schemas/ExpenseCategoryTotal"
+            },
+            "type": "array",
+            "title": "Expenses By Category"
+          },
+          "card_commission": {
+            "type": "integer",
+            "title": "Card Commission"
+          },
+          "tax_estimate": {
+            "type": "integer",
+            "title": "Tax Estimate"
+          },
+          "card_commission_percent": {
+            "type": "string",
+            "title": "Card Commission Percent"
+          },
+          "tax_percent": {
+            "type": "string",
+            "title": "Tax Percent"
+          },
+          "operating_total": {
+            "type": "integer",
+            "title": "Operating Total"
+          },
+          "profit_after_expenses": {
+            "type": "integer",
+            "title": "Profit After Expenses"
+          },
+          "buy_today_base_cost": {
+            "type": "integer",
+            "title": "Buy Today Base Cost"
+          },
+          "rate_effect": {
+            "type": "integer",
+            "title": "Rate Effect"
+          },
           "buy_today_cost": {
             "type": "integer",
             "title": "Buy Today Cost"
@@ -8972,6 +9378,17 @@
         },
         "type": "object",
         "required": [
+          "expenses_total",
+          "expenses_count",
+          "expenses_by_category",
+          "card_commission",
+          "tax_estimate",
+          "card_commission_percent",
+          "tax_percent",
+          "operating_total",
+          "profit_after_expenses",
+          "buy_today_base_cost",
+          "rate_effect",
           "buy_today_cost",
           "buy_today_unknown_count",
           "revenue",
@@ -9106,6 +9523,252 @@
         ],
         "title": "UserUpdate",
         "description": "PATCH /api/auth/me: settings the user changes for themselves."
+      },
+      "app__expenses__schemas__ExpenseOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "expense_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expense Date"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "salary",
+              "customer_delivery",
+              "communication",
+              "advertising",
+              "taxes",
+              "bank",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "posted",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by_name": {
+            "type": "string",
+            "title": "Created By Name"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "cancelled_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By Name"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "expense_date",
+          "category",
+          "amount",
+          "note",
+          "status",
+          "created_at",
+          "created_by_name",
+          "cancelled_at",
+          "cancelled_by_name",
+          "cancel_reason"
+        ],
+        "title": "ExpenseOut"
+      },
+      "app__receipts__schemas__ExpenseOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "delivery",
+              "customs_duty",
+              "antidumping_duty",
+              "import_vat",
+              "broker",
+              "bank",
+              "other"
+            ],
+            "title": "Kind"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "title": "Amount Minor"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "exchange_rate": {
+            "type": "string",
+            "title": "Exchange Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nbk",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          },
+          "amount_tiyn": {
+            "type": "integer",
+            "title": "Amount Tiyn"
+          },
+          "allocation_method": {
+            "type": "string",
+            "enum": [
+              "amount",
+              "quantity",
+              "selected",
+              "manual"
+            ],
+            "title": "Allocation Method"
+          },
+          "is_vat_credit": {
+            "type": "boolean",
+            "title": "Is Vat Credit"
+          },
+          "revaluation_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CNY",
+                  "USD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revaluation Currency"
+          },
+          "revaluation_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revaluation Rate"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationOut"
+            },
+            "type": "array",
+            "title": "Allocations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "amount_minor",
+          "currency",
+          "exchange_rate",
+          "rate_date",
+          "rate_source",
+          "amount_tiyn",
+          "allocation_method",
+          "is_vat_credit",
+          "revaluation_currency",
+          "revaluation_rate",
+          "allocations"
+        ],
+        "title": "ExpenseOut"
       }
     },
     "securitySchemes": {
