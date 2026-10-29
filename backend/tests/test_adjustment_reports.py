@@ -171,7 +171,7 @@ def test_adjustments_query_count_is_constant(db_session):
             statements.clear()
             result = service.adjustments(db_session, START, END, "minus", 50, 0)
             assert result.total == (1 if count == 1 else 21)
-            assert len(statements) == 2
+            assert len(statements) == 3
         finally:
             event.remove(conn, "before_cursor_execute", record)
 

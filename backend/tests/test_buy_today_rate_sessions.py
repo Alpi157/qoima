@@ -75,7 +75,7 @@ def test_read_apis_use_independent_rate_sessions_and_only_cache_commits(
 
             def read_only(conn, cursor, statement, parameters, context, executemany):
                 sql = " ".join(statement.upper().split())
-                assert sql.startswith("SELECT ") and "FOR UPDATE" not in sql, sql
+                assert sql.startswith(("SELECT ", "WITH ")) and "FOR UPDATE" not in sql, sql
 
             connection = db.connection()
             event.listen(connection, "before_cursor_execute", read_only)
@@ -103,6 +103,7 @@ def test_read_apis_use_independent_rate_sessions_and_only_cache_commits(
             for path in (
                 f"/api/products/{pid}/buy-today",
                 "/api/stock/buy-today",
+                "/api/attention",
                 "/api/reports/summary?from=2026-10-11&to=2026-10-11",
             ):
                 response = client.get(path)

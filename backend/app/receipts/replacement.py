@@ -62,3 +62,8 @@ def price_for_markup(cost: int, markup: int | None) -> int | None:
     if markup is None or markup < -100:
         return None
     return round_half_up(cost * (100 + markup), 100)
+
+
+def suggested_price(buy_today: int, markup_then: int | None) -> int:
+    base = price_for_markup(buy_today, markup_then) if markup_then is not None else buy_today
+    return ((max(base if base is not None else buy_today, buy_today) + 999) // 1000) * 1000

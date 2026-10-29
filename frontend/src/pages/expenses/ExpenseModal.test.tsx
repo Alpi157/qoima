@@ -31,9 +31,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 function settings(tax = '0', commission = '0') {
-  vi.spyOn(api, 'GET').mockReturnValue(
-    ok(makeBusinessSettings({ tax_percent: tax, card_commission_percent: commission })),
-  )
+  vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+    path === '/api/settings'
+      ? ok(makeBusinessSettings({ tax_percent: tax, card_commission_percent: commission }))
+      : ok({ items: [], total: 0, posted_amount: 0 })) as never)
 }
 function renderModal(source?: Expense[]) {
   const close = vi.fn()
@@ -177,6 +178,7 @@ it('copies categories and notes, excludes unchecked rows, and repeats the fixed 
     .mockReturnValueOnce(ok({ items: [item] }))
   renderModal([item, { ...item, id: 2, number: 8, category: 'salary' }])
   const user = setupUser()
+  await screen.findAllByRole('checkbox')
   await user.click(screen.getAllByRole('checkbox')[1])
   await user.click(screen.getByRole('button', { name: 'Сохранить' }))
   await screen.findByTestId('unknown-result')
@@ -197,6 +199,7 @@ it.each(['kk', 'ru', 'zh'])(
     renderModal(
       Array.from({ length: 21 }, (_, index) => ({ ...item, id: index + 1, number: index + 1 })),
     )
+    await screen.findAllByRole('checkbox')
     expect(
       within(screen.getByTestId('expense-actions')).getByText(i18n.t('expenses.repeatLimit')),
     ).toBeTruthy()
@@ -243,4 +246,38 @@ it('opens an expense from a conflict even when its date is outside the displayed
   await user.click(screen.getByRole('button', { name: 'Открыть' }))
   expect((await screen.findByTestId('focused-expense')).textContent).toContain('№9')
   expect(router.state.location.search).toContain('expenseFocus=17')
+})
+
+it('unchecks recorded repeats, shows source date and permits explicit repetition', async () => {
+  vi.spyOn(api, 'GET').mockImplementation(((path: string) =>
+    path === '/api/settings'
+      ? ok(makeBusinessSettings())
+      : ok({
+          items: [{ ...item, expense_date: todayLocal() }],
+          total: 1,
+          posted_amount: item.amount,
+        })) as never)
+  const post = vi.spyOn(api, 'POST').mockReturnValue(ok({ items: [item] }))
+  renderModal([item])
+  const box = (await screen.findByRole('checkbox')) as HTMLInputElement
+  expect(box.checked).toBe(false)
+  expect(screen.getByText('Уже записан в этом месяце')).toBeTruthy()
+  expect(screen.getByText(/30.09.2026/)).toBeTruthy()
+  expect(screen.queryByText(/№7/)).toBeNull()
+  const user = setupUser()
+  await user.click(box)
+  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+  await waitFor(() => expect(post).toHaveBeenCalled())
+  expect(postBody<ExpenseCreate>(post).items[0].amount).toBe(item.amount)
+})
+
+it('uses the reviewed Kazakh purchase hint', async () => {
+  await i18n.changeLanguage('kk')
+  settings()
+  renderModal()
+  expect(
+    screen.getByText(
+      'Жеткізу, кеден төлемі және брокер шығындарын мұнда емес, тауар қабылдағанда жазыңыз.',
+    ),
+  ).toBeTruthy()
 })

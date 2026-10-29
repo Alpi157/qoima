@@ -1,6 +1,10 @@
-from sqlalchemy import func
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.orm import Session
 
+from app.db_utils import LOCAL_TZ
+from app.rates import service as rates_service
+from app.sales.models import Sale
 from app.settings.models import SETTINGS_ID, BusinessSettings
 from app.settings.schemas import BusinessSettingsOut, BusinessSettingsUpdate
 
@@ -30,11 +34,47 @@ def get_business_settings(db: Session, *, read_only: bool = False) -> BusinessSe
             rate_warning_percent=10,
             card_commission_bp=0,
             tax_bp=0,
+            attention_markup_drop_points=10,
+            attention_debt_days=30,
+            attention_frozen_days=90,
+            attention_runway_days=30,
+            attention_discount_percent=10,
+            attention_loss_percent=2,
         )
     )
 
 
 def update_business_settings(db: Session, data: BusinessSettingsUpdate) -> BusinessSettings:
+    opening = data.opening_balance_date
+    if opening is not None:
+        error = None
+        params = {}
+        if opening > rates_service.today_local():
+            error = ("opening_date_in_future", "Дата начала учёта не может быть в будущем")
+        else:
+            first = db.scalar(
+                select(func.min(cast(func.timezone(LOCAL_TZ, Sale.sold_at), Date))).where(
+                    Sale.status == "posted"
+                )
+            )
+            if first is not None and first <= opening:
+                error = (
+                    "opening_date_after_sales",
+                    "Дата начала учёта должна быть раньше первой продажи",
+                )
+                params = {"first_sale_date": first.isoformat()}
+        if error:
+            raise RequestValidationError(
+                [
+                    {
+                        "type": error[0],
+                        "loc": ("body", "opening_balance_date"),
+                        "msg": error[1],
+                        "input": opening.isoformat(),
+                        "ctx": params,
+                    }
+                ]
+            )
     settings = _settings_row(db)
     for field, value in data.model_dump(exclude_unset=True).items():
         if field in ("card_commission_percent", "tax_percent"):

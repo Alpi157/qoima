@@ -30,9 +30,12 @@ export function useExpenses(from: string, to: string, page: number, enabled = tr
   })
 }
 
-export function usePreviousExpenses(from: string, to: string) {
+export function usePreviousExpenses(from: string, to: string, enabled = true) {
   return useQuery({
     queryKey: ['expenses', 'previous', from, to],
+    enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
     queryFn: async () => {
       const items: Expense[] = []
       let total = 1

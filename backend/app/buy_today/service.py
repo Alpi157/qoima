@@ -29,6 +29,7 @@ from app.receipts.replacement import (
     markup_percent,
     price_for_markup,
     rounded,
+    suggested_price,
 )
 
 
@@ -253,6 +254,7 @@ def evaluate_products(
             sale_price=product.sale_price,
             markup_then=markup_then,
             markup_now=markup_percent(product.sale_price, cost.unit_cost) if cost else None,
+            suggested_price=suggested_price(cost.unit_cost, markup_then) if cost else None,
             price_to_keep_markup=price_for_markup(cost.unit_cost, markup_then) if cost else None,
             difference_vs_avg=cost.unit_cost - avg
             if cost is not None and avg is not None

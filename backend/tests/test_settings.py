@@ -26,6 +26,19 @@ FILLED = {
 IIN_BIN_MESSAGE = "ИИН/БИН должен состоять из 12 цифр"
 
 
+ATTENTION_DEFAULTS = {
+    "opening_balance_date": None,
+    "attention_markup_drop_points": 10,
+    "attention_debt_days": 30,
+    "attention_frozen_days": 90,
+    "attention_runway_days": 30,
+    "attention_discount_percent": 10,
+    "attention_loss_percent": 2,
+}
+EMPTY.update(ATTENTION_DEFAULTS)
+FILLED.update(ATTENTION_DEFAULTS)
+
+
 def _fields(body: dict[str, object]) -> dict[str, object]:
     return {key: value for key, value in body.items() if key != "updated_at"}
 

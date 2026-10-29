@@ -41,6 +41,7 @@ class BuyTodayOut(BaseModel):
     sale_price: int
     markup_then: int | None
     markup_now: int | None
+    suggested_price: int | None
     price_to_keep_markup: int | None
     difference_vs_avg: int | None
     reason_unavailable: Literal["no_purchase", "no_rate"] | None

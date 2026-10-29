@@ -486,6 +486,76 @@ def seed(db: Session, password: str, now: datetime | None = None) -> None:
                 db, product_ids[item.article], ProductUpdate(is_archived=True)
             )
 
+    _seed_attention(db, user.id, now)
+
+
+def _seed_attention(db: Session, user_id: int, now: datetime) -> None:
+    from app.price_quotes.schemas import PriceQuoteCreate
+    from app.price_quotes.service import create_quote
+
+    ids = []
+    for article, name, price in [
+        ("23220-0D110", "Бензонасос", 450000),
+        ("16620-0H020", "Ролик натяжителя", 200000),
+        ("90916-02570", "Ремень генератора", 200000),
+    ]:
+        ids.append(
+            catalog_service.create_product(
+                db, ProductCreate(article=article, name=name, sale_price=price)
+            ).id
+        )
+    customer = customers_service.create_customer(db, CustomerCreate(name="Асқар Сәрсенов"))
+    receipts_service.post_receipt(
+        db,
+        ReceiptCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "attention-receipt"),
+            received_at=_local_time(now, 120, (9, 0)),
+            lines=[
+                ReceiptLineIn(product_id=pid, qty=qty, unit_price_minor=cost)
+                for pid, qty, cost in zip(ids, [10, 10, 29], [500000, 100000, 100000], strict=True)
+            ],
+        ),
+        user_id,
+    )
+    sales_service.post_sale(
+        db,
+        SaleCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "attention-debt"),
+            customer_id=customer.id,
+            paid_amount=0,
+            sold_at=_local_time(now, 45, (10, 0)),
+            lines=[SaleLineIn(product_id=ids[0], qty=1, unit_price=450000)],
+        ),
+        user_id,
+    )
+    sales_service.post_sale(
+        db,
+        SaleCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "attention-loss"),
+            sold_at=_local_time(now, 20, (10, 0)),
+            lines=[SaleLineIn(product_id=ids[2], qty=24, unit_price=90000)],
+        ),
+        user_id,
+    )
+    create_quote(
+        db,
+        ids[1],
+        PriceQuoteCreate(
+            request_id=uuid.uuid5(_REQUEST_NS, "attention-quote"),
+            currency="KZT",
+            price_minor=120000,
+            quoted_on=now.astimezone(LOCAL_TZ).date(),
+        ),
+        user_id,
+    )
+    _historical_adjustment(
+        db,
+        MovementIn(ids[0], -3, "adjustment", note="Ақаулы тауар"),
+        user_id,
+        _local_time(now, 2, (11, 0)),
+    )
+    db.commit()
+
 
 def _seed_command() -> int:
     password = os.environ.get(DEMO_PASSWORD_ENV, "")

@@ -182,10 +182,23 @@ def _expense_totals(db: Session, date_from: date, date_to: date) -> list[Expense
     ]
 
 
+def adjustment_conditions(date_from: date, date_to: date, opening: date | None):
+    conditions = [
+        StockMovement.kind == "adjustment",
+        *local_date_range(StockMovement.created_at, date_from, date_to),
+    ]
+    if opening is not None:
+        conditions.extend(
+            local_date_range(StockMovement.created_at, opening + timedelta(days=1), None)
+        )
+    return conditions
+
+
 def summary(
     db: Session, date_from: date, date_to: date, *, session_factory: SessionFactory | None = None
 ) -> SummaryOut:
     validate_period(date_from, date_to)
+    settings = get_business_settings(db, read_only=True)
     source = _sales_source(date_from, date_to)
     fields = (
         "revenue",
@@ -265,8 +278,7 @@ def summary(
         _local_date(StockMovement.created_at).label("date"),
         *(adjustment_values.get(field, literal(0)).label(field) for field in fields),
     ).where(
-        StockMovement.kind == "adjustment",
-        *local_date_range(StockMovement.created_at, date_from, date_to),
+        *adjustment_conditions(date_from, date_to, settings.opening_balance_date),
     )
     facts = union_all(lines, sales, payments, returns, adjustment_facts).subquery()
     rows = (
@@ -395,8 +407,9 @@ def adjustments(
     offset: int,
 ) -> AdjustmentReportPage:
     validate_period(date_from, date_to)
+    settings = get_business_settings(db, read_only=True)
     conditions = (
-        StockMovement.kind == "adjustment",
+        *adjustment_conditions(date_from, date_to, settings.opening_balance_date),
         StockMovement.qty < 0 if direction == "minus" else StockMovement.qty > 0,
         *local_date_range(StockMovement.created_at, date_from, date_to),
     )

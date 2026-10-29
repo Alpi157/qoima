@@ -997,7 +997,8 @@
     },
     "cancelled": "已作废",
     "empty": "此期间没有支出。",
-    "total": "合计：{{amount}}"
+    "total": "合计：{{amount}}",
+    "alreadyRecorded": "本月已记录"
   },
   "profit": {
     "title": "利润是怎么算出来的",

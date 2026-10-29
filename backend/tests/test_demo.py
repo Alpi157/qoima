@@ -48,21 +48,23 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     assert settings.seller_name == "3А Аuto Parts.KZ"
     assert settings.chief_accountant == "Қамтамасыз етілмейді"
 
-    assert db_session.scalar(select(func.count()).select_from(Product)) == len(demo.PRODUCTS)
+    assert db_session.scalar(select(func.count()).select_from(Product)) == len(demo.PRODUCTS) + 3
     archived = db_session.scalars(select(Product.article).where(Product.is_archived)).all()
     assert archived == ["04466-02070"]
     assert _stock(db_session, "22401-8H515") == 2
     assert _stock(db_session, "L3Y4-18-110") == 0
 
-    assert db_session.scalar(select(func.count()).select_from(Customer)) == len(demo.CUSTOMERS)
-    receipts = db_session.scalars(select(Receipt).order_by(Receipt.received_at)).all()
+    assert db_session.scalar(select(func.count()).select_from(Customer)) == len(demo.CUSTOMERS) + 1
+    receipts = db_session.scalars(
+        select(Receipt).where(Receipt.supplier.is_not(None)).order_by(Receipt.received_at)
+    ).all()
     assert len(receipts) == len(demo.RECEIPTS) + 2
     assert receipts[0].supplier == "Бастапқы қалдық"
 
     statuses = db_session.scalars(select(Sale.status)).all()
-    assert len(statuses) == len(demo.SALES)
+    assert len(statuses) == len(demo.SALES) + 2
     assert statuses.count("cancelled") == 1
-    sales = db_session.scalars(select(Sale)).all()
+    sales = db_session.scalars(select(Sale).where(Sale.number <= len(demo.SALES))).all()
     assert all(sale.seller_name == settings.seller_name for sale in sales)
     for model in (SaleLine, ReceiptLine, SaleReturnLine):
         for line in db_session.scalars(select(model)):
@@ -91,7 +93,7 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
     debts = [
         current_debt(db_session, customer.id) for customer in db_session.scalars(select(Customer))
     ]
-    assert sum(debt > 0 for debt in debts) == 3
+    assert sum(debt > 0 for debt in debts) == 4
     assert sum(debt < 0 for debt in debts) == 1
     payments = db_session.scalars(select(CustomerPayment)).all()
     assert len(payments) == 3
@@ -120,7 +122,9 @@ def test_seed_fills_demo_data(db_session: Session) -> None:
             current_debt(db_session, customer.id), 0
         )
     for line, price in db_session.execute(
-        select(ReceiptLine, Product.sale_price).join(Product, Product.id == ReceiptLine.product_id)
+        select(ReceiptLine, Product.sale_price)
+        .join(Product, Product.id == ReceiptLine.product_id)
+        .where(Product.article.in_([p.article for p in demo.PRODUCTS]))
     ):
         assert line.unit_cost is not None
         assert price * 55 <= line.unit_cost * 100 <= price * 60
@@ -269,3 +273,48 @@ def test_historical_adjustment_removes_listener_on_failure(client, db_session, m
     saved = response.json()["movement"]
     assert datetime.fromisoformat(saved["created_at"]) == expected_now
     assert db_session.get(StockMovement, saved["id"]).created_at == expected_now
+
+
+def test_fresh_demo_attention_api(client, db_session):
+    demo.seed(db_session, "demo-password")
+    assert (
+        client.post(
+            "/api/auth/login", json={"username": "demo", "password": "demo-password"}
+        ).status_code
+        == 200
+    )
+    from sqlalchemy.orm import sessionmaker
+
+    from app.main import app
+    from app.rates.router import get_rate_session_factory
+
+    app.dependency_overrides[get_rate_session_factory] = lambda: sessionmaker(
+        bind=db_session.connection(), join_transaction_mode="create_savepoint"
+    )
+    response = client.get("/api/attention")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    from app.attention.schemas import KINDS
+
+    assert {s["kind"] for s in body["signals"]} == set(KINDS)
+    assert {s["object"] for s in body["signals"] if s["kind"] == "incomplete_data"} == {
+        "stock",
+        "sales",
+    }
+    assert body["pending"]
+    expected = [
+        ("below_replacement", "Бензонасос", 300000),
+        ("old_debt", "Асқар Сәрсенов", 450000),
+        ("markup_drop", "Ролик натяжителя", 400000),
+        ("frozen_stock", "Ролик натяжителя", 1000000),
+        ("running_out", "Ремень генератора", 1400000),
+        ("loss_sales", "Ремень генератора", 240000),
+    ]
+    for kind, name, amount in expected:
+        signal = next(
+            s for s in body["signals"] if s["kind"] == kind and s["params"].get("name") == name
+        )
+        assert signal["amount"] == amount
+        if kind == "running_out":
+            assert signal["params"]["days_left"] == 12
+            assert signal["params"]["order_qty"] == 19

@@ -73,6 +73,57 @@ export interface paths {
         patch: operations["update_me_api_auth_me_patch"];
         trace?: never;
     };
+    "/api/attention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Attention */
+        get: operations["attention_api_attention_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attention/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide */
+        post: operations["hide_api_attention_hide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attention/unhide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unhide */
+        post: operations["unhide_api_attention_unhide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/products": {
         parameters: {
             query?: never;
@@ -887,6 +938,94 @@ export interface components {
             /** Amount Tiyn */
             amount_tiyn: number;
         };
+        /** AttentionKey */
+        AttentionKey: {
+            /** Key */
+            key: string;
+        };
+        /** AttentionOut */
+        AttentionOut: {
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            thresholds: components["schemas"]["Thresholds"];
+            /** Signals */
+            signals: (components["schemas"]["BelowReplacementSignal"] | components["schemas"]["MarkupDropSignal"] | components["schemas"]["OldDebtSignal"] | components["schemas"]["FrozenStockSignal"] | components["schemas"]["RunningOutSignal"] | components["schemas"]["LossSalesSignal"] | components["schemas"]["DiscountsSignal"] | components["schemas"]["DefectsWriteOffsSignal"] | components["schemas"]["IncompleteSignal"])[];
+            /** Hidden */
+            hidden: components["schemas"]["HiddenSignal"][];
+            /** Pending */
+            pending: components["schemas"]["Pending"][];
+            /** Rates */
+            rates: components["schemas"]["TodayRateOut"][];
+        };
+        /** BelowReplacement */
+        BelowReplacement: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Sale Price */
+            sale_price: number;
+            /** Buy Today */
+            buy_today: number;
+            /** Shortage Per Unit */
+            shortage_per_unit: number;
+            /** Markup Then */
+            markup_then: number | null;
+            /** Suggested Price */
+            suggested_price: number;
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "purchase" | "quote";
+            /**
+             * Basis Date
+             * Format: date
+             */
+            basis_date: string;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Goods Today */
+            goods_today: number;
+            /** Expenses Revalued */
+            expenses_revalued: number;
+            /** Expenses Fixed */
+            expenses_fixed: number;
+            /** Rates */
+            rates: components["schemas"]["TodayRateOut"][];
+        };
+        /** BelowReplacementSignal */
+        BelowReplacementSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "below_replacement";
+            /** Object */
+            object: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "change_price";
+            params: components["schemas"]["BelowReplacement"];
+        };
         /** BusinessSettingsOut */
         BusinessSettingsOut: {
             /** Seller Name */
@@ -907,6 +1046,20 @@ export interface components {
             card_commission_percent: string;
             /** Tax Percent */
             tax_percent: string;
+            /** Opening Balance Date */
+            opening_balance_date: string | null;
+            /** Attention Markup Drop Points */
+            attention_markup_drop_points: number;
+            /** Attention Debt Days */
+            attention_debt_days: number;
+            /** Attention Frozen Days */
+            attention_frozen_days: number;
+            /** Attention Runway Days */
+            attention_runway_days: number;
+            /** Attention Discount Percent */
+            attention_discount_percent: number;
+            /** Attention Loss Percent */
+            attention_loss_percent: number;
             /**
              * Updated At
              * Format: date-time
@@ -932,6 +1085,20 @@ export interface components {
             is_vat_payer?: boolean | null;
             /** Rate Warning Percent */
             rate_warning_percent?: number | null;
+            /** Opening Balance Date */
+            opening_balance_date?: string | null;
+            /** Attention Markup Drop Points */
+            attention_markup_drop_points?: number | null;
+            /** Attention Debt Days */
+            attention_debt_days?: number | null;
+            /** Attention Frozen Days */
+            attention_frozen_days?: number | null;
+            /** Attention Runway Days */
+            attention_runway_days?: number | null;
+            /** Attention Discount Percent */
+            attention_discount_percent?: number | null;
+            /** Attention Loss Percent */
+            attention_loss_percent?: number | null;
             /** Card Commission Percent */
             card_commission_percent?: string | null;
             /** Tax Percent */
@@ -973,6 +1140,8 @@ export interface components {
             markup_then: number | null;
             /** Markup Now */
             markup_now: number | null;
+            /** Suggested Price */
+            suggested_price: number | null;
             /** Price To Keep Markup */
             price_to_keep_markup: number | null;
             /** Difference Vs Avg */
@@ -1201,6 +1370,104 @@ export interface components {
             /** Sum Posted */
             sum_posted: number;
         };
+        /** DefectsWriteOffs */
+        DefectsWriteOffs: {
+            /** Defect Loss */
+            defect_loss: number;
+            /** Write Off Value */
+            write_off_value: number;
+            /** Surplus Value */
+            surplus_value: number;
+            /** Losses */
+            losses: number;
+            /** Revenue */
+            revenue: number;
+            /** Percent */
+            percent: number | null;
+            /** Threshold Percent */
+            threshold_percent: number;
+            /** Window Days */
+            window_days: number;
+            /** Products */
+            products: components["schemas"]["LossProduct"][];
+        };
+        /** DefectsWriteOffsSignal */
+        DefectsWriteOffsSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "defects_write_offs";
+            /**
+             * Object
+             * @constant
+             */
+            object: "business";
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "show_products";
+            params: components["schemas"]["DefectsWriteOffs"];
+        };
+        /** DiscountSale */
+        DiscountSale: {
+            /** Sale Id */
+            sale_id: number;
+            /** Number */
+            number: number;
+            /**
+             * Sold At
+             * Format: date-time
+             */
+            sold_at: string;
+            /** Customer Name */
+            customer_name: string | null;
+            /** Discount */
+            discount: number;
+        };
+        /** Discounts */
+        Discounts: {
+            /** Discount Total */
+            discount_total: number;
+            /** Profit */
+            profit: number;
+            /** Percent */
+            percent: number | null;
+            /** Threshold Percent */
+            threshold_percent: number;
+            /** Window Days */
+            window_days: number;
+            /** Sales */
+            sales: components["schemas"]["DiscountSale"][];
+        };
+        /** DiscountsSignal */
+        DiscountsSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "discounts";
+            /**
+             * Object
+             * @constant
+             */
+            object: "business";
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "show_sales";
+            params: components["schemas"]["Discounts"];
+        };
         /**
          * ErrorCode
          * @description Machine-readable error code, sent as `code` in every 4xx error response.
@@ -1331,6 +1598,179 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** FrozenStock */
+        FrozenStock: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Avg Cost */
+            avg_cost: number;
+            /** Is Archived */
+            is_archived: boolean;
+            /**
+             * History Start
+             * Format: date
+             */
+            history_start: string;
+            /** Last Sale Date */
+            last_sale_date: string | null;
+            /** Days Without Sales */
+            days_without_sales: number;
+        };
+        /** FrozenStockSignal */
+        FrozenStockSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "frozen_stock";
+            /** Object */
+            object: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "open_product";
+            params: components["schemas"]["FrozenStock"];
+        };
+        /** HiddenSignal */
+        HiddenSignal: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "below_replacement" | "markup_drop" | "old_debt" | "frozen_stock" | "running_out" | "loss_sales" | "discounts" | "defects_write_offs" | "incomplete_data";
+            /** Amount */
+            amount: number;
+            /**
+             * Hidden Until
+             * Format: date
+             */
+            hidden_until: string;
+        };
+        /** HiddenUntil */
+        HiddenUntil: {
+            /** Key */
+            key: string;
+            /**
+             * Hidden Until
+             * Format: date
+             */
+            hidden_until: string;
+        };
+        /** IncompleteRate */
+        IncompleteRate: {
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "CNY" | "USD";
+            /** Rate */
+            rate: string | null;
+            /** Rate Date */
+            rate_date: string | null;
+            /** Products Count */
+            products_count: number;
+        };
+        /** IncompleteRateSignal */
+        IncompleteRateSignal: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "incomplete_data";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            object: "rate:CNY" | "rate:USD";
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "show_products";
+            params: components["schemas"]["IncompleteRate"];
+        };
+        /** IncompleteSales */
+        IncompleteSales: {
+            /** Lines Count */
+            lines_count: number;
+            /** Revenue */
+            revenue: number;
+            /** Sales */
+            sales: components["schemas"]["UnknownSale"][];
+        };
+        /** IncompleteSalesSignal */
+        IncompleteSalesSignal: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "incomplete_data";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            object: "sales";
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "show_sales";
+            params: components["schemas"]["IncompleteSales"];
+        };
+        IncompleteSignal: components["schemas"]["IncompleteStockSignal"] | components["schemas"]["IncompleteSalesSignal"] | components["schemas"]["IncompleteRateSignal"];
+        /** IncompleteStock */
+        IncompleteStock: {
+            /** Products Count */
+            products_count: number;
+            /** Products */
+            products: components["schemas"]["UnknownProduct"][];
+        };
+        /** IncompleteStockSignal */
+        IncompleteStockSignal: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "incomplete_data";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            object: "stock";
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "show_products";
+            params: components["schemas"]["IncompleteStock"];
+        };
         /** LedgerItem */
         LedgerItem: {
             /**
@@ -1378,12 +1818,152 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** LossProduct */
+        LossProduct: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Defect Loss */
+            defect_loss: number;
+            /** Write Off Value */
+            write_off_value: number;
+            /** Surplus Value */
+            surplus_value: number;
+            /** Net */
+            net: number;
+        };
+        /** LossSale */
+        LossSale: {
+            /** Sale Id */
+            sale_id: number;
+            /** Number */
+            number: number;
+            /**
+             * Sold At
+             * Format: date-time
+             */
+            sold_at: string;
+            /** Qty */
+            qty: number;
+            /** Unit Price */
+            unit_price: number;
+            /** Unit Cost */
+            unit_cost: number;
+        };
+        /** LossSales */
+        LossSales: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Lines Count */
+            lines_count: number;
+            /** Qty */
+            qty: number;
+            /** Loss */
+            loss: number;
+            /** Sales */
+            sales: components["schemas"]["LossSale"][];
+        };
+        /** LossSalesSignal */
+        LossSalesSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "loss_sales";
+            /** Object */
+            object: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "show_sales";
+            params: components["schemas"]["LossSales"];
+        };
         /** ManualAllocationIn */
         ManualAllocationIn: {
             /** Product Id */
             product_id: number;
             /** Amount Tiyn */
             amount_tiyn: number;
+        };
+        /** MarkupDrop */
+        MarkupDrop: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Qty */
+            qty: number;
+            /** Sale Price */
+            sale_price: number;
+            /** Cost Then */
+            cost_then: number;
+            /** Buy Today */
+            buy_today: number;
+            /** Markup Then */
+            markup_then: number;
+            /** Markup Now */
+            markup_now: number;
+            /** Drop Points */
+            drop_points: number;
+            /** Price To Keep Markup */
+            price_to_keep_markup: number;
+            /** Suggested Price */
+            suggested_price: number;
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "purchase" | "quote";
+            /**
+             * Basis Date
+             * Format: date
+             */
+            basis_date: string;
+            /**
+             * Currency
+             * @enum {string}
+             */
+            currency: "KZT" | "CNY" | "USD";
+            /** Rates */
+            rates: components["schemas"]["TodayRateOut"][];
+        };
+        /** MarkupDropSignal */
+        MarkupDropSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "markup_drop";
+            /** Object */
+            object: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "change_price";
+            params: components["schemas"]["MarkupDrop"];
         };
         /** MovementOut */
         MovementOut: {
@@ -1417,6 +1997,55 @@ export interface components {
             items: components["schemas"]["MovementOut"][];
             /** Total */
             total: number;
+        };
+        /** OldDebt */
+        OldDebt: {
+            /** Customer Id */
+            customer_id: number;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone: string | null;
+            /** Total Debt */
+            total_debt: number;
+            /** Old Amount */
+            old_amount: number;
+            /** Old Positions Count */
+            old_positions_count: number;
+            /**
+             * Oldest Date
+             * Format: date
+             */
+            oldest_date: string;
+            /**
+             * Oldest Kind
+             * @enum {string}
+             */
+            oldest_kind: "sale" | "adjustment";
+            /** Oldest Number */
+            oldest_number: number;
+            /** Age Days */
+            age_days: number;
+        };
+        /** OldDebtSignal */
+        OldDebtSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "old_debt";
+            /** Object */
+            object: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "open_customer";
+            params: components["schemas"]["OldDebt"];
         };
         /** PaymentCancel */
         PaymentCancel: {
@@ -1507,6 +2136,23 @@ export interface components {
             total: number;
             /** Sum Posted */
             sum_posted: number;
+        };
+        /** Pending */
+        Pending: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "frozen_stock" | "running_out";
+            /** Products Count */
+            products_count: number;
+            /** Days Left */
+            days_left: number;
+            /**
+             * Ready On
+             * Format: date
+             */
+            ready_on: string;
         };
         /** PreviewAllocationOut */
         PreviewAllocationOut: {
@@ -2285,6 +2931,63 @@ export interface components {
             /** Number */
             number: number;
         };
+        /** RunningOut */
+        RunningOut: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Stock */
+            stock: number;
+            /** Min Qty */
+            min_qty: number | null;
+            /** Sold Qty */
+            sold_qty: number;
+            /** Days */
+            days: number;
+            /** Days Left */
+            days_left: number;
+            /** Runway Days */
+            runway_days: number;
+            /** Order Qty */
+            order_qty: number;
+            /** Sale Price */
+            sale_price: number;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "runway" | "min_qty" | "both";
+            /**
+             * History Start
+             * Format: date
+             */
+            history_start: string;
+        };
+        /** RunningOutSignal */
+        RunningOutSignal: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "running_out";
+            /** Object */
+            object: string;
+            /** Amount */
+            amount: number;
+            /**
+             * Action
+             * @constant
+             */
+            action: "open_product";
+            params: components["schemas"]["RunningOut"];
+        };
         /** SaleCancel */
         SaleCancel: {
             /** Reason */
@@ -2638,6 +3341,33 @@ export interface components {
             /** Days */
             days: components["schemas"]["DayOut"][];
         };
+        /** Thresholds */
+        Thresholds: {
+            /** Attention Markup Drop Points */
+            attention_markup_drop_points: number;
+            /** Attention Debt Days */
+            attention_debt_days: number;
+            /** Attention Frozen Days */
+            attention_frozen_days: number;
+            /** Attention Runway Days */
+            attention_runway_days: number;
+            /** Attention Discount Percent */
+            attention_discount_percent: number;
+            /** Attention Loss Percent */
+            attention_loss_percent: number;
+            /**
+             * Window Days
+             * @default 30
+             * @constant
+             */
+            window_days: 30;
+            /**
+             * Order Days
+             * @default 60
+             * @constant
+             */
+            order_days: 60;
+        };
         /** TodayRateOut */
         TodayRateOut: {
             /**
@@ -2651,6 +3381,29 @@ export interface components {
             rate_date: string | null;
             /** Exact */
             exact: boolean | null;
+        };
+        /** UnknownProduct */
+        UnknownProduct: {
+            /** Product Id */
+            product_id: number;
+            /** Article */
+            article: string;
+            /** Name */
+            name: string;
+            /** Qty */
+            qty: number;
+        };
+        /** UnknownSale */
+        UnknownSale: {
+            /** Sale Id */
+            sale_id: number;
+            /** Number */
+            number: number;
+            /**
+             * Sold At
+             * Format: date-time
+             */
+            sold_at: string;
         };
         /** UserOut */
         UserOut: {
@@ -2903,6 +3656,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    attention_api_attention_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttentionOut"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    hide_api_attention_hide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttentionKey"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenUntil"];
+                };
+            };
+            /** @description Ошибка: текст для пользователя и код */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    unhide_api_attention_unhide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttentionKey"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttentionKey"];
                 };
             };
             /** @description Ошибка: текст для пользователя и код */

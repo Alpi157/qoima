@@ -122,6 +122,8 @@
   остатка; на kk в 1366x768 и 390x844. `buy-today-*` пересняты без повтора заголовка.
   E2e `expense` проверяет аренду, отчёт, отмену и бюджет 4 действия.
 - Эталоны шага 29: `cd backend && uv run pytest -q tests/test_expense_reports.py -k "reference_11 or reference_13 or reference_14"`.
+- Проверка сигналов 30a на свежем демосиде: `cd backend && uv run pytest -q tests/test_demo.py::test_fresh_demo_attention_api`. Эталоны и границы: `uv run pytest -q tests/test_attention.py`. Локальный API после `make demo`: авторизованный `GET http://127.0.0.1:8011/api/attention`; скрытие — POST `/api/attention/hide`, возврат — POST `/api/attention/unhide`, тело `{ "key": "discounts:business" }`.
+- Чувствительность 30a: `cd backend && uv run python ../scripts/check_attention_sensitivity.py` (8 отдельных процессов, исходники не меняются). Замер 20 запросов на свежем демо с API на 8011: `DEMO_PASSWORD=... python3 scripts/check_attention_demo.py` из корня; результат в `review/attention-benchmark.json`.
 - Собрать пакет для ревью: `make review STEP=NN` (или `bash scripts/make_review.sh NN`)
 
 ## Жёсткие правила архитектуры

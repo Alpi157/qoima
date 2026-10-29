@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -30,6 +30,13 @@ class BusinessSettingsUpdate(BaseModel):
     is_vat_payer: bool | None = None
     rate_warning_percent: Annotated[int, Field(strict=True, ge=1, le=100)] | None = None
 
+    opening_balance_date: date | None = None
+    attention_markup_drop_points: Annotated[int, Field(strict=True, ge=1, le=100)] | None = None
+    attention_debt_days: Annotated[int, Field(strict=True, ge=1, le=365)] | None = None
+    attention_frozen_days: Annotated[int, Field(strict=True, ge=30, le=365)] | None = None
+    attention_runway_days: Annotated[int, Field(strict=True, ge=1, le=180)] | None = None
+    attention_discount_percent: Annotated[int, Field(strict=True, ge=1, le=100)] | None = None
+    attention_loss_percent: Annotated[int, Field(strict=True, ge=1, le=100)] | None = None
     card_commission_percent: str | None = None
     tax_percent: str | None = None
 
@@ -53,7 +60,19 @@ class BusinessSettingsUpdate(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _no_nulls(cls, data: object) -> object:
-        return reject_explicit_nulls(data, ("is_vat_payer", "rate_warning_percent"))
+        return reject_explicit_nulls(
+            data,
+            (
+                "is_vat_payer",
+                "rate_warning_percent",
+                "attention_markup_drop_points",
+                "attention_debt_days",
+                "attention_frozen_days",
+                "attention_runway_days",
+                "attention_discount_percent",
+                "attention_loss_percent",
+            ),
+        )
 
     @field_validator("seller_iin_bin")
     @classmethod
@@ -75,4 +94,11 @@ class BusinessSettingsOut(BaseModel):
     rate_warning_percent: int
     card_commission_percent: str
     tax_percent: str
+    opening_balance_date: date | None
+    attention_markup_drop_points: int
+    attention_debt_days: int
+    attention_frozen_days: int
+    attention_runway_days: int
+    attention_discount_percent: int
+    attention_loss_percent: int
     updated_at: datetime

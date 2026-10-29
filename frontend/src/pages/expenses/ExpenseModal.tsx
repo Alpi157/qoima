@@ -1,16 +1,18 @@
 import { Alert, Button, Checkbox, Group, SimpleGrid, Stack, Text, Textarea } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInvalidateExpenses } from '../../api/invalidate'
+import { PageLoader } from '../../components/PageLoader'
+import { QueryError } from '../../components/QueryError'
 import { MoneyInput } from '../../components/MoneyInput'
 import { DocumentModal } from '../../components/flow/DocumentModal'
 import { useDocumentModalStatus } from '../../components/flow/documentModalState'
 import { RequestConflictAlert, UnknownResult } from '../../components/flow/DocumentResult'
 import { useDocumentResult } from '../../components/flow/documentResultState'
 import { formatMoney, parseMoney, validateMoneyText } from '../../lib/money'
-import { todayLocal } from '../../lib/dates'
+import { formatDate, quickRange, todayLocal } from '../../lib/dates'
 import { FIELD_WIDTH } from '../../lib/fieldWidths'
 import { serverFormErrors } from '../../lib/formErrors'
 import { useBusinessSettings } from '../settings/api'
@@ -20,9 +22,18 @@ import {
   type ExpenseCategory,
   type ExpenseCreate,
   usePostExpenses,
+  usePreviousExpenses,
 } from './api'
 
-function ExpenseForm({ source, onClose }: { source?: Expense[]; onClose: () => void }) {
+function ExpenseForm({
+  source,
+  current = [],
+  onClose,
+}: {
+  source?: Expense[]
+  current?: Expense[]
+  onClose: () => void
+}) {
   const { t, i18n } = useTranslation()
   const settings = useBusinessSettings()
   const post = usePostExpenses()
@@ -32,7 +43,12 @@ function ExpenseForm({ source, onClose }: { source?: Expense[]; onClose: () => v
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [rows, setRows] = useState(() =>
-    (source ?? []).map((item) => ({ item, selected: true, date: todayLocal() as string | null })),
+    (source ?? []).map((item) => {
+      const recorded = current.some(
+        (value) => value.category === item.category && value.amount === item.amount,
+      )
+      return { item, recorded, selected: !recorded, date: todayLocal() as string | null }
+    }),
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
@@ -133,7 +149,7 @@ function ExpenseForm({ source, onClose }: { source?: Expense[]; onClose: () => v
                     style={{ borderBottom: '1px solid var(--q-color-border)', paddingBottom: 16 }}
                   >
                     <Checkbox
-                      label={`${t(`expenses.categories.${row.item.category}`)} · ${formatMoney(row.item.amount)} · №${row.item.number}`}
+                      label={`${t(`expenses.categories.${row.item.category}`)} · ${formatMoney(row.item.amount)} · ${formatDate(row.item.expense_date)}`}
                       checked={row.selected}
                       onChange={(event) => {
                         const checked = event.currentTarget.checked
@@ -144,6 +160,7 @@ function ExpenseForm({ source, onClose }: { source?: Expense[]; onClose: () => v
                         )
                       }}
                     />
+                    {row.recorded && <Text c="dimmed">{t('expenses.alreadyRecorded')}</Text>}
                     {row.item.note && <Text c="dimmed">{row.item.note}</Text>}
                     <DatePickerInput
                       {...dateProps}
@@ -285,6 +302,18 @@ function ExpenseForm({ source, onClose }: { source?: Expense[]; onClose: () => v
   )
 }
 
+function RepeatForm({ source, onClose }: { source: Expense[]; onClose: () => void }) {
+  const current = usePreviousExpenses(...quickRange('month'))
+  const [initial, setInitial] = useState<Expense[] | null>(null)
+  useEffect(() => {
+    if (!current.isFetching && current.data && initial === null) setInitial(current.data)
+  }, [current.isFetching, current.data, initial])
+  if (initial === null && current.isError)
+    return <QueryError error={current.error} onRetry={() => current.refetch()} />
+  if (initial === null) return <PageLoader />
+  return <ExpenseForm source={source} current={initial} onClose={onClose} />
+}
+
 export function ExpenseModal({
   opened,
   onClose,
@@ -304,7 +333,12 @@ export function ExpenseModal({
       title={t(source ? 'expenses.review' : 'expenses.add')}
       size="lg"
     >
-      {opened && <ExpenseForm source={source} onClose={onClose} />}
+      {opened &&
+        (source ? (
+          <RepeatForm source={source} onClose={onClose} />
+        ) : (
+          <ExpenseForm onClose={onClose} />
+        ))}
     </DocumentModal>
   )
 }

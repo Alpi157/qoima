@@ -730,6 +730,13 @@ test('expense screens and profit calculation in Kazakh', async ({ page }, testIn
     .getByRole('button', { name: 'Өткен айдағы жалдау мен жалақыны қайталау', exact: true })
     .click()
   await expect(page.getByRole('dialog')).toContainText('Мына шығыстар жазылады')
+  await expect(page.getByRole('dialog').getByText('Осы айда жазылған').first()).toBeVisible()
+  await expect(
+    page
+      .getByRole('dialog')
+      .getByRole('checkbox', { name: /Жалдау ақысы/ })
+      .first(),
+  ).not.toBeChecked()
   await snap(page, 'expense-repeat', width, { fullPage: false })
   await page.getByRole('dialog').getByRole('button', { name: 'Бас тарту', exact: true }).click()
   await page.goto('/expenses?from=2026-02-01&to=2026-02-28')

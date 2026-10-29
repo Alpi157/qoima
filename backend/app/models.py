@@ -1,5 +1,6 @@
 """Imports every model so Base.metadata is complete (used by Alembic)."""
 
+from app.attention.models import AttentionDismissal
 from app.auth.models import User, UserSession
 from app.catalog.models import Product
 from app.customers.models import Customer
@@ -16,6 +17,7 @@ from app.sales.models import Sale, SaleLine
 from app.settings.models import BusinessSettings
 
 __all__ = [
+    "AttentionDismissal",
     "BusinessSettings",
     "Customer",
     "CustomerPayment",

@@ -181,6 +181,134 @@
         ]
       }
     },
+    "/api/attention": {
+      "get": {
+        "tags": [
+          "attention"
+        ],
+        "summary": "Attention",
+        "operationId": "attention_api_attention_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttentionOut"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/api/attention/hide": {
+      "post": {
+        "tags": [
+          "attention"
+        ],
+        "summary": "Hide",
+        "operationId": "hide_api_attention_hide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttentionKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HiddenUntil"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/api/attention/unhide": {
+      "post": {
+        "tags": [
+          "attention"
+        ],
+        "summary": "Unhide",
+        "operationId": "unhide_api_attention_unhide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttentionKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttentionKey"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Ошибка: текст для пользователя и код",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
     "/api/products": {
       "get": {
         "tags": [
@@ -3937,6 +4065,265 @@
         ],
         "title": "AllocationOut"
       },
+      "AttentionKey": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "AttentionKey"
+      },
+      "AttentionOut": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/Thresholds"
+          },
+          "signals": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/BelowReplacementSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/MarkupDropSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/OldDebtSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/FrozenStockSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/RunningOutSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/LossSalesSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/DiscountsSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/DefectsWriteOffsSignal"
+                },
+                {
+                  "$ref": "#/components/schemas/IncompleteSignal"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "below_replacement": "#/components/schemas/BelowReplacementSignal",
+                  "defects_write_offs": "#/components/schemas/DefectsWriteOffsSignal",
+                  "discounts": "#/components/schemas/DiscountsSignal",
+                  "frozen_stock": "#/components/schemas/FrozenStockSignal",
+                  "incomplete_data": "#/components/schemas/IncompleteSignal",
+                  "loss_sales": "#/components/schemas/LossSalesSignal",
+                  "markup_drop": "#/components/schemas/MarkupDropSignal",
+                  "old_debt": "#/components/schemas/OldDebtSignal",
+                  "running_out": "#/components/schemas/RunningOutSignal"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "hidden": {
+            "items": {
+              "$ref": "#/components/schemas/HiddenSignal"
+            },
+            "type": "array",
+            "title": "Hidden"
+          },
+          "pending": {
+            "items": {
+              "$ref": "#/components/schemas/Pending"
+            },
+            "type": "array",
+            "title": "Pending"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TodayRateOut"
+            },
+            "type": "array",
+            "title": "Rates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "thresholds",
+          "signals",
+          "hidden",
+          "pending",
+          "rates"
+        ],
+        "title": "AttentionOut"
+      },
+      "BelowReplacement": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "sale_price": {
+            "type": "integer",
+            "title": "Sale Price"
+          },
+          "buy_today": {
+            "type": "integer",
+            "title": "Buy Today"
+          },
+          "shortage_per_unit": {
+            "type": "integer",
+            "title": "Shortage Per Unit"
+          },
+          "markup_then": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markup Then"
+          },
+          "suggested_price": {
+            "type": "integer",
+            "title": "Suggested Price"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "purchase",
+              "quote"
+            ],
+            "title": "Basis"
+          },
+          "basis_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Basis Date"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "goods_today": {
+            "type": "integer",
+            "title": "Goods Today"
+          },
+          "expenses_revalued": {
+            "type": "integer",
+            "title": "Expenses Revalued"
+          },
+          "expenses_fixed": {
+            "type": "integer",
+            "title": "Expenses Fixed"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TodayRateOut"
+            },
+            "type": "array",
+            "title": "Rates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "sale_price",
+          "buy_today",
+          "shortage_per_unit",
+          "markup_then",
+          "suggested_price",
+          "basis",
+          "basis_date",
+          "currency",
+          "goods_today",
+          "expenses_revalued",
+          "expenses_fixed",
+          "rates"
+        ],
+        "title": "BelowReplacement"
+      },
+      "BelowReplacementSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "below_replacement",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^product:[1-9][0-9]*$",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "change_price",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/BelowReplacement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "BelowReplacementSignal"
+      },
       "BusinessSettingsOut": {
         "properties": {
           "seller_name": {
@@ -3975,6 +4362,42 @@
             "type": "string",
             "title": "Tax Percent"
           },
+          "opening_balance_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Balance Date"
+          },
+          "attention_markup_drop_points": {
+            "type": "integer",
+            "title": "Attention Markup Drop Points"
+          },
+          "attention_debt_days": {
+            "type": "integer",
+            "title": "Attention Debt Days"
+          },
+          "attention_frozen_days": {
+            "type": "integer",
+            "title": "Attention Frozen Days"
+          },
+          "attention_runway_days": {
+            "type": "integer",
+            "title": "Attention Runway Days"
+          },
+          "attention_discount_percent": {
+            "type": "integer",
+            "title": "Attention Discount Percent"
+          },
+          "attention_loss_percent": {
+            "type": "integer",
+            "title": "Attention Loss Percent"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -3992,6 +4415,13 @@
           "rate_warning_percent",
           "card_commission_percent",
           "tax_percent",
+          "opening_balance_date",
+          "attention_markup_drop_points",
+          "attention_debt_days",
+          "attention_frozen_days",
+          "attention_runway_days",
+          "attention_discount_percent",
+          "attention_loss_percent",
           "updated_at"
         ],
         "title": "BusinessSettingsOut"
@@ -4045,6 +4475,96 @@
               }
             ],
             "title": "Rate Warning Percent"
+          },
+          "opening_balance_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Balance Date"
+          },
+          "attention_markup_drop_points": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Markup Drop Points"
+          },
+          "attention_debt_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Debt Days"
+          },
+          "attention_frozen_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365.0,
+                "minimum": 30.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Frozen Days"
+          },
+          "attention_runway_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 180.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Runway Days"
+          },
+          "attention_discount_percent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Discount Percent"
+          },
+          "attention_loss_percent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Loss Percent"
           },
           "card_commission_percent": {
             "anyOf": [
@@ -4274,6 +4794,17 @@
             ],
             "title": "Markup Now"
           },
+          "suggested_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Price"
+          },
           "price_to_keep_markup": {
             "anyOf": [
               {
@@ -4352,6 +4883,7 @@
           "sale_price",
           "markup_then",
           "markup_now",
+          "suggested_price",
           "price_to_keep_markup",
           "difference_vs_avg",
           "reason_unavailable",
@@ -4976,6 +5508,238 @@
         ],
         "title": "DebtAdjustmentPage"
       },
+      "DefectsWriteOffs": {
+        "properties": {
+          "defect_loss": {
+            "type": "integer",
+            "title": "Defect Loss"
+          },
+          "write_off_value": {
+            "type": "integer",
+            "title": "Write Off Value"
+          },
+          "surplus_value": {
+            "type": "integer",
+            "title": "Surplus Value"
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses"
+          },
+          "revenue": {
+            "type": "integer",
+            "title": "Revenue"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "threshold_percent": {
+            "type": "integer",
+            "title": "Threshold Percent"
+          },
+          "window_days": {
+            "type": "integer",
+            "title": "Window Days"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/LossProduct"
+            },
+            "type": "array",
+            "title": "Products"
+          }
+        },
+        "type": "object",
+        "required": [
+          "defect_loss",
+          "write_off_value",
+          "surplus_value",
+          "losses",
+          "revenue",
+          "percent",
+          "threshold_percent",
+          "window_days",
+          "products"
+        ],
+        "title": "DefectsWriteOffs"
+      },
+      "DefectsWriteOffsSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "defects_write_offs",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "const": "business",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "show_products",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/DefectsWriteOffs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "DefectsWriteOffsSignal"
+      },
+      "DiscountSale": {
+        "properties": {
+          "sale_id": {
+            "type": "integer",
+            "title": "Sale Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "sold_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sold At"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "discount": {
+            "type": "integer",
+            "title": "Discount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sale_id",
+          "number",
+          "sold_at",
+          "customer_name",
+          "discount"
+        ],
+        "title": "DiscountSale"
+      },
+      "Discounts": {
+        "properties": {
+          "discount_total": {
+            "type": "integer",
+            "title": "Discount Total"
+          },
+          "profit": {
+            "type": "integer",
+            "title": "Profit"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "threshold_percent": {
+            "type": "integer",
+            "title": "Threshold Percent"
+          },
+          "window_days": {
+            "type": "integer",
+            "title": "Window Days"
+          },
+          "sales": {
+            "items": {
+              "$ref": "#/components/schemas/DiscountSale"
+            },
+            "type": "array",
+            "title": "Sales"
+          }
+        },
+        "type": "object",
+        "required": [
+          "discount_total",
+          "profit",
+          "percent",
+          "threshold_percent",
+          "window_days",
+          "sales"
+        ],
+        "title": "Discounts"
+      },
+      "DiscountsSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "discounts",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "const": "business",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "show_sales",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/Discounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "DiscountsSignal"
+      },
       "ErrorCode": {
         "type": "string",
         "enum": [
@@ -5398,6 +6162,412 @@
         ],
         "title": "FieldErrorOut"
       },
+      "FrozenStock": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "avg_cost": {
+            "type": "integer",
+            "title": "Avg Cost"
+          },
+          "is_archived": {
+            "type": "boolean",
+            "title": "Is Archived"
+          },
+          "history_start": {
+            "type": "string",
+            "format": "date",
+            "title": "History Start"
+          },
+          "last_sale_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sale Date"
+          },
+          "days_without_sales": {
+            "type": "integer",
+            "title": "Days Without Sales"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "avg_cost",
+          "is_archived",
+          "history_start",
+          "last_sale_date",
+          "days_without_sales"
+        ],
+        "title": "FrozenStock"
+      },
+      "FrozenStockSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "frozen_stock",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^product:[1-9][0-9]*$",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "open_product",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/FrozenStock"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "FrozenStockSignal"
+      },
+      "HiddenSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "below_replacement",
+              "markup_drop",
+              "old_debt",
+              "frozen_stock",
+              "running_out",
+              "loss_sales",
+              "discounts",
+              "defects_write_offs",
+              "incomplete_data"
+            ],
+            "title": "Kind"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "hidden_until": {
+            "type": "string",
+            "format": "date",
+            "title": "Hidden Until"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "amount",
+          "hidden_until"
+        ],
+        "title": "HiddenSignal"
+      },
+      "HiddenUntil": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "hidden_until": {
+            "type": "string",
+            "format": "date",
+            "title": "Hidden Until"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "hidden_until"
+        ],
+        "title": "HiddenUntil"
+      },
+      "IncompleteRate": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "products_count": {
+            "type": "integer",
+            "title": "Products Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "rate",
+          "rate_date",
+          "products_count"
+        ],
+        "title": "IncompleteRate"
+      },
+      "IncompleteRateSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "incomplete_data",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "rate:CNY",
+              "rate:USD"
+            ],
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "show_products",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/IncompleteRate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "IncompleteRateSignal"
+      },
+      "IncompleteSales": {
+        "properties": {
+          "lines_count": {
+            "type": "integer",
+            "title": "Lines Count"
+          },
+          "revenue": {
+            "type": "integer",
+            "title": "Revenue"
+          },
+          "sales": {
+            "items": {
+              "$ref": "#/components/schemas/UnknownSale"
+            },
+            "type": "array",
+            "title": "Sales"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lines_count",
+          "revenue",
+          "sales"
+        ],
+        "title": "IncompleteSales"
+      },
+      "IncompleteSalesSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "incomplete_data",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "const": "sales",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "show_sales",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/IncompleteSales"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "IncompleteSalesSignal"
+      },
+      "IncompleteSignal": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/IncompleteStockSignal"
+          },
+          {
+            "$ref": "#/components/schemas/IncompleteSalesSignal"
+          },
+          {
+            "$ref": "#/components/schemas/IncompleteRateSignal"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "object",
+          "mapping": {
+            "rate:CNY": "#/components/schemas/IncompleteRateSignal",
+            "rate:USD": "#/components/schemas/IncompleteRateSignal",
+            "sales": "#/components/schemas/IncompleteSalesSignal",
+            "stock": "#/components/schemas/IncompleteStockSignal"
+          }
+        }
+      },
+      "IncompleteStock": {
+        "properties": {
+          "products_count": {
+            "type": "integer",
+            "title": "Products Count"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/UnknownProduct"
+            },
+            "type": "array",
+            "title": "Products"
+          }
+        },
+        "type": "object",
+        "required": [
+          "products_count",
+          "products"
+        ],
+        "title": "IncompleteStock"
+      },
+      "IncompleteStockSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "incomplete_data",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "const": "stock",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "show_products",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/IncompleteStock"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "IncompleteStockSignal"
+      },
       "LedgerItem": {
         "properties": {
           "kind": {
@@ -5555,6 +6725,179 @@
         ],
         "title": "LoginIn"
       },
+      "LossProduct": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "defect_loss": {
+            "type": "integer",
+            "title": "Defect Loss"
+          },
+          "write_off_value": {
+            "type": "integer",
+            "title": "Write Off Value"
+          },
+          "surplus_value": {
+            "type": "integer",
+            "title": "Surplus Value"
+          },
+          "net": {
+            "type": "integer",
+            "title": "Net"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "defect_loss",
+          "write_off_value",
+          "surplus_value",
+          "net"
+        ],
+        "title": "LossProduct"
+      },
+      "LossSale": {
+        "properties": {
+          "sale_id": {
+            "type": "integer",
+            "title": "Sale Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "sold_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sold At"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "unit_price": {
+            "type": "integer",
+            "title": "Unit Price"
+          },
+          "unit_cost": {
+            "type": "integer",
+            "title": "Unit Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sale_id",
+          "number",
+          "sold_at",
+          "qty",
+          "unit_price",
+          "unit_cost"
+        ],
+        "title": "LossSale"
+      },
+      "LossSales": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "lines_count": {
+            "type": "integer",
+            "title": "Lines Count"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "loss": {
+            "type": "integer",
+            "title": "Loss"
+          },
+          "sales": {
+            "items": {
+              "$ref": "#/components/schemas/LossSale"
+            },
+            "type": "array",
+            "title": "Sales"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "lines_count",
+          "qty",
+          "loss",
+          "sales"
+        ],
+        "title": "LossSales"
+      },
+      "LossSalesSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "loss_sales",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^product:[1-9][0-9]*$",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "show_sales",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/LossSales"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "LossSalesSignal"
+      },
       "ManualAllocationIn": {
         "properties": {
           "product_id": {
@@ -5577,6 +6920,152 @@
           "amount_tiyn"
         ],
         "title": "ManualAllocationIn"
+      },
+      "MarkupDrop": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          },
+          "sale_price": {
+            "type": "integer",
+            "title": "Sale Price"
+          },
+          "cost_then": {
+            "type": "integer",
+            "title": "Cost Then"
+          },
+          "buy_today": {
+            "type": "integer",
+            "title": "Buy Today"
+          },
+          "markup_then": {
+            "type": "integer",
+            "title": "Markup Then"
+          },
+          "markup_now": {
+            "type": "integer",
+            "title": "Markup Now"
+          },
+          "drop_points": {
+            "type": "integer",
+            "title": "Drop Points"
+          },
+          "price_to_keep_markup": {
+            "type": "integer",
+            "title": "Price To Keep Markup"
+          },
+          "suggested_price": {
+            "type": "integer",
+            "title": "Suggested Price"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "purchase",
+              "quote"
+            ],
+            "title": "Basis"
+          },
+          "basis_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Basis Date"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KZT",
+              "CNY",
+              "USD"
+            ],
+            "title": "Currency"
+          },
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TodayRateOut"
+            },
+            "type": "array",
+            "title": "Rates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "qty",
+          "sale_price",
+          "cost_then",
+          "buy_today",
+          "markup_then",
+          "markup_now",
+          "drop_points",
+          "price_to_keep_markup",
+          "suggested_price",
+          "basis",
+          "basis_date",
+          "currency",
+          "rates"
+        ],
+        "title": "MarkupDrop"
+      },
+      "MarkupDropSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "markup_drop",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^product:[1-9][0-9]*$",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "change_price",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/MarkupDrop"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "MarkupDropSignal"
       },
       "MovementOut": {
         "properties": {
@@ -5685,6 +7174,116 @@
           "total"
         ],
         "title": "MovementPage"
+      },
+      "OldDebt": {
+        "properties": {
+          "customer_id": {
+            "type": "integer",
+            "title": "Customer Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "total_debt": {
+            "type": "integer",
+            "title": "Total Debt"
+          },
+          "old_amount": {
+            "type": "integer",
+            "title": "Old Amount"
+          },
+          "old_positions_count": {
+            "type": "integer",
+            "title": "Old Positions Count"
+          },
+          "oldest_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Oldest Date"
+          },
+          "oldest_kind": {
+            "type": "string",
+            "enum": [
+              "sale",
+              "adjustment"
+            ],
+            "title": "Oldest Kind"
+          },
+          "oldest_number": {
+            "type": "integer",
+            "title": "Oldest Number"
+          },
+          "age_days": {
+            "type": "integer",
+            "title": "Age Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "name",
+          "phone",
+          "total_debt",
+          "old_amount",
+          "old_positions_count",
+          "oldest_date",
+          "oldest_kind",
+          "oldest_number",
+          "age_days"
+        ],
+        "title": "OldDebt"
+      },
+      "OldDebtSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "old_debt",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^customer:[1-9][0-9]*$",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "open_customer",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/OldDebt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "OldDebtSignal"
       },
       "PaymentCancel": {
         "properties": {
@@ -5936,6 +7535,39 @@
           "sum_posted"
         ],
         "title": "PaymentPage"
+      },
+      "Pending": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "frozen_stock",
+              "running_out"
+            ],
+            "title": "Kind"
+          },
+          "products_count": {
+            "type": "integer",
+            "title": "Products Count"
+          },
+          "days_left": {
+            "type": "integer",
+            "title": "Days Left"
+          },
+          "ready_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Ready On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "products_count",
+          "days_left",
+          "ready_on"
+        ],
+        "title": "Pending"
       },
       "PreviewAllocationOut": {
         "properties": {
@@ -8400,6 +10032,137 @@
         ],
         "title": "ReturnSaleOut"
       },
+      "RunningOut": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "stock": {
+            "type": "integer",
+            "title": "Stock"
+          },
+          "min_qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Qty"
+          },
+          "sold_qty": {
+            "type": "integer",
+            "title": "Sold Qty"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "days_left": {
+            "type": "integer",
+            "title": "Days Left"
+          },
+          "runway_days": {
+            "type": "integer",
+            "title": "Runway Days"
+          },
+          "order_qty": {
+            "type": "integer",
+            "title": "Order Qty"
+          },
+          "sale_price": {
+            "type": "integer",
+            "title": "Sale Price"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "runway",
+              "min_qty",
+              "both"
+            ],
+            "title": "Trigger"
+          },
+          "history_start": {
+            "type": "string",
+            "format": "date",
+            "title": "History Start"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "unit",
+          "stock",
+          "min_qty",
+          "sold_qty",
+          "days",
+          "days_left",
+          "runway_days",
+          "order_qty",
+          "sale_price",
+          "trigger",
+          "history_start"
+        ],
+        "title": "RunningOut"
+      },
+      "RunningOutSignal": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "const": "running_out",
+            "title": "Kind"
+          },
+          "object": {
+            "type": "string",
+            "pattern": "^product:[1-9][0-9]*$",
+            "title": "Object"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "action": {
+            "type": "string",
+            "const": "open_product",
+            "title": "Action"
+          },
+          "params": {
+            "$ref": "#/components/schemas/RunningOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "object",
+          "amount",
+          "action",
+          "params"
+        ],
+        "title": "RunningOutSignal"
+      },
       "SaleCancel": {
         "properties": {
           "reason": {
@@ -9411,6 +11174,56 @@
         ],
         "title": "SummaryOut"
       },
+      "Thresholds": {
+        "properties": {
+          "attention_markup_drop_points": {
+            "type": "integer",
+            "title": "Attention Markup Drop Points"
+          },
+          "attention_debt_days": {
+            "type": "integer",
+            "title": "Attention Debt Days"
+          },
+          "attention_frozen_days": {
+            "type": "integer",
+            "title": "Attention Frozen Days"
+          },
+          "attention_runway_days": {
+            "type": "integer",
+            "title": "Attention Runway Days"
+          },
+          "attention_discount_percent": {
+            "type": "integer",
+            "title": "Attention Discount Percent"
+          },
+          "attention_loss_percent": {
+            "type": "integer",
+            "title": "Attention Loss Percent"
+          },
+          "window_days": {
+            "type": "integer",
+            "const": 30,
+            "title": "Window Days",
+            "default": 30
+          },
+          "order_days": {
+            "type": "integer",
+            "const": 60,
+            "title": "Order Days",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "required": [
+          "attention_markup_drop_points",
+          "attention_debt_days",
+          "attention_frozen_days",
+          "attention_runway_days",
+          "attention_discount_percent",
+          "attention_loss_percent"
+        ],
+        "title": "Thresholds"
+      },
       "TodayRateOut": {
         "properties": {
           "currency": {
@@ -9465,6 +11278,58 @@
           "exact"
         ],
         "title": "TodayRateOut"
+      },
+      "UnknownProduct": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "article": {
+            "type": "string",
+            "title": "Article"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "qty": {
+            "type": "integer",
+            "title": "Qty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "article",
+          "name",
+          "qty"
+        ],
+        "title": "UnknownProduct"
+      },
+      "UnknownSale": {
+        "properties": {
+          "sale_id": {
+            "type": "integer",
+            "title": "Sale Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "sold_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sold At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sale_id",
+          "number",
+          "sold_at"
+        ],
+        "title": "UnknownSale"
       },
       "UserOut": {
         "properties": {
